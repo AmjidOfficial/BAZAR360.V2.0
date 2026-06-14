@@ -1,0 +1,6 @@
+{
+  "name": "Bazar360",
+  "description": "Next-generation automotive marketplace and multi-dealer ecosystem with an automated server-side AI marketing engine.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,119 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with role-based access control configurations",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique user authentication ID" },
+        "email": { "type": "string", "description": "User's verified email address" },
+        "displayName": { "type": "string", "description": "User display pre-formatted moniker" },
+        "role": { "type": "string", "enum": ["Admin", "Manager", "SalesRep", "PrivateSeller", "Buyer"], "description": "RBAC privilege tier" },
+        "region": { "type": "string", "description": "Geographical operations region, e.g., Dubai, Abu Dhabi" },
+        "salesPodId": { "type": "string", "description": "Showroom sales pod indicator for managers" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "createdAt", "updatedAt"]
+    },
+    "Dealer": {
+      "title": "Verified Dealer",
+      "description": "Showroom showroom identity records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "location": { "type": "string" },
+        "rating": { "type": "number" },
+        "vehiclesCount": { "type": "integer" },
+        "followersCount": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "description": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "location", "rating"]
+    },
+    "CarListing": {
+      "title": "Vehicle Listing",
+      "description": "Car listing with technical parameters, prices, and assigned managers or sales reps",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "make": { "type": "string" },
+        "model": { "type": "string" },
+        "year": { "type": "integer" },
+        "price": { "type": "integer" },
+        "mileage": { "type": "integer" },
+        "fuelType": { "type": "string", "enum": ["Petrol", "Diesel", "Hybrid", "Electric"] },
+        "transmission": { "type": "string", "enum": ["Automatic", "Manual"] },
+        "imageUrl": { "type": "string" },
+        "verified": { "type": "boolean" },
+        "featured": { "type": "boolean" },
+        "dealerId": { "type": "string" },
+        "assignedSalesRepId": { "type": "string" },
+        "region": { "type": "string" },
+        "salesPodId": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "make", "model", "year", "price", "dealerId", "assignedSalesRepId", "region", "createdAt", "updatedAt"]
+    },
+    "Review": {
+      "title": "Verified Review",
+      "description": "Verified client response feedback and ratings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "author": { "type": "string" },
+        "rating": { "type": "integer" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "author", "rating", "comment", "createdAt"]
+    },
+    "Offer": {
+      "title": "Dynamic Offer",
+      "description": "Non-binding customer bid or pricing proposal across the pipeline",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "listingId": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "price": { "type": "integer" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "listingId", "buyerId", "price", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User metadata and multi-role RBAC attributes"
+    },
+    "/dealers/{dealerId}": {
+      "schema": "Dealer",
+      "description": "Automotive showrooms profiles"
+    },
+    "/listings/{listingId}": {
+      "schema": "CarListing",
+      "description": "Marketplace vehicle entries"
+    },
+    "/dealers/{dealerId}/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Showroom buyer feedback"
+    },
+    "/listings/{listingId}/offers/{offerId}": {
+      "schema": "Offer",
+      "description": "Proposals on specific cars"
+    }
+  }
+}

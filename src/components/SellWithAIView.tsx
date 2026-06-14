@@ -77,7 +77,7 @@ export default function SellWithAIView({ onAddListing, setTab }: SellWithAIViewP
       setGeneratedData(parsed);
       setManualTitle(parsed.title);
       setManualDescription(parsed.description);
-      setManualPrice(parsed.suggestedPriceAED || 85000);
+      setManualPrice(parsed.suggestedPricePKR || 1500000);
 
       // Guessing car specifications based on input
       const textL = shorthandInput.toLowerCase();
@@ -119,13 +119,13 @@ export default function SellWithAIView({ onAddListing, setTab }: SellWithAIViewP
         title: "Pristine 2022 Honda Civic White - Certified Premium State",
         description: `This immaculate Honda Civic represents high efficiency, modern styling, and pure performance reliability. Fitted with high-end safety ratings and completely pre-inspected. Sells rapidly directly from premium dealer portfolios.`,
         tags: ["Sedan", "Fuel Efficient", "Certified", "Immaculate"],
-        suggestedPriceAED: 85000,
-        highlights: ["Shorthand notes optimized", "SEO structural tags embedded", "GCC compatible styling"]
+        suggestedPricePKR: 4500000,
+        highlights: ["Shorthand notes optimized", "SEO structural tags embedded", "Pakistan compatible specs"]
       };
       setGeneratedData(fallbackObj);
       setManualTitle(fallbackObj.title);
       setManualDescription(fallbackObj.description);
-      setManualPrice(fallbackObj.suggestedPriceAED);
+      setManualPrice(fallbackObj.suggestedPricePKR);
     } finally {
       setAiLoading(false);
     }
@@ -153,7 +153,7 @@ export default function SellWithAIView({ onAddListing, setTab }: SellWithAIViewP
         color: 'Slick Finish',
         engineSize: '2.0L Turbo',
         horspower: '190 hp',
-        regionalSpecs: 'GCC Specification'
+        regionalSpecs: 'Pak/Japanese Specs'
       }
     };
 
@@ -337,7 +337,7 @@ export default function SellWithAIView({ onAddListing, setTab }: SellWithAIViewP
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-white/50 block font-semibold leading-relaxed font-mono text-[10px] uppercase">Selling Valuation (AED):</label>
+              <label className="text-white/50 block font-semibold leading-relaxed font-mono text-[10px] uppercase">Selling Valuation (PKR):</label>
               <input
                 className="w-full bg-[#0F172A] border border-white/5 rounded-xl p-2.5 text-white focus:outline-none focus:border-[#38BDF8] font-mono text-xs"
                 type="number"

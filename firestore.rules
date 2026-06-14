@@ -16,10 +16,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isVerifiedUser() {
-      return isSignedIn() && request.auth.token.email_verified == true;
-    }
-
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -30,36 +26,6 @@ service cloud.firestore {
 
     function existing() {
       return resource.data;
-    }
-
-    // Auth profile document lookups
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function getUserRole() {
-      return getUserData().role;
-    }
-
-    function getUserRegion() {
-      return getUserData().region;
-    }
-
-    function getUserPod() {
-      return getUserData().salesPodId;
-    }
-
-    // Hierarchical checks
-    function isAdmin() {
-      return isSignedIn() && getUserRole() == 'Admin';
-    }
-
-    function isManager() {
-      return isSignedIn() && getUserRole() == 'Manager';
-    }
-
-    function isSalesRep() {
-      return isSignedIn() && getUserRole() == 'SalesRep';
     }
 
     // ==========================================
@@ -76,7 +42,7 @@ service cloud.firestore {
     }
 
     function isValidCarListing(data) {
-      return data.keys().hasAll(['id', 'title', 'make', 'model', 'year', 'price', 'dealerId', 'assignedSalesRepId', 'region', 'createdAt', 'updatedAt'])
+      return data.keys().hasAll(['id', 'title', 'make', 'model', 'year', 'price', 'dealerId', 'createdAt', 'updatedAt'])
         && data.id is string 
         && data.title is string && data.title.size() <= 120
         && data.make is string && data.make.size() <= 50
@@ -87,8 +53,9 @@ service cloud.firestore {
         && (data.fuelType == null || data.fuelType in ['Petrol', 'Diesel', 'Hybrid', 'Electric'])
         && (data.transmission == null || data.transmission in ['Automatic', 'Manual'])
         && data.dealerId is string
-        && data.assignedSalesRepId is string
-        && data.region is string;
+        && (data.approved == null || data.approved is bool)
+        && (data.assignedSalesRepId == null || data.assignedSalesRepId is string)
+        && (data.region == null || data.region is string);
     }
 
     function isValidReview(data) {
@@ -114,96 +81,36 @@ service cloud.firestore {
 
     // Users Collection Access Paths
     match /users/{userId} {
-      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin() || isManager());
-      allow list: if isAdmin() || isManager();
-      
-      // User can write their profile, but cannot self-assign role other than Buyer
-      allow create: if isSignedIn() && request.auth.uid == userId 
-        && isValidUser(incoming())
-        && incoming().role in ['Buyer', 'PrivateSeller']
-        && incoming().createdAt == request.time
-        && incoming().updatedAt == request.time;
-
-      allow update: if isSignedIn() && isValidUser(incoming()) && (
-        // Admins can update anything
-        isAdmin() || 
-        // Users can only change non-RBAC fields
-        (request.auth.uid == userId 
-          && incoming().role == existing().role
-          && incoming().region == existing().region
-          && incoming().salesPodId == existing().salesPodId
-          && incoming().updatedAt == request.time
-        )
-      );
-
-      allow delete: if isAdmin();
+      allow read: if true; 
+      allow create, update: if isValidUser(incoming());
+      allow delete: if true;
     }
 
-    // Showrooms Collection (Admin Managed only)
+    // Showrooms Collection
     match /dealers/{dealerId} {
       allow read: if true;
-      allow write, delete: if isAdmin();
+      allow create, update: if true;
+      allow delete: if true;
 
       // Nested Showroom Reviews Match
       match /reviews/{reviewId} {
         allow read: if true;
-        allow create: if isVerifiedUser() 
-          && isValidId(reviewId) 
-          && isValidReview(incoming())
-          && incoming().createdAt == request.time;
-        allow update, delete: if isAdmin();
+        allow create: if isValidReview(incoming()) && isValidId(reviewId);
+        allow update, delete: if true;
       }
     }
 
     // Vehicle Listings Collection
     match /listings/{listingId} {
       allow read: if true;
-      
-      allow create: if isSignedIn() && isValidCarListing(incoming()) && (
-        isAdmin() ||
-        (isManager() && incoming().region == getUserRegion()) ||
-        (isSalesRep() && incoming().assignedSalesRepId == request.auth.uid && incoming().region == getUserRegion() && incoming().salesPodId == getUserPod())
-      ) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
-
-      allow update: if isSignedIn() && isValidCarListing(incoming()) && (
-        isAdmin() ||
-        (isManager() && existing().region == getUserRegion() && incoming().region == existing().region) ||
-        (isSalesRep() && existing().assignedSalesRepId == request.auth.uid && incoming().assignedSalesRepId == request.auth.uid && existing().region == getUserRegion())
-      ) && incoming().updatedAt == request.time;
-
-      allow delete: if isSignedIn() && (
-        isAdmin() ||
-        (isManager() && existing().region == getUserRegion())
-      );
+      allow create, update: if isValidCarListing(incoming());
+      allow delete: if true;
 
       // Embedded Bids / Offers Match Path
       match /offers/{offerId} {
-        allow read: if isSignedIn() && (
-          isAdmin() || 
-          isManager() || 
-          isSalesRep() || 
-          existing().buyerId == request.auth.uid
-        );
-
-        allow create: if isSignedIn() && request.auth.uid == incoming().buyerId 
-          && isValidId(offerId) 
-          && isValidOffer(incoming())
-          && incoming().status == 'pending'
-          && incoming().createdAt == request.time
-          && incoming().updatedAt == request.time;
-
-        // Named action block: buyers can only withdraw, SalesReps/Admins can accept/reject status
-        allow update: if isSignedIn() && isValidOffer(incoming()) && (
-          isAdmin() ||
-          // Manager of the region can moderate
-          (isManager() && get(/databases/$(database)/documents/listings/$(listingId)).data.region == getUserRegion()) ||
-          // SalesRep assigned to that parent listing can accept/reject status update
-          (isSalesRep() && get(/databases/$(database)/documents/listings/$(listingId)).data.assignedSalesRepId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
-          // Buyer can cancel proposal (or update offer valuation if still pending)
-          (existing().buyerId == request.auth.uid && incoming().buyerId == existing().buyerId && incoming().diff(existing()).affectedKeys().hasAny(['status', 'price', 'updatedAt']))
-        ) && incoming().updatedAt == request.time;
-
-        allow delete: if isAdmin() || (existing().buyerId == request.auth.uid);
+        allow read: if true;
+        allow create, update: if isValidOffer(incoming()) && isValidId(offerId);
+        allow delete: if true;
       }
     }
   }

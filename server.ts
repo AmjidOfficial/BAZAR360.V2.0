@@ -46,13 +46,13 @@ async function startServer() {
 
       const systemPrompt = `You are a professional automotive copywriter and SEO marketing specialist named "Bazar360-Marketer".
 Your task is to transform raw, shorthand seller notes into a pristine, high-end SEO-optimized listing.
-Convert slang prices like "65 lac" (which represents Pakistani Rupees Lak or Indian Lakh) or raw numbers appropriately to equivalent AED (United Arab Emirates Dirham) value. For example: "65 lac PKR" is roughly AED 85,000, "15 lac INR" is roughly AED 65,000. Underwrite a competitive valuation accordingly based on the vehicle year and make.
+Convert slang prices like "65 lac" (which represents 6,500,000 Pakistani Rupees PKR) or "1.2 crore" (12,000,000 PKR) or raw numbers appropriately to equivalent full PKR (Pakistani Rupees) value as an integer. For example: "65 lac" is 6500000, "15 lac" is 1500000. Underwrite a competitive valuation accordingly in Pakistani Rupees (PKR) based on the vehicle year and make.
 Generate output strictly conforming to the following JSON structure:
 {
   "title": "A highly premium, professional automotive title",
   "description": "Rich sales description focusing on safety, drivability, and premium status, matched to the selected style tone",
   "tags": ["Tag1", "Tag2"],
-  "suggestedPriceAED": 85000,
+  "suggestedPricePKR": 6500000,
   "highlights": ["Highlight point 1", "Highlight point 2", "Highlight point 3"]
 }
 Tone tuning selected: ${tone || 'Premium'}. Ensure vocabulary mirrors luxury automotive catalogs.`;
@@ -72,13 +72,13 @@ Tone tuning selected: ${tone || 'Premium'}. Ensure vocabulary mirrors luxury aut
                 type: Type.ARRAY,
                 items: { type: Type.STRING }
               },
-              suggestedPriceAED: { type: Type.INTEGER },
+              suggestedPricePKR: { type: Type.INTEGER },
               highlights: {
                 type: Type.ARRAY,
                 items: { type: Type.STRING }
               }
             },
-            required: ["title", "description", "tags", "suggestedPriceAED", "highlights"]
+            required: ["title", "description", "tags", "suggestedPricePKR", "highlights"]
           }
         }
       });
@@ -98,11 +98,11 @@ Tone tuning selected: ${tone || 'Premium'}. Ensure vocabulary mirrors luxury aut
         success: false,
         error: error.message,
         result: {
-          title: "Premium Certified Hatchback - Modern Series",
+          title: "Premium Certified Sedan - Pakistan Edition",
           description: "A meticulously styled vehicle ready for immediate city drives. Features clean upholstery, smooth transmission, and optimal performance diagnostics. Passed full Bazar360 safety inspections.",
           tags: ["Compact", "Certified", "Slick"],
-          suggestedPriceAED: 85000,
-          highlights: ["Clean vehicle background checked", "Pristine interior condition", "Optimal GCC specs"]
+          suggestedPricePKR: 1500000,
+          highlights: ["Clean vehicle background checked", "Pristine interior condition", "Optimal Pakistani specs"]
         }
       });
     }
@@ -122,7 +122,7 @@ Tone tuning selected: ${tone || 'Premium'}. Ensure vocabulary mirrors luxury aut
       const contextPrompt = `You are a helpful, professional, and friendly sales representative representing the premium dealership "${dealerName}".
 Dealership bio: "${dealerBio}".
 Current active showcase stock list: "${inventorySummary}".
-Your task is to engage with high-net-worth GCC buyers with extreme courtesy, technical precision, and persuasive sales mechanics.
+Your task is to engage with car buyers in Pakistan with extreme courtesy, technical precision, and persuasive sales mechanics.
 Incorporate details of our showcase fleet where appropriate. Maintain roleplay parameters flawlessly. Keep responses concise (under 80 words).`;
 
       // Transform chat history for Gemini model calling

@@ -21,7 +21,7 @@ export default function SearchExplorerView({
   setSearchQuery,
   onSelectListing,
 }: SearchExplorerViewProps) {
-  const [maxPrice, setMaxPrice] = useState<number>(1200000);
+  const [maxPrice, setMaxPrice] = useState<number>(150000000);
   const [onlyVerified, setOnlyVerified] = useState<boolean>(false);
 
   const filteredListings = useMemo(() => {
@@ -115,13 +115,13 @@ export default function SearchExplorerView({
           <div className="space-y-2">
             <div className="flex justify-between items-center text-gray-400 font-mono">
               <span className="font-bold uppercase tracking-wider text-[10px]">Maximum Price threshold:</span>
-              <span className="font-mono text-[#F97316] font-bold text-sm">AED {maxPrice.toLocaleString()}</span>
+              <span className="font-mono text-[#F97316] font-bold text-sm">Rs. {maxPrice.toLocaleString()}</span>
             </div>
             <input
               type="range"
-              min="50000"
-              max="1200000"
-              step="25000"
+              min="1000000"
+              max="150000000"
+              step="500000"
               className="w-full accent-[#F97316] h-1.5 bg-[#0F172A] rounded-lg cursor-pointer"
               value={maxPrice}
               onChange={(e) => setMaxPrice(parseInt(e.target.value))}
@@ -226,7 +226,7 @@ export default function SearchExplorerView({
                       <div className="flex flex-col">
                         <span className="text-[8px] font-mono uppercase tracking-widest text-[#38BDF8] font-bold">Starting Price</span>
                         <span className="text-lg font-black text-[#F97316]">
-                          AED {car.price.toLocaleString()}
+                          Rs. {car.price.toLocaleString()}
                         </span>
                       </div>
                       

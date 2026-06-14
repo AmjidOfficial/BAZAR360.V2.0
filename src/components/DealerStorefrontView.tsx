@@ -1,5 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, Phone, MessageSquare, ShieldCheck, Star, Users, Award, CornerDownRight, Send } from 'lucide-react';
+import { 
+  MapPin, 
+  Phone, 
+  MessageSquare, 
+  ShieldCheck, 
+  Star, 
+  Users, 
+  Award, 
+  CornerDownRight, 
+  Send,
+  Globe,
+  Instagram,
+  Facebook,
+  Twitter,
+  Youtube,
+  Video,
+  MessageCircle
+} from 'lucide-react';
 import { Dealer, CarListing, Review, ChatMessage } from '../types';
 
 interface DealerStorefrontViewProps {
@@ -34,7 +51,7 @@ export default function DealerStorefrontView({
     {
       id: 'welcome',
       sender: 'agent',
-      text: `Hello! Welcome to ${dealer.name}. I am your dedicated digital sales assistant. Feel free to ask me anything about our current vehicles, finance packages, or to schedule a GCC delivery!`,
+      text: `Hello! Welcome to ${dealer.name}. I am your dedicated digital sales assistant. Feel free to ask me anything about our current vehicles, finance packages, or to schedule a nationwide delivery inside Pakistan!`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -94,7 +111,7 @@ export default function DealerStorefrontView({
         body: JSON.stringify({
           dealerName: dealer.name,
           dealerBio: dealer.description,
-          inventorySummary: dealerCars.map((c) => `${c.title} (AED ${c.price.toLocaleString()}, ${c.mileage} km, ${c.fuelType})`).join(', '),
+          inventorySummary: dealerCars.map((c) => `${c.title} (Rs. ${c.price.toLocaleString()}, ${c.mileage} km, ${c.fuelType})`).join(', '),
           message: requestedInput,
           history: chatMessages.map((m) => ({ role: m.sender === 'user' ? 'user' : 'model', text: m.text })),
         }),
@@ -163,6 +180,87 @@ export default function DealerStorefrontView({
               </span>
             </div>
             <p className="text-white/60 text-xs font-sans mt-1.5">{dealer.subtitle}</p>
+
+            {/* Showroom Sleek Digital Badges */}
+            <div className="flex flex-wrap gap-1.5 mt-3 justify-center md:justify-start">
+              {dealer.socials?.website && (
+                <a
+                  href={dealer.socials.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-[#38Bdf8] font-mono text-[9px] uppercase font-bold border border-blue-500/10 flex items-center gap-1 transition-all"
+                  title="Official Website"
+                >
+                  <Globe size={11} /> website
+                </a>
+              )}
+              {dealer.socials?.instagram && (
+                <a
+                  href={dealer.socials.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-0.5 rounded bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 font-mono text-[9px] uppercase font-bold border border-pink-500/10 flex items-center gap-1 transition-all"
+                  title="Instagram"
+                >
+                  <Instagram size={11} /> instagram
+                </a>
+              )}
+              {dealer.socials?.facebook && (
+                <a
+                  href={dealer.socials.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-0.5 rounded bg-blue-600/10 hover:bg-blue-600/20 text-blue-450 font-mono text-[9px] uppercase font-bold border border-blue-600/10 flex items-center gap-1 transition-all"
+                  title="Facebook"
+                >
+                  <Facebook size={11} /> facebook
+                </a>
+              )}
+              {dealer.socials?.tiktok && (
+                <a
+                  href={dealer.socials.tiktok}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-0.5 rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-450 font-mono text-[9px] uppercase font-bold border border-purple-500/10 flex items-center gap-1 transition-all"
+                  title="TikTok Feed"
+                >
+                  <Video size={11} /> tiktok
+                </a>
+              )}
+              {dealer.socials?.youtube && (
+                <a
+                  href={dealer.socials.youtube}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 font-mono text-[9px] uppercase font-bold border border-red-500/10 flex items-center gap-1 transition-all"
+                  title="YouTube Channel"
+                >
+                  <Youtube size={11} /> youtube
+                </a>
+              )}
+              {dealer.socials?.twitter && (
+                <a
+                  href={dealer.socials.twitter}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-0.5 rounded bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 font-mono text-[9px] uppercase font-bold border border-sky-500/10 flex items-center gap-1 transition-all"
+                  title="Twitter / X"
+                >
+                  <Twitter size={11} /> twitter / x
+                </a>
+              )}
+              {dealer.whatsapp && (
+                <a
+                  href={`https://wa.me/${dealer.whatsapp.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(dealer.name)}!%20I%20am%20viewing%20your%20vehicles%20on%20CarBazar-360.%20I%20would%20like%20to%20inquire.`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-mono text-[9px] uppercase font-bold border border-emerald-500/15 flex items-center gap-1 transition-all"
+                  title="WhatsApp Connect"
+                >
+                  <MessageCircle size={11} /> whatsapp
+                </a>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-3 max-w-sm mx-auto md:mx-0 text-center md:text-left pt-2.5 border-t border-white/5 font-mono">
@@ -313,7 +411,7 @@ export default function DealerStorefrontView({
                       {car.mileage.toLocaleString()} KM • {car.fuelType} • {car.transmission}
                     </p>
                     <p className="text-[#F97316] font-black text-base pt-1 font-mono">
-                      AED {car.price.toLocaleString()}
+                      Rs. {car.price.toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -420,12 +518,139 @@ export default function DealerStorefrontView({
                 <div className="space-y-3">
                   <h4 className="text-[#38BDF8] font-bold text-[10px] uppercase tracking-widest font-mono">Authorized Services</h4>
                   <div className="flex flex-wrap gap-2">
-                    {['Bespoke Imports', 'Direct Leasing', 'Trade-In Welcome', '111-Point Certifications', 'GCC Home Shipping'].map((tag) => (
+                    {['Bespoke Imports', 'Direct Leasing', 'Trade-In Welcome', '111-Point Certifications', 'Nationwide Shipping'].map((tag) => (
                       <span key={tag} className="bg-[#38BDF8]/10 border border-[#38BDF8]/20 text-[10px] text-[#38BDF8] px-3 py-1.5 rounded-xl font-mono uppercase font-bold tracking-tight">
                         {tag}
                       </span>
                     ))}
                   </div>
+                </div>
+              </div>
+
+              {/* Social Channels Showcase */}
+              <div className="pt-5 border-t border-white/5 space-y-4">
+                <h4 className="text-[#38BDF8] font-bold text-[10px] uppercase tracking-widest font-mono">Digital Presence & Verification</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  
+                  {dealer.socials?.website && (
+                    <a
+                      href={dealer.socials.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-[#0F172A] border border-white/5 hover:border-[#38BDF8]/30 p-3.5 rounded-2xl flex items-center gap-3 transition-all hover:bg-white/5"
+                    >
+                      <div className="bg-blue-500/10 text-blue-400 p-2 rounded-xl">
+                        <Globe size={16} />
+                      </div>
+                      <div className="overflow-hidden">
+                        <span className="text-[9px] uppercase tracking-wider font-bold text-white/50 block">Official Site</span>
+                        <span className="text-xs font-bold text-white truncate block">{dealer.socials.website.replace('https://', '')}</span>
+                      </div>
+                    </a>
+                  )}
+
+                  {dealer.socials?.instagram && (
+                    <a
+                      href={dealer.socials.instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-[#0F172A] border border-white/5 hover:border-pink-500/35 p-3.5 rounded-2xl flex items-center gap-3 transition-all hover:bg-white/5"
+                    >
+                      <div className="bg-pink-500/10 text-pink-400 p-2 rounded-xl">
+                        <Instagram size={16} />
+                      </div>
+                      <div className="overflow-hidden">
+                        <span className="text-[9px] uppercase tracking-wider font-bold text-white/50 block">Instagram</span>
+                        <span className="text-xs font-bold text-white truncate block">@{dealer.name.toLowerCase().replace(/\s+/g, '')}</span>
+                      </div>
+                    </a>
+                  )}
+
+                  {dealer.socials?.facebook && (
+                    <a
+                      href={dealer.socials.facebook}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-[#0F172A] border border-white/5 hover:border-blue-700/30 p-3.5 rounded-2xl flex items-center gap-3 transition-all hover:bg-white/5"
+                    >
+                      <div className="bg-blue-600/10 text-blue-400 p-2 rounded-xl">
+                        <Facebook size={16} />
+                      </div>
+                      <div className="overflow-hidden">
+                        <span className="text-[9px] uppercase tracking-wider font-bold text-white/50 block">Facebook</span>
+                        <span className="text-xs font-bold text-white truncate block">{dealer.name} Official</span>
+                      </div>
+                    </a>
+                  )}
+
+                  {dealer.socials?.tiktok && (
+                    <a
+                      href={dealer.socials.tiktok}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-[#0F172A] border border-white/5 hover:border-purple-500/30 p-3.5 rounded-2xl flex items-center gap-3 transition-all hover:bg-white/5"
+                    >
+                      <div className="bg-purple-500/10 text-purple-400 p-2 rounded-xl">
+                        <Video size={16} />
+                      </div>
+                      <div className="overflow-hidden">
+                        <span className="text-[9px] uppercase tracking-wider font-bold text-white/50 block">TikTok</span>
+                        <span className="text-xs font-bold text-white truncate block">@{dealer.name.toLowerCase().replace(/\s+/g, '')}</span>
+                      </div>
+                    </a>
+                  )}
+
+                  {dealer.socials?.youtube && (
+                    <a
+                      href={dealer.socials.youtube}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-[#0F172A] border border-white/5 hover:border-red-500/35 p-3.5 rounded-2xl flex items-center gap-3 transition-all hover:bg-white/5"
+                    >
+                      <div className="bg-red-500/10 text-red-400 p-2 rounded-xl">
+                        <Youtube size={16} />
+                      </div>
+                      <div className="overflow-hidden">
+                        <span className="text-[9px] uppercase tracking-wider font-bold text-white/50 block">YouTube</span>
+                        <span className="text-xs font-bold text-white truncate block">{dealer.name} TV</span>
+                      </div>
+                    </a>
+                  )}
+
+                  {dealer.socials?.twitter && (
+                    <a
+                      href={dealer.socials.twitter}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-[#0F172A] border border-white/5 hover:border-sky-500/30 p-3.5 rounded-2xl flex items-center gap-3 transition-all hover:bg-white/5"
+                    >
+                      <div className="bg-sky-500/10 text-sky-400 p-2 rounded-xl">
+                        <Twitter size={16} />
+                      </div>
+                      <div className="overflow-hidden">
+                        <span className="text-[9px] uppercase tracking-wider font-bold text-white/50 block">Twitter / X</span>
+                        <span className="text-xs font-bold text-white truncate block">@{dealer.name.toLowerCase().replace(/\s+/g, '')}</span>
+                      </div>
+                    </a>
+                  )}
+
+                  {dealer.whatsapp && (
+                    <a
+                      href={`https://wa.me/${dealer.whatsapp.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(dealer.name)}!%20I%20am%20viewing%20your%20vehicles%20on%20CarBazar-360.%20Please%20send%20details.`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-[#0F172A] border border-white/5 hover:border-emerald-500/30 p-3.5 rounded-2xl flex items-center gap-3 transition-all hover:bg-white/5"
+                    >
+                      <div className="bg-emerald-500/10 text-emerald-400 p-2 rounded-xl">
+                        <MessageCircle size={16} />
+                      </div>
+                      <div className="overflow-hidden">
+                        <span className="text-[9px] uppercase tracking-wider font-bold text-white/50 block">WhatsApp Secure</span>
+                        <span className="text-xs font-bold text-[#10B981] truncate block">{dealer.whatsapp}</span>
+                      </div>
+                    </a>
+                  )}
+
                 </div>
               </div>
             </div>
@@ -445,7 +670,7 @@ export default function DealerStorefrontView({
                 </div>
                 <div>
                   <h4 className="text-[10px] uppercase font-bold text-white tracking-widest leading-relaxed">Scale Network</h4>
-                  <p className="text-[9px] text-white/50 leading-relaxed font-sans">Serving the GCC with multi-office logistics & trade connections.</p>
+                  <p className="text-[9px] text-white/50 leading-relaxed font-sans">Serving Pakistan with multi-city logistics & regional trade connections.</p>
                 </div>
               </div>
 
@@ -518,7 +743,7 @@ export default function DealerStorefrontView({
             <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-4 md:p-6 space-y-1 shadow-inner">
               <span className="text-[9px] uppercase tracking-widest text-[#38BDF8] font-bold block">Hotline</span>
               <span className="text-xl font-bold text-white block">{dealer.phone}</span>
-              <span className="text-[9px] text-white/40 mt-2 block">Available GCC Time: 9AM - 9PM</span>
+              <span className="text-[9px] text-white/40 mt-2 block">Available PKT Time: 9AM - 9PM</span>
             </div>
 
             <div className="flex gap-3 text-[10px] uppercase font-bold tracking-wider">

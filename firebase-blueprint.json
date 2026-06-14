@@ -54,6 +54,7 @@
         "imageUrl": { "type": "string" },
         "verified": { "type": "boolean" },
         "featured": { "type": "boolean" },
+        "approved": { "type": "boolean", "description": "Moderator approval flag" },
         "dealerId": { "type": "string" },
         "assignedSalesRepId": { "type": "string" },
         "region": { "type": "string" },

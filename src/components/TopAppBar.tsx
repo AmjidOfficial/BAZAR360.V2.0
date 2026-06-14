@@ -1,12 +1,19 @@
-import { Bell, PlusCircle, Car } from 'lucide-react';
+import { Bell, PlusCircle, User, ShieldAlert } from 'lucide-react';
+import { UserProfile } from '../lib/dbService';
 
 interface TopAppBarProps {
   currentTab: string;
   setTab: (tab: string) => void;
   onPostAdClick: () => void;
+  currentUser: UserProfile | null;
 }
 
-export default function TopAppBar({ currentTab, setTab, onPostAdClick }: TopAppBarProps) {
+export default function TopAppBar({ 
+  currentTab, 
+  setTab, 
+  onPostAdClick, 
+  currentUser 
+}: TopAppBarProps) {
   return (
     <header className="flex justify-between items-center w-full px-5 md:px-16 h-16 fixed top-0 z-50 bg-[#0B1121] border-b border-white/5 shadow-lg">
       <div className="flex items-center gap-4">
@@ -15,7 +22,7 @@ export default function TopAppBar({ currentTab, setTab, onPostAdClick }: TopAppB
             B
           </div>
           <span className="font-sans font-extrabold text-2xl tracking-tighter text-white select-none hover:opacity-95">
-            BAZAR<span className="text-[#38BDF8]">360</span> <span className="hidden sm:inline text-[9px] font-mono font-medium opacity-50 px-1.5 py-0.5 rounded border border-white/10 ml-2">ARCHITECT v2.4</span>
+            BAZAR<span className="text-[#38BDF8]">360</span> <span className="hidden sm:inline text-[9px] font-mono font-medium opacity-50 px-1.5 py-0.5 rounded border border-white/10 ml-2">ARCHITECT v2.5</span>
           </span>
         </div>
       </div>
@@ -24,7 +31,7 @@ export default function TopAppBar({ currentTab, setTab, onPostAdClick }: TopAppB
       <nav className="hidden md:flex items-center gap-8 font-mono text-xs tracking-wider">
         <button
           onClick={() => setTab('home')}
-          className={`font-bold transition-all duration-150 ${
+          className={`font-bold transition-all duration-150 cursor-pointer ${
             currentTab === 'home'
               ? 'text-[#38BDF8] border-b-2 border-[#38BDF8] pb-1'
               : 'text-gray-400 hover:text-white'
@@ -34,7 +41,7 @@ export default function TopAppBar({ currentTab, setTab, onPostAdClick }: TopAppB
         </button>
         <button
           onClick={() => setTab('search')}
-          className={`font-bold transition-all duration-150 ${
+          className={`font-bold transition-all duration-150 cursor-pointer ${
             currentTab === 'search'
               ? 'text-[#38BDF8] border-b-2 border-[#38BDF8] pb-1'
               : 'text-gray-400 hover:text-white'
@@ -44,7 +51,7 @@ export default function TopAppBar({ currentTab, setTab, onPostAdClick }: TopAppB
         </button>
         <button
           onClick={() => setTab('dealers')}
-          className={`font-bold transition-all duration-150 ${
+          className={`font-bold transition-all duration-150 cursor-pointer ${
             currentTab === 'dealers' || currentTab === 'dealer-storefront'
               ? 'text-[#38BDF8] border-b-2 border-[#38BDF8] pb-1'
               : 'text-gray-400 hover:text-white'
@@ -52,9 +59,36 @@ export default function TopAppBar({ currentTab, setTab, onPostAdClick }: TopAppB
         >
           DEALERS
         </button>
+        <button
+          onClick={() => setTab('portal')}
+          className={`font-bold transition-all duration-150 cursor-pointer flex items-center gap-1.5 ${
+            currentTab === 'portal'
+              ? 'text-[#38BDF8] border-b-2 border-[#38BDF8] pb-1'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          <span>PORTAL</span>
+          <span className="bg-[#38BDF8]/10 text-[#38BDF8] text-[8px] font-mono font-bold tracking-tight px-1.5 py-0.5 rounded uppercase leading-none border border-[#38BDF8]/20 animate-pulse">Forms</span>
+        </button>
       </nav>
 
       <div className="flex items-center gap-4">
+        {/* Active Session Role Pill */}
+        {currentUser && (
+          <div 
+            onClick={() => setTab('portal')}
+            className="hidden lg:flex items-center gap-2 bg-[#121c32]/80 border border-white/10 rounded-full py-1 pl-1.5 pr-3 cursor-pointer text-[10px] select-none hover:border-[#38BDF8]/40 transition-colors"
+          >
+            <div className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center font-extrabold text-[9px] uppercase font-mono">
+              {currentUser.displayName.substring(0, 1).toUpperCase()}
+            </div>
+            <span className="text-gray-300 font-bold max-w-[80px] truncate">{currentUser.displayName.split(' ')[0]}</span>
+            <span className="bg-amber-500/10 text-amber-400 font-bold px-1.5 py-0.5 rounded text-[8px] border border-amber-500/20 uppercase tracking-wider scale-90">
+              {currentUser.role}
+            </span>
+          </div>
+        )}
+
         {/* Simple mock notifications badge */}
         <div className="relative cursor-pointer transition-transform duration-100 hover:scale-105 active:scale-95">
           <Bell className="text-white hover:text-[#38BDF8]" size={20} />
@@ -66,7 +100,7 @@ export default function TopAppBar({ currentTab, setTab, onPostAdClick }: TopAppB
 
         <button
           onClick={onPostAdClick}
-          className="hidden md:flex bg-[#F97316] text-white px-5 py-2.0 rounded-xl text-xs font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-900/20 items-center gap-2 border border-white/5 duration-150 tracking-wider uppercase"
+          className="hidden md:flex bg-[#F97316] text-white px-5 py-2.0 rounded-xl text-xs font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-900/20 items-center gap-2 border border-white/5 duration-150 tracking-wider uppercase cursor-pointer"
         >
           <PlusCircle size={15} />
           AI Selling Engine

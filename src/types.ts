@@ -4,7 +4,7 @@ export interface CarListing {
   make: string;
   model: string;
   year: number;
-  price: number; // in AED
+  price: number; // in PKR
   mileage: number; // in km
   fuelType: 'Petrol' | 'Diesel' | 'Hybrid' | 'Electric';
   transmission: 'Automatic' | 'Manual';
@@ -21,6 +21,9 @@ export interface CarListing {
     horspower: string;
     regionalSpecs: string;
   };
+  approved?: boolean;
+  assignedSalesRepId?: string;
+  region?: string;
 }
 
 export interface Dealer {
@@ -40,6 +43,10 @@ export interface Dealer {
   socials: {
     facebook?: string;
     instagram?: string;
+    tiktok?: string;
+    youtube?: string;
+    twitter?: string;
+    website?: string;
   };
   activityFeed: ActivityPost[];
 }
@@ -74,6 +81,6 @@ export interface GeneratedSEOListing {
   title: string;
   description: string;
   tags: string[];
-  suggestedPriceAED: number;
+  suggestedPricePKR: number;
   highlights: string[];
 }

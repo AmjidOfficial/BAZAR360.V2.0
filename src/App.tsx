@@ -1,7 +1,20 @@
-import React, { useState } from 'react';
-import { X, ShieldCheck, MapPin, Gauge, Fuel, Milestone, Star, Award, DollarSign, Send } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ShieldCheck, MapPin, Gauge, Fuel, Milestone, Star, Award, DollarSign, Send, Hourglass } from 'lucide-react';
 import { CarListing, Dealer, Review } from './types';
 import { INITIAL_DEALERS, INITIAL_LISTINGS, INITIAL_REVIEWS } from './data';
+
+import { 
+  dbFetchDealers, 
+  dbFetchListings, 
+  dbSaveListing, 
+  dbRegisterDealership, 
+  dbApproveListing, 
+  dbAddReview, 
+  dbFetchReviews,
+  dbSaveUserProfile,
+  UserProfile,
+  seedDatabaseIfEmpty
+} from './lib/dbService';
 
 import TopAppBar from './components/TopAppBar';
 import BottomNavBar from './components/BottomNavBar';
@@ -9,16 +22,41 @@ import HomeView from './components/HomeView';
 import DealerStorefrontView from './components/DealerStorefrontView';
 import SellWithAIView from './components/SellWithAIView';
 import SearchExplorerView from './components/SearchExplorerView';
+import RegistrationPortal from './components/RegistrationPortal';
+import AdminModerationDeck from './components/AdminModerationDeck';
 
 export default function App() {
   const [currentTab, setTab] = useState<string>('home');
   const [selectedDealerId, setSelectedDealerId] = useState<string>('almas-car-valley');
   const [selectedListing, setSelectedListing] = useState<CarListing | null>(null);
 
-  // Dynamic Marketplace States
-  const [listings, setListings] = useState<CarListing[]>(INITIAL_LISTINGS);
-  const [dealers, setDealers] = useState<Dealer[]>(INITIAL_DEALERS);
-  const [reviewsMap, setReviewsMap] = useState<Record<string, Review[]>>(INITIAL_REVIEWS);
+  // Dynamic States
+  const [listings, setListings] = useState<CarListing[]>([]);
+  const [dealers, setDealers] = useState<Dealer[]>([]);
+  const [reviewsMap, setReviewsMap] = useState<Record<string, Review[]>>({});
+  const [dbLoading, setDbLoading] = useState<boolean>(true);
+
+  // Active Session User Profile
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
+    const saved = localStorage.getItem('bazar360_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // Fallback
+      }
+    }
+    // Default logged in user - Private Seller, so they can post ads like FB Marketplace right away!
+    return {
+      uid: 'usr-default-777',
+      email: 'amjid.bisconni@gmail.com',
+      displayName: 'Amjid B. (Direct Seller)',
+      role: 'PrivateSeller',
+      region: 'Lahore',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+  });
 
   // Filter trackers
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -28,34 +66,122 @@ export default function App() {
   const [offerInput, setOfferInput] = useState('');
   const [offerSuccessMessage, setOfferSuccessMessage] = useState('');
 
+  // Sync session profile to standard storage
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('bazar360_user', JSON.stringify(currentUser));
+      // Save profile to database
+      dbSaveUserProfile(currentUser).catch(err => console.warn('Bypass profile save:', err));
+    }
+  }, [currentUser]);
+
+  // Initial Sync and Seed workflow
+  useEffect(() => {
+    async function initDatabase() {
+      setDbLoading(true);
+      try {
+        await seedDatabaseIfEmpty();
+        
+        const fetchedDealers = await dbFetchDealers();
+        const fetchedListings = await dbFetchListings();
+        
+        setDealers(fetchedDealers);
+        setListings(fetchedListings);
+        
+        // Load reviews in record
+        const revsRecord: Record<string, Review[]> = {};
+        for (const dl of fetchedDealers) {
+          revsRecord[dl.id] = await dbFetchReviews(dl.id);
+        }
+        setReviewsMap(revsRecord);
+      } catch (err) {
+        console.warn('Sandbox local sync bypass:', err);
+        setDealers(INITIAL_DEALERS);
+        setListings(INITIAL_LISTINGS);
+        setReviewsMap(INITIAL_REVIEWS);
+      } finally {
+        setDbLoading(false);
+      }
+    }
+    initDatabase();
+  }, []);
+
   const onSelectDealer = (id: string) => {
     setSelectedDealerId(id);
     setTab('dealer-storefront');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleAddListing = (newListing: CarListing) => {
-    // Append the newly created AI listing to the listings stream state
-    setListings((prev) => [newListing, ...prev]);
+  const handleAddListing = async (newListing: CarListing) => {
+    // 1. Determine permission default values
+    const isApprovedByDefault = currentUser?.role === 'Admin' || currentUser?.role === 'Manager' || currentUser?.role === 'PrivateSeller';
+    
+    const finalListing: CarListing = {
+      ...newListing,
+      approved: isApprovedByDefault,
+      assignedSalesRepId: currentUser?.uid || 'guest-seller',
+      // If of Manager role, assign to their showroom
+      dealerId: currentUser?.role === 'Manager' && currentUser?.salesPodId ? currentUser.salesPodId : 'private',
+      createdAt: new Date().toISOString()
+    };
 
-    // Update individual dealer count metrics (e.g. Almas Car Valley)
-    setDealers((prevDealers) =>
-      prevDealers.map((d) =>
-        d.id === newListing.dealerId
-          ? { ...d, vehiclesCount: d.vehiclesCount + 1 }
-          : d
-      )
+    // 2. Commit to database
+    try {
+      await dbSaveListing(finalListing);
+    } catch (err) {
+      console.warn(err);
+    }
+
+    // 3. Update React views instantly
+    setListings((prev) => [finalListing, ...prev]);
+
+    if (finalListing.dealerId !== 'private') {
+      setDealers((prevDealers) =>
+        prevDealers.map((d) =>
+          d.id === finalListing.dealerId
+            ? { ...d, vehiclesCount: d.vehiclesCount + 1 }
+            : d
+        )
+      );
+    }
+  };
+
+  const handleApproveListing = async (listingId: string) => {
+    try {
+      await dbApproveListing(listingId, true);
+    } catch (err) {
+      console.warn(err);
+    }
+    setListings((prev) =>
+      prev.map((l) => (l.id === listingId ? { ...l, approved: true } : l))
     );
   };
 
-  const handleAddReview = (comment: string, rating: number) => {
+  const handleRejectListing = async (listingId: string) => {
+    try {
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      const { db } = await import('./firebase');
+      await deleteDoc(doc(db, 'listings', listingId));
+    } catch (err) {
+      console.warn(err);
+    }
+    setListings((prev) => prev.filter((l) => l.id !== listingId));
+  };
+
+  const handleAddReview = async (comment: string, rating: number) => {
     const newRev: Review = {
       id: `rev-${Date.now()}`,
-      author: 'Aamir G. (Verified Buyer)',
+      author: currentUser?.displayName || 'Aamir G. (Verified Buyer)',
       rating,
-      date: 'Today',
+      date: new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }),
       comment,
     };
+
+    try {
+      await dbAddReview(selectedDealerId, newRev);
+    } catch (err) {
+      console.warn(err);
+    }
 
     setReviewsMap((prev) => ({
       ...prev,
@@ -87,7 +213,7 @@ export default function App() {
     const listingDealer = dealers.find((d) => d.id === selectedListing?.dealerId);
 
     setOfferSuccessMessage(
-      `✓ Dynamic Offer of AED ${bidAmount.toLocaleString()} submitted successfully! ${
+      `✓ Dynamic Offer of Rs. ${bidAmount.toLocaleString()} submitted successfully! ${
         listingDealer?.name || 'Seller'
       } is processing your proposal.`
     );
@@ -97,6 +223,15 @@ export default function App() {
     }, 5000);
   };
 
+  // RBAC query view filtering based on permissions
+  const visibleListings = listings.filter((l) => {
+    if (l.approved !== false) return true; // Show all approved listings
+    // Non-approved listings only visible to Admins, Showroom Managers, or the listing author
+    const isModerator = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
+    const isOwner = currentUser && l.assignedSalesRepId === currentUser.uid;
+    return isModerator || isOwner;
+  });
+
   return (
     <div className="bg-[#0b121f] text-white min-h-screen text-sm font-sans flex flex-col pb-24 md:pb-8">
       
@@ -105,106 +240,149 @@ export default function App() {
         currentTab={currentTab}
         setTab={setTab}
         onPostAdClick={() => setTab('sell')}
+        currentUser={currentUser}
       />
 
       {/* Main Container Core Shell */}
       <main className="flex-grow max-w-[1440px] mx-auto w-full pt-20 px-5 md:px-16">
         
-        {currentTab === 'home' && (
-          <HomeView
-            dealers={dealers}
-            listings={listings}
-            setTab={setTab}
-            setSelectedCategory={setSelectedCategory}
-            setSearchQuery={setSearchQuery}
-            onSelectDealer={onSelectDealer}
-            onSelectListing={setSelectedListing}
-          />
-        )}
-
-        {currentTab === 'search' && (
-          <SearchExplorerView
-            listings={listings}
-            dealers={dealers}
-            selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            onSelectListing={setSelectedListing}
-          />
-        )}
-
-        {currentTab === 'dealers' && (
-          <div className="space-y-6">
-            <div className="border-b border-[#1e293b] pb-3">
-              <h2 className="font-sans font-bold text-xl md:text-2xl text-white">Verified Automotive Dealerships</h2>
-              <p className="text-xs text-gray-400 mt-1">Select an elite showroom partner to inspect dedicated inventories and talk with experts</p>
+        {dbLoading ? (
+          <div className="flex flex-col items-center justify-center p-12 min-h-[50vh] space-y-4">
+            <div className="relative">
+              <Hourglass className="animate-spin text-[#38BDF8]" size={36} />
+              <div className="absolute inset-0 border-2 border-dashed border-[#38BDF8] rounded-full animate-ping scale-150 opacity-15"></div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {dealers.map((dealer) => (
-                <div
-                  key={dealer.id}
-                  onClick={() => onSelectDealer(dealer.id)}
-                  className="bg-[#121a2a] border border-[#1e293b] rounded-2xl overflow-hidden group hover:-translate-y-1 cursor-pointer relative shadow-xl duration-200 hover:border-[#00a3ff]"
-                >
-                  <div className="h-32 bg-[#051020] relative flex items-center justify-center overflow-hidden">
-                    <img
-                      alt={dealer.name}
-                      className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-opacity duration-300"
-                      src={dealer.coverImage}
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center z-10 shadow-lg border-2 border-[#121a2a]">
-                      <span className="font-sans font-bold text-xl text-black">
-                        {dealer.avatarLetter}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-5 space-y-4">
-                    <div>
-                      <h3 className="font-sans font-extrabold text-[#00a3ff] text-base group-hover:text-blue-400 transition-colors uppercase tracking-tight">
-                        {dealer.name}
-                      </h3>
-                      <p className="text-gray-400 text-xs mt-1 flex items-center gap-1 font-sans">
-                        <MapPin size={12} className="text-[#00a3ff]" /> {dealer.location}
-                      </p>
-                    </div>
-
-                    <p className="text-[#a3b3cc] text-xs leading-relaxed line-clamp-2 pr-2 font-sans">
-                      {dealer.description}
-                    </p>
-
-                    <div className="flex justify-between items-center border-t border-[#1e293b]/50 pt-3 text-[10px]/relaxed">
-                      <div className="flex items-center gap-1 font-sans text-gray-500 uppercase tracking-widest font-bold">
-                        <Star size={12} className="fill-[#ff6b00] text-[#ff6b00]" /> {dealer.rating} User Score
-                      </div>
-                      <span className="font-sans text-gray-500 uppercase tracking-widest font-bold">
-                        {listings.filter((l) => l.dealerId === dealer.id).length} Active Listings
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <p className="text-xs text-[#38BDF8] font-mono tracking-widest uppercase font-bold">Synchronizing Cloud Core</p>
+            <p className="text-[10px] text-white/40 font-sans">Connecting to persistent firestore instance & seeding databases...</p>
           </div>
-        )}
+        ) : (
+          <>
+            {/* Show Moderation Dashboard to Admins or Managers on home page */}
+            {currentTab === 'home' && (currentUser?.role === 'Admin' || currentUser?.role === 'Manager') && (
+              <div className="mb-8">
+                <AdminModerationDeck
+                  listings={listings}
+                  dealers={dealers}
+                  onApproveListing={handleApproveListing}
+                  onRejectListing={handleRejectListing}
+                />
+              </div>
+            )}
 
-        {currentTab === 'dealer-storefront' && (
-          <DealerStorefrontView
-            dealer={currentDealer}
-            listings={listings}
-            reviews={reviewsMap[selectedDealerId] || []}
-            onAddReview={handleAddReview}
-            onSelectListing={setSelectedListing}
-          />
-        )}
+            {currentTab === 'home' && (
+              <HomeView
+                dealers={dealers}
+                listings={visibleListings}
+                setTab={setTab}
+                setSelectedCategory={setSelectedCategory}
+                setSearchQuery={setSearchQuery}
+                onSelectDealer={onSelectDealer}
+                onSelectListing={setSelectedListing}
+              />
+            )}
 
-        {currentTab === 'sell' && (
-          <SellWithAIView
-            onAddListing={handleAddListing}
-            setTab={setTab}
-          />
+            {currentTab === 'search' && (
+              <SearchExplorerView
+                listings={visibleListings}
+                dealers={dealers}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                onSelectListing={setSelectedListing}
+              />
+            )}
+
+            {currentTab === 'dealers' && (
+              <div className="space-y-6">
+                <div className="border-b border-[#1e293b] pb-3">
+                  <h2 className="font-sans font-bold text-xl md:text-2xl text-white">Verified Automotive Dealerships</h2>
+                  <p className="text-xs text-gray-400 mt-1">Select an elite showroom partner to inspect dedicated inventories and talk with experts</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {dealers.map((dealer) => (
+                    <div
+                      key={dealer.id}
+                      onClick={() => onSelectDealer(dealer.id)}
+                      className="bg-[#121a2a] border border-[#1e293b] rounded-2xl overflow-hidden group hover:-translate-y-1 cursor-pointer relative shadow-xl duration-200 hover:border-[#00a3ff]"
+                    >
+                      <div className="h-32 bg-[#051020] relative flex items-center justify-center overflow-hidden">
+                        <img
+                          alt={dealer.name}
+                          className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-opacity duration-300"
+                          src={dealer.coverImage}
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center z-10 shadow-lg border-2 border-[#121a2a]">
+                          <span className="font-sans font-bold text-xl text-black">
+                            {dealer.avatarLetter}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-5 space-y-4">
+                        <div>
+                          <h3 className="font-sans font-extrabold text-[#00a3ff] text-base group-hover:text-blue-400 transition-colors uppercase tracking-tight">
+                            {dealer.name}
+                          </h3>
+                          <p className="text-gray-400 text-xs mt-1 flex items-center gap-1 font-sans">
+                            <MapPin size={12} className="text-[#00a3ff]" /> {dealer.location}
+                          </p>
+                        </div>
+
+                        <p className="text-[#a3b3cc] text-xs leading-relaxed line-clamp-2 pr-2 font-sans">
+                          {dealer.description}
+                        </p>
+
+                        <div className="flex justify-between items-center border-t border-[#1e293b]/50 pt-3 text-[10px]/relaxed">
+                          <div className="flex items-center gap-1 font-sans text-gray-500 uppercase tracking-widest font-bold">
+                            <Star size={12} className="fill-[#ff6b00] text-[#ff6b00]" /> {dealer.rating} User Score
+                          </div>
+                          <span className="font-sans text-gray-500 uppercase tracking-widest font-bold">
+                            {listings.filter((l) => l.dealerId === dealer.id).length} Active Listings
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {currentTab === 'dealer-storefront' && (
+              <DealerStorefrontView
+                dealer={currentDealer}
+                listings={visibleListings}
+                reviews={reviewsMap[selectedDealerId] || []}
+                onAddReview={handleAddReview}
+                onSelectListing={setSelectedListing}
+              />
+            )}
+
+            {currentTab === 'sell' && (
+              <SellWithAIView
+                onAddListing={handleAddListing}
+                setTab={setTab}
+              />
+            )}
+
+            {currentTab === 'portal' && (
+              <div className="max-w-4xl mx-auto space-y-8 pb-16">
+                <div className="border-b border-[#1e293b] pb-3">
+                  <h2 className="font-sans font-bold text-xl md:text-2xl text-[#38bdf8] uppercase tracking-tight">CarBazar-360 Portal & Forms</h2>
+                  <p className="text-xs text-gray-400 mt-1">Register user accounts, submit dealership catalogs, or toggle RBAC privilege contexts for end-to-end testing.</p>
+                </div>
+                <RegistrationPortal
+                  currentUser={currentUser}
+                  setCurrentUser={setCurrentUser}
+                  onDealerRegistered={(newD) => {
+                    setDealers((prev) => [...prev, newD]);
+                    setReviewsMap((prev) => ({ ...prev, [newD.id]: [] }));
+                  }}
+                />
+              </div>
+            )}
+          </>
         )}
 
       </main>
@@ -257,13 +435,13 @@ export default function App() {
                       {selectedListing.title}
                     </h2>
                     <p className="text-[#00a3ff] text-xs font-bold font-sans mt-1.5 flex items-center gap-1">
-                      <MapPin size={12} /> GCC Deliverable from {dealers.find((d) => d.id === selectedListing.dealerId)?.name || 'Merchant'}
+                      <MapPin size={12} /> Nationwide Delivery in Pakistan from {dealers.find((d) => d.id === selectedListing.dealerId)?.name || 'Merchant'}
                     </p>
                   </div>
                   <div className="bg-[#001729] border border-[#003964] px-4 py-3 rounded-xl flex flex-col items-center justify-center text-center">
                     <span className="text-[9px] uppercase tracking-wider text-gray-500 font-bold block">Certified Valuation</span>
                     <span className="text-xl font-extrabold text-[#ff6b00]">
-                      AED {selectedListing.price.toLocaleString()}
+                      Rs. {selectedListing.price.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -333,7 +511,7 @@ export default function App() {
                         <DollarSign size={14} className="text-[#00a3ff] mr-1 shrink-0" />
                         <input
                           type="number"
-                          placeholder="Place custom offer in AED..."
+                          placeholder="Place custom offer in PKR / Rs..."
                           className="bg-transparent border-none text-white focus:outline-none focus:ring-0 text-xs w-full"
                           value={offerInput}
                           onChange={(e) => setOfferInput(e.target.value)}
@@ -370,7 +548,7 @@ export default function App() {
               </button>
               
               <a
-                href={`mailto:amjid.bisconni@gmail.com?subject=Inquiry on ${selectedListing.title}&body=Hello, I am interested in checking GCC parameters on the ${selectedListing.title} listed under id ${selectedListing.id}.`}
+                href={`mailto:amjid.bisconni@gmail.com?subject=Inquiry on ${selectedListing.title}&body=Hello, I am interested in checking vehicle specifications on the ${selectedListing.title} listed under id ${selectedListing.id}.`}
                 className="flex-1 bg-[#ff6b00] hover:bg-orange-600 border border-orange-500 text-white font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-1.5 text-center active:scale-97 change-all duration-75 shadow"
               >
                 <span className="material-symbols-outlined shrink-0 text-base">mail</span> Submit Instant Query Card

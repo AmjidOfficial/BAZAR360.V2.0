@@ -8,16 +8,20 @@ export const INITIAL_DEALERS: Dealer[] = [
     coverImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB7L3tc6G8oV2yG6bD2-4rkocsDR68Fv03AYKixBC3Jo7z3F2dxC7l1k4a5qF2lg9sOFyDrPsAyPlvZ6lr6DN1PB651SzZXlvwyRfHsTV44M01h5rtpJZP3vkPARPkwkcD8rbWhw9phqyv92EMw-dvIsScW2rCrgiunc8yMndccSDmD5SZni8J5SJF098meLiFId3ebyei-RpMdRt4bsa4Ot5PZonvepRTSshKKpywxQZF24fSlk6DLYXf6M5s4qDFp0VhtnsirnJI',
     avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBxjdmxshS1JqZkmKOnuIQnDYZHFmCE3hju62g3Xuijw0NH6ziKx3ehh71XWbAz9bRJ7tdwnwTi767TJTthdIH7vm1OVA6cLrk7A8bhVlo_lG_KOt0KxAaWqpsBXd6UJFuV8iFNzupeIIRlq5DOOX2nNaCJ35dCQJVPGFnUTr8VUoU4JT41jK1Y2PJAlGRFv5MbNEJz8JruesXMGFKjbHUozAuWoSGCdkr_ZaMLfjAvHgcF8SMPMiRrAV98zbPzw9xsMy-SmUEI7xo',
     subtitle: 'Premium Pre-owned & Luxury Vehicles',
-    location: 'Dubai, UAE',
+    location: 'Gulberg, Lahore',
     rating: 4.8,
     vehiclesCount: 142,
     followersCount: '12.5k',
-    description: 'We offer an elite, handpicked inventory of high-end sports cars, prestige SUVs, and zero-emission electric vehicles. Providing professional inspection and white-glove delivery across the entire GCC region.',
-    phone: '+971 4 333 3600',
-    whatsapp: '+971 50 123 4567',
+    description: 'We offer an elite, handpicked inventory of high-end sports cars, prestige SUVs, and zero-emission electric vehicles. Providing professional inspection and white-glove delivery across all major cities of Pakistan.',
+    phone: '+92 42 333 3600',
+    whatsapp: '+92 300 123 4567',
     socials: {
       facebook: 'https://facebook.com/almascarvalley',
       instagram: 'https://instagram.com/almascarvalley',
+      tiktok: 'https://tiktok.com/@almascarvalley',
+      youtube: 'https://youtube.com/@almascarvalley',
+      twitter: 'https://x.com/almascarvalley',
+      website: 'https://almascarvalley.com.pk'
     },
     activityFeed: [
       {
@@ -27,7 +31,7 @@ export const INITIAL_DEALERS: Dealer[] = [
         imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBHs7Za22_aYMs1VGHEYckNGnFgDZzkirSxzLiCJBbCB2xad7rRbbQo7M1xi7RyGNq8fvUUeGKfFFf93rh8AmKvNpWDRSLWCByW_bP0wK9XhH89wGXq5pXT2Px4I9jvkv5MBaJz82g9lonJQn3tomdmnq1xkOb7_VYzNv57n_oDsol7EzCfdb7PAysiZ_xKKaKLUSX2asp4D15fPMkZ87Rak4ev3Dn7scIHsYk-rDEk0lhfaS18RDIBh_FH8gp3SYVfy_24Oiv87Uw',
         title: '2023 Porsche 911 Carrera S',
         description: 'Pristine condition, low mileage. Experience the thrill of German engineering. Ready for a test drive today.',
-        price: 'AED 457,000',
+        price: 'Rs. 45,700,000',
         carId: 'car-porsche-911-carrera',
       },
       {
@@ -35,9 +39,9 @@ export const INITIAL_DEALERS: Dealer[] = [
         timestamp: '1 day ago',
         badge: 'Price Restructure',
         imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDJqJ3MkFiS7DRa6OqXFSkJcsI3cZ9685e7vJevGiglSWNC2IfxmZhySZymL0jE7nrtUXMK6mf7aHDMHqlrZWKmkCE0srhAhIAspnSs8zwfdjDTe-dg6nn_Aga0qdRS4HRXFWY3F_q8ZawA6LnWHg_skTG6XUMyQyjW-p2_o3ang_YT0dQhOTTRaDaYBO7_Qu4gbU9bE6JvdTXnmdtv7C205mCo97G1dOgK0FxT0Ydptt8zcbWU1l6sXYT9tEUyNWIkdrgiPIn9esI',
-        title: '2021 Audi RS Q8 GCC',
+        title: '2021 Audi RS Q8 PK',
         description: 'Immaculate RS Q8 SUV back with restructured premium parameters. Full dealership service logs available.',
-        price: 'AED 389,000',
+        price: 'Rs. 38,900,000',
         carId: 'car-audi-rsq8',
       }
     ]
@@ -49,15 +53,18 @@ export const INITIAL_DEALERS: Dealer[] = [
     coverImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB7L3tc6G8oV2yG6bD2-4rkocsDR68Fv03AYKixBC3Jo7z3F2dxC7l1k4a5qF2lg9sOFyDrPsAyPlvZ6lr6DN1PB651SzZXlvwyRfHsTV44M01h5rtpJZP3vkPARPkwkcD8rbWhw9phqyv92EMw-dvIsScW2rCrgiunc8yMndccSDmD5SZni8J5SJF098meLiFId3ebyei-RpMdRt4bsa4Ot5PZonvepRTSshKKpywxQZF24fSlk6DLYXf6M5s4qDFp0VhtnsirnJI',
     avatarUrl: '',
     subtitle: 'Luxury and Ultra-Performance Dealer',
-    location: 'Abu Dhabi, UAE',
+    location: 'DHA Phase 6, Karachi',
     rating: 4.9,
     vehiclesCount: 18,
     followersCount: '4.2k',
-    description: 'Providing elite, certified pre-owned supercars and bespoke executive luxury cruisers. Authorised dealer for leading hyper-performance customized vehicles in Abu Dhabi.',
-    phone: '+971 2 555 1212',
-    whatsapp: '+971 52 987 6543',
+    description: 'Providing elite, certified pre-owned supercars and bespoke executive luxury cruisers. Authorised dealer for leading hyper-performance customized vehicles in Karachi.',
+    phone: '+92 21 555 1212',
+    whatsapp: '+92 321 987 6543',
     socials: {
+      facebook: 'https://facebook.com/eliteprestigemotors',
       instagram: 'https://instagram.com/eliteprestigemotors',
+      tiktok: 'https://tiktok.com/@eliteprestigemotors',
+      website: 'https://eliteprestigemotors.com.pk'
     },
     activityFeed: [
       {
@@ -66,8 +73,8 @@ export const INITIAL_DEALERS: Dealer[] = [
         badge: 'Newly Featured',
         imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBZtBmgc7whl0zLeKAWRQtQFFaqpX0BeFFFhv-7s4eS0XJv8a1i88YYMhBhIwgqiGj0A7rd6ANHhOigA9qyoVbvYOAnweQXtNq7ErLbCyQjxwaBqRacvP9ywt_OdSJTgjIghQ1HJJryxlmkvysweO35ZG8mIQ-GXkXc9eRcG8W6mfooetlurMVEfJwBT5kA3gsemMgkdQQ1x8uV6kvo-7Fd2TWs0eo0DbfHCrGCCkwIOepT-cmfMIReSrrjlnJsv7mXR0lNxmLRanQ',
         title: '2023 Porsche 911 GT3 RS',
-        description: 'The ultimate track-focussed road weapon, now on our main launchpad in Abu Dhabi. 100% factory specifications.',
-        price: 'AED 850,000',
+        description: 'The ultimate track-focussed road weapon, now on our main launchpad in Karachi. 100% factory specifications.',
+        price: 'Rs. 85,000,000',
         carId: 'car-porsche-911-gt3',
       }
     ]
@@ -78,15 +85,17 @@ export const INITIAL_DEALERS: Dealer[] = [
     avatarLetter: 'AL',
     coverImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB7L3tc6G8oV2yG6bD2-4rkocsDR68Fv03AYKixBC3Jo7z3F2dxC7l1k4a5qF2lg9sOFyDrPsAyPlvZ6lr6DN1PB651SzZXlvwyRfHsTV44M01h5rtpJZP3vkPARPkwkcD8rbWhw9phqyv92EMw-dvIsScW2rCrgiunc8yMndccSDmD5SZni8J5SJF098meLiFId3ebyei-RpMdRt4bsa4Ot5PZonvepRTSshKKpywxQZF24fSlk6DLYXf6M5s4qDFp0VhtnsirnJI',
     subtitle: 'Bespoke Executive Automotive Boutique',
-    location: 'Marina Mall, Dubai',
+    location: 'F-7, Islamabad',
     rating: 4.7,
     vehiclesCount: 35,
     followersCount: '8.9k',
     description: 'Specialists in high-performance electric vehicles and limited edition luxury SUVs. Delivering next-generation mobility with customized specifications.',
-    phone: '+971 4 444 8888',
-    whatsapp: '+971 56 777 9999',
+    phone: '+92 51 444 8888',
+    whatsapp: '+92 333 777 9999',
     socials: {
       instagram: 'https://instagram.com/apexwheels',
+      youtube: 'https://youtube.com/@apexwheels',
+      website: 'https://apexluxurywheels.com.pk'
     },
     activityFeed: [
       {
@@ -96,7 +105,7 @@ export const INITIAL_DEALERS: Dealer[] = [
         imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBkRyZgqdwVho1YG4awPp4toJiKUSqH05IGmlCDeY-esoL_rsDYbAkp7FPKlnXbFzCmNSSrCuHqwrXO_non2l8_jM8QfzbMxg4aYyOMfOsMhs3rpT2R8j1Gx1Mf3knoB5B5hIqUiVq3mIkhn8Bc_376AboW7iBngDAdVbQRCj0uupxH2V2RrluMiTA106UgPdQQb-5gB_A5arpTkTHIfrGwAj737v9D8LD8iIwl-xWDtVKgoKbuQ9XpeQ3NVP4I-N1tqLxV1YsPjWs',
         title: '2024 BMW M4 Comp EV Edition',
         description: 'Elite white styling equipped with professional racing suspension. High tech handling, high sustainability.',
-        price: 'AED 301,000',
+        price: 'Rs. 30,100,000',
         carId: 'car-bmw-m4-comp',
       }
     ]
@@ -110,7 +119,7 @@ export const INITIAL_LISTINGS: CarListing[] = [
     make: 'Porsche',
     model: '911 GT3',
     year: 2023,
-    price: 850000,
+    price: 85000000,
     mileage: 15000,
     fuelType: 'Petrol',
     transmission: 'Automatic',
@@ -125,7 +134,7 @@ export const INITIAL_LISTINGS: CarListing[] = [
       color: 'Dark Metallic Gray',
       engineSize: '4.0L H6',
       horspower: '502 hp',
-      regionalSpecs: 'GCC Specification'
+      regionalSpecs: 'Imported Spec (Pak Registered)'
     }
   },
   {
@@ -134,7 +143,7 @@ export const INITIAL_LISTINGS: CarListing[] = [
     make: 'Mercedes-Benz',
     model: 'G63 AMG',
     year: 2024,
-    price: 1150000,
+    price: 115000000,
     mileage: 500,
     fuelType: 'Petrol',
     transmission: 'Automatic',
@@ -149,7 +158,7 @@ export const INITIAL_LISTINGS: CarListing[] = [
       color: 'Matte Obsidian Black',
       engineSize: '4.0L V8 BiTurbo',
       horspower: '577 hp',
-      regionalSpecs: 'GCC Specification'
+      regionalSpecs: 'Imported Spec (Pak Registered)'
     }
   },
   {
@@ -158,7 +167,7 @@ export const INITIAL_LISTINGS: CarListing[] = [
     make: 'BMW',
     model: 'M4 Competition',
     year: 2022,
-    price: 301000,
+    price: 30100000,
     mileage: 12000,
     fuelType: 'Petrol',
     transmission: 'Automatic',
@@ -173,7 +182,7 @@ export const INITIAL_LISTINGS: CarListing[] = [
       color: 'Alpine White',
       engineSize: '3.0L S58 Twin-Turbo I6',
       horspower: '503 hp',
-      regionalSpecs: 'GCC Specification'
+      regionalSpecs: 'Imported Spec'
     }
   },
   {
@@ -182,7 +191,7 @@ export const INITIAL_LISTINGS: CarListing[] = [
     make: 'Audi',
     model: 'RS Q8',
     year: 2021,
-    price: 389000,
+    price: 38900000,
     mileage: 24000,
     fuelType: 'Petrol',
     transmission: 'Automatic',
@@ -197,7 +206,7 @@ export const INITIAL_LISTINGS: CarListing[] = [
       color: 'Nardo Gray',
       engineSize: '4.0L twin-turbocharged V8',
       horspower: '591 hp',
-      regionalSpecs: 'GCC Specification'
+      regionalSpecs: 'Imported Spec'
     }
   },
   {
@@ -206,7 +215,7 @@ export const INITIAL_LISTINGS: CarListing[] = [
     make: 'Porsche',
     model: '911 Carrera S',
     year: 2023,
-    price: 457000,
+    price: 45700000,
     mileage: 8200,
     fuelType: 'Petrol',
     transmission: 'Automatic',
@@ -221,7 +230,7 @@ export const INITIAL_LISTINGS: CarListing[] = [
       color: 'Chalk White',
       engineSize: '3.0L Twin-Turbo Flat-6',
       horspower: '443 hp',
-      regionalSpecs: 'GCC Specification'
+      regionalSpecs: 'Imported Spec'
     }
   }
 ];
@@ -233,14 +242,14 @@ export const INITIAL_REVIEWS: Record<string, Review[]> = {
       author: 'Amjid B.',
       rating: 5,
       date: 'June 10, 2026',
-      comment: 'Absolutely superb service from Almas Car Valley. From initial inquiry to personalized shipping inside Dubai, everything was handled professionally. Highly recommended dealership!'
+      comment: 'Absolutely superb service from Almas Car Valley. From initial inquiry to personalized delivery in Lahore, everything was handled professionally. Highly recommended dealership!'
     },
     {
       id: 'rev-2',
       author: 'Fatima K.',
       rating: 4,
       date: 'May 24, 2026',
-      comment: 'Very reliable pre-owned collection. Got my Carrera inspecitoned through Bazar360 inspection service too and it was super easy!'
+      comment: 'Very reliable pre-owned collection. Got my Carrera inspected through Bazar360 inspection service too and it was super easy!'
     }
   ],
   'elite-prestige-motors': [
@@ -249,7 +258,7 @@ export const INITIAL_REVIEWS: Record<string, Review[]> = {
       author: 'Zayed A.',
       rating: 5,
       date: 'June 13, 2026',
-      comment: 'Top tier sports car selection. The Porsche 911 GT3 is an absolute rocket. Seamless finance transition.'
+      comment: 'Top tier sports car selection. The Porsche 911 GT3 is an absolute rocket. Seamless transition.'
     }
   ],
   'apex-luxury-wheels': []

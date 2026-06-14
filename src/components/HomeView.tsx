@@ -210,7 +210,7 @@ export default function HomeView({
                   <div className="flex flex-col">
                     <span className="text-[8px] font-mono uppercase tracking-widest text-[#38BDF8] font-bold">Starting Price</span>
                     <span className="text-lg font-black text-[#F97316]">
-                      AED {car.price.toLocaleString()}
+                      Rs. {car.price.toLocaleString()}
                     </span>
                   </div>
                   <div className="bg-[#0F172A] border border-white/10 text-[#38BDF8] p-2.5 rounded-xl group-hover:bg-[#38BDF8] group-hover:text-white hover:border-transparent transition-all duration-200">

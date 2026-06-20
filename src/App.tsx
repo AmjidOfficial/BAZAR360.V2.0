@@ -1035,6 +1035,43 @@ export default function App() {
   return (
     <div className="bg-[#0b121f] text-white min-h-screen text-sm font-sans flex flex-col pb-24 md:pb-8">
       
+      {/* 🚀 FAST LIVE ENGINE TICKER MARQUEE */}
+      {currentCategory === 'auto' && (
+        <div className="fixed top-0 left-0 w-full h-8 bg-[#040812] border-b border-orange-500/10 z-50 flex items-center overflow-hidden select-none">
+          <div className="absolute left-0 top-0 h-full bg-[#121c32] px-3.5 flex items-center gap-1.5 border-r border-[#38BDF8]/20 z-15 shadow-[10px_0_15px_rgba(0,0,0,0.8)]">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+            </span>
+            <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest font-mono">LIVE PRICES</span>
+          </div>
+          <div className="w-full pl-28 overflow-hidden relative">
+            <div className="animate-fast-ticker flex items-center whitespace-nowrap gap-12 font-mono text-[9px] text-[#38BDF8]/90 font-bold tracking-tight uppercase">
+              <span>🔥 SUZUKI ALTO VXR: Rs. 2,330,000 (LAC 23.3)</span>
+              <span>⚡ BYD SEAL PREMIUM EV: Rs. 14,500,000 (LAC 145)</span>
+              <span>🚀 TOYOTA FORTUNER LEGENDER: Rs. 18,500,000 (LAC 185)</span>
+              <span>🔥 HONDA CIVIC RS TURBO: Rs. 9,800,000 (LAC 98)</span>
+              <span>💥 CHANGAN OSHAN X7: Rs. 8,200,000 (LAC 82)</span>
+              <span>⭐ MG HS ESSENCE SUV: Rs. 8,100,000 (LAC 81)</span>
+              <span>🔥 TOYOTA COROLLA ALTIS GRANDE: Rs. 7,800,000 (LAC 78)</span>
+              <span>⚡ DEEPAL S07 EV PREMIUM: Rs. 10,500,000 (LAC 105)</span>
+              <span>⭐ KIA SPORTAGE AWD: Rs. 8,900,000 (LAC 89)</span>
+              
+              {/* Mirror values to ensure seamless loop */}
+              <span>🔥 SUZUKI ALTO VXR: Rs. 2,330,000 (LAC 23.3)</span>
+              <span>⚡ BYD SEAL PREMIUM EV: Rs. 14,500,000 (LAC 145)</span>
+              <span>🚀 TOYOTA FORTUNER LEGENDER: Rs. 18,500,000 (LAC 185)</span>
+              <span>🔥 HONDA CIVIC RS TURBO: Rs. 9,800,000 (LAC 98)</span>
+              <span>💥 CHANGAN OSHAN X7: Rs. 8,200,000 (LAC 82)</span>
+              <span>⭐ MG HS ESSENCE SUV: Rs. 8,100,000 (LAC 81)</span>
+              <span>🔥 TOYOTA COROLLA ALTIS GRANDE: Rs. 7,800,000 (LAC 78)</span>
+              <span>⚡ DEEPAL S07 EV PREMIUM: Rs. 10,500,000 (LAC 105)</span>
+              <span>⭐ KIA SPORTAGE AWD: Rs. 8,900,000 (LAC 89)</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Dynamic Top Navigation */}
       <TopAppBar
         currentTab={currentTab}
@@ -1043,11 +1080,12 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
         onBackToGateway={() => handleSetCategory('gateway')}
+        isWithTicker={currentCategory === 'auto'}
       />
 
       {/* Super-Admin Multi-Role Gateway (Exclusive email interception) */}
       {currentUser?.email === 'amjid.bisconni@gmail.com' && (
-        <div className="bg-[#050b16] border-b-2 border-orange-500/80 px-5 py-3 sticky top-14 z-40 shadow-xl shadow-black/40">
+        <div className={`bg-[#050b16] border-b-2 border-orange-500/80 px-5 py-3 sticky ${currentCategory === 'auto' ? 'top-24' : 'top-14'} z-40 shadow-xl shadow-black/40 transition-all`}>
           <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <span className="relative flex h-3 w-3">
@@ -1097,7 +1135,7 @@ export default function App() {
       )}
 
       {/* Main Container Core Shell */}
-      <main className="flex-grow max-w-[1440px] mx-auto w-full pt-20 px-5 md:px-16">
+      <main className={`flex-grow max-w-[1440px] mx-auto w-full px-5 md:px-16 transition-all ${currentCategory === 'auto' ? 'pt-28' : 'pt-20'}`}>
         
         {activeIndustry !== 'Automotive' && (
           <div className="mb-6 bg-slate-950/90 backdrop-blur-md border border-[#38BDF8]/30 p-5 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 animate-scale-fade shadow-xl">

@@ -93,6 +93,8 @@ export default function HomeView({
   const [filterTransmission, setFilterTransmission] = useState('All');
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState('Newest');
+  const [filterYearMin, setFilterYearMin] = useState<number>(2000);
+  const [filterYearMax, setFilterYearMax] = useState<number>(2026);
 
   // Real-time synchronization of currency switches to the budget typing input box
   React.useEffect(() => {
@@ -265,6 +267,8 @@ export default function HomeView({
     setFilterTransmission('All');
     setActiveCategory('All');
     setSortBy('Newest');
+    setFilterYearMin(2000);
+    setFilterYearMax(2026);
   };
 
   // Dynamic filtering pipeline
@@ -303,6 +307,9 @@ export default function HomeView({
 
     // Transmission type
     if (filterTransmission !== 'All' && car.transmission !== filterTransmission) return false;
+
+    // Year range filter
+    if (car.year && (car.year < filterYearMin || car.year > filterYearMax)) return false;
 
     return true;
   });
@@ -367,132 +374,6 @@ export default function HomeView({
         </div>
       </section>
 
-      {/* 1. UNIFIED SEARCH CONSOLE */}
-      <section className="bg-[#121c32]/80 backdrop-blur-md border border-[#38BDF8]/20 p-4 rounded-3xl shadow-2xl space-y-3 order-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 font-mono text-[10px] font-black text-[#38BDF8] uppercase tracking-widest">
-            <Compass size={12} className="animate-spin text-orange-500" style={{ animationDuration: '5s' }} />
-            Unified Search Console
-          </div>
-          <span className="text-[9px] font-mono text-gray-500 uppercase">Interactive Filter Matrix</span>
-        </div>
-
-        {/* Console Hub (Compressed into a single horizontal row on mobile with 48px tap targets, standard grid on desktop) */}
-        <div className="flex flex-row md:grid md:grid-cols-4 gap-2 bg-[#070c12]/90 p-2 rounded-2xl border border-white/5 overflow-x-auto select-none no-scrollbar">
-          
-          {/* Keywords Parameter */}
-          <div 
-            onClick={() => openMobileSheet('keywords')}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 cursor-pointer h-12 flex-grow md:flex-initial min-w-[125px] md:min-w-0"
-            style={{ minHeight: '48px' }}
-          >
-            <Search size={14} className="text-[#38BDF8] shrink-0" />
-            <div className="flex-grow text-left overflow-hidden hidden sm:block md:block">
-              <span className="text-[7.5px] uppercase text-gray-500 block font-mono">Keywords Search</span>
-              <input
-                type="text"
-                placeholder="Type specs..."
-                value={filterSearch}
-                onChange={(e) => setFilterSearch(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-transparent border-none text-[10px] font-sans font-bold text-white placeholder-gray-600 focus:outline-none w-full truncate"
-              />
-            </div>
-            <div className="sm:hidden text-left overflow-hidden">
-              <span className="text-[7.5px] uppercase font-mono text-gray-500 block">Keywords</span>
-              <span className="text-[10px] font-sans font-extrabold text-orange-400 block truncate">{filterSearch || 'All specs'}</span>
-            </div>
-          </div>
-
-          {/* Location Parameter */}
-          <div 
-            onClick={() => openMobileSheet('city')}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 cursor-pointer h-12 flex-grow md:flex-initial min-w-[105px] md:min-w-0"
-            style={{ minHeight: '48px' }}
-          >
-            <MapPin size={14} className="text-[#38BDF8] shrink-0" />
-            <div className="flex-grow text-left overflow-hidden">
-              <span className="text-[7.5px] uppercase text-gray-500 block font-mono">District</span>
-              <span className="text-[10px] font-sans font-extrabold text-orange-400 block truncate">{filterCity === 'All' ? 'Nationwide' : filterCity}</span>
-            </div>
-          </div>
-
-          {/* Flexible Budget Input Box */}
-          <div 
-            className="flex flex-col justify-center px-3 py-1 bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 focus-within:border-[#38BDF8]/40 rounded-xl h-12 flex-grow md:flex-initial min-w-[140px] md:min-w-0 text-left relative transition-colors"
-            style={{ minHeight: '48px' }}
-          >
-            <div className="absolute top-[3px] left-3 text-[7.5px] uppercase text-gray-500 font-mono font-bold block">Enter Your Budget</div>
-            <div className="flex items-center gap-1 mt-2.5">
-              <span className="text-orange-500 font-black text-xs font-mono">{currencyMode === 'USD' ? '$' : 'Rs.'}</span>
-              <input
-                id="budget-filter-input"
-                type="text"
-                value={budgetInputText}
-                placeholder={currencyMode === 'USD' ? 'e.g., 150k' : 'e.g., 350 Lac'}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setBudgetInputText(val);
-
-                  // Extract numeric content
-                  let parsedValue = parseFloat(val.replace(/[^0-9.]/g, '')) || 0;
-                  const lower = val.toLowerCase();
-
-                  if (currencyMode === 'USD') {
-                    // USD multipliers
-                    if (lower.includes('k')) {
-                      parsedValue *= 1000;
-                    } else if (lower.includes('m')) {
-                      parsedValue *= 1000000;
-                    }
-                    const pkrEquivalent = Math.round(parsedValue * 278);
-                    setFilterPriceRange(pkrEquivalent > 50000000 ? pkrEquivalent : pkrEquivalent);
-                  } else {
-                    // PKR qualifiers
-                    if (lower.includes('lac') || lower.includes('lakh')) {
-                      parsedValue *= 100000;
-                    } else if (lower.includes('crore')) {
-                      parsedValue *= 10000000;
-                    } else if (parsedValue < 1000 && parsedValue > 0) {
-                      // Autocomplete bare numbers up to 1000 as Lakhs/Lacs
-                      parsedValue *= 100000;
-                    }
-                    setFilterPriceRange(parsedValue);
-                  }
-                }}
-                className="bg-transparent border-none text-[10px] font-sans font-extrabold text-[#38BDF8] focus:outline-none w-full p-0 font-mono tracking-tight"
-                style={{ height: '22px' }}
-              />
-            </div>
-            <span className="absolute bottom-[2px] right-2 text-[6.5px] font-mono font-bold text-gray-500 pointer-events-none uppercase">
-              {currencyMode === 'USD' ? 'USD limit' : 'PKR limit'}
-            </span>
-          </div>
-
-          {/* Search Trigger Button & Reset Combo */}
-          <div className="flex items-center gap-1.5 shrink-0 md:flex-grow">
-            <button
-              onClick={() => {
-                setTab('inventory');
-                setSearchQuery(filterSearch);
-              }}
-              className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-[0.98] duration-100 uppercase font-mono font-black text-[10px] px-4 py-3 rounded-xl shadow-lg shadow-orange-950/20 text-slate-950 flex items-center justify-center gap-1 h-12"
-              style={{ minHeight: '48px' }}
-            >
-              <Compass size={14} className="animate-pulse shrink-0" /> <span className="hidden sm:inline">Scan ({filteredListings.length})</span><span className="sm:hidden">Scan</span>
-            </button>
-            <button
-              onClick={handleResetFilters}
-              className="p-3 bg-white/5 hover:bg-white/10 active:scale-95 duration-100 rounded-xl border border-white/5 flex items-center justify-center text-gray-400 hover:text-white h-12 w-12"
-              title="Reset matrix constraints"
-              style={{ minHeight: '48px', minWidth: '48px' }}
-            >
-              <RotateCcw size={14} />
-            </button>
-          </div>
-
-        </div>
-      </section>
 
       {/* 2. DUAL SELLING PIPELINE SELECTOR MATRIX */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6 order-4">
@@ -1005,7 +886,46 @@ export default function HomeView({
         {/* ========================================================= */}
         <div className="lg:col-span-1 space-y-6 order-3 lg:order-1">
           
-          {/* Card 1: Live Activities feed */}
+          {/* Card 1: Clickable verified dealerships (On Top) */}
+          <div className="bg-[#121a2a]/95 border border-[#1e293b] rounded-2xl p-4 space-y-4 shadow-xl">
+            <h3 className="text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-2.5">
+              <Building size={14} className="text-[#38BDF8]" /> Verified Showrooms
+            </h3>
+
+            <div className="space-y-2.5">
+              {dealers.map((dl) => (
+                <button
+                  key={dl.id}
+                  onClick={() => onSelectDealer(dl.id)}
+                  className="w-full text-left bg-[#080d19] border border-white/5 hover:border-[#38BDF8]/40 hover:bg-white/[0.02] p-2.5 rounded-xl flex items-center gap-3 transition-all group cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/10 shrink-0 flex items-center justify-center overflow-hidden">
+                    {dl.avatarUrl ? (
+                      <img
+                        src={dl.avatarUrl}
+                        alt={dl.name}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <span className="text-xs font-black text-white">{dl.avatarLetter}</span>
+                    )}
+                  </div>
+                  <div className="overflow-hidden flex-1">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-tight truncate group-hover:text-[#38BDF8] transition-colors">
+                      {dl.name}
+                    </h4>
+                    <span className="text-[9px] text-[#22c55e] font-mono flex items-center gap-1 mt-0.5">
+                      ● Active Storefront
+                    </span>
+                  </div>
+                  <ChevronRight size={14} className="text-gray-600 group-hover:text-[#38BDF8] transition-colors shrink-0" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Card 2: Live Activities feed (Beneath) */}
           <div className="bg-[#121a2a]/95 border border-[#1e293b] rounded-2xl p-4 space-y-4 shadow-xl">
             <h3 className="text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-2.5">
               <Activity size={14} className="text-[#38BDF8] animate-pulse" /> Live Activity Feed
@@ -1051,45 +971,6 @@ export default function HomeView({
             </div>
           </div>
 
-          {/* Card 2: Clickable verified dealerships */}
-          <div className="bg-[#121a2a]/95 border border-[#1e293b] rounded-2xl p-4 space-y-4 shadow-xl">
-            <h3 className="text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-2.5">
-              <Building size={14} className="text-[#38BDF8]" /> Verified Showrooms
-            </h3>
-
-            <div className="space-y-2.5">
-              {dealers.map((dl) => (
-                <button
-                  key={dl.id}
-                  onClick={() => onSelectDealer(dl.id)}
-                  className="w-full text-left bg-[#080d19] border border-white/5 hover:border-[#38BDF8]/40 hover:bg-white/[0.02] p-2.5 rounded-xl flex items-center gap-3 transition-all group cursor-pointer"
-                >
-                  <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/10 shrink-0 flex items-center justify-center overflow-hidden">
-                    {dl.avatarUrl ? (
-                      <img
-                        src={dl.avatarUrl}
-                        alt={dl.name}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <span className="text-xs font-black text-white">{dl.avatarLetter}</span>
-                    )}
-                  </div>
-                  <div className="overflow-hidden flex-1">
-                    <h4 className="text-xs font-bold text-white uppercase tracking-tight truncate group-hover:text-[#38BDF8] transition-colors">
-                      {dl.name}
-                    </h4>
-                    <span className="text-[9px] text-[#22c55e] font-mono flex items-center gap-1 mt-0.5">
-                      ● Active Storefront
-                    </span>
-                  </div>
-                  <ChevronRight size={14} className="text-gray-600 group-hover:text-[#38BDF8] transition-colors shrink-0" />
-                </button>
-              ))}
-            </div>
-          </div>
-
         </div>
 
         {/* ========================================================= */}
@@ -1113,38 +994,6 @@ export default function HomeView({
                 {cat}
               </button>
             ))}
-            
-            {/* Upcoming clickable category slot: Spaces (Option A) */}
-            <button
-              onClick={() => setSelectedFutureSector({
-                title: "Bazar360 Real Estate",
-                tagline: "Next-Gen Spaces, Redefined Architecture.",
-                desc: "Sourcing premium residential penthouses, sustainable designer villas, and verified commercial spaces across Lahore & Islamabad.",
-                icon: "🏢",
-                spec: "Phase II Integration: Active seeding under progress."
-              })}
-              className="px-4 py-3 rounded-xl text-[10px] font-mono font-bold text-sky-400/80 bg-[#080d19]/60 border border-dashed border-sky-500/20 hover:border-sky-400 hover:text-white transition-all duration-150 whitespace-nowrap cursor-pointer select-none"
-              style={{ minHeight: '44px' }}
-              title="Click to view coming soon sector parameters with dynamic TAGLINE."
-            >
-              🏢 Spaces [Coming]
-            </button>
-
-            {/* Upcoming clickable category slot: Health (Option B) */}
-            <button
-              onClick={() => setSelectedFutureSector({
-                title: "Bazar360 Healthcare",
-                tagline: "Your Neighborhood Health Partner, Digitally Accelerated.",
-                desc: "Instant tele-consultation access, automated local diagnostic orders, and secure authentic pharmaceutical fulfillment.",
-                icon: "🏥",
-                spec: "Phase III Integration: Diagnostics compliance indexing active."
-              })}
-              className="px-4 py-3 rounded-xl text-[10px] font-mono font-bold text-purple-400/80 bg-[#080d19]/60 border border-dashed border-purple-500/20 hover:border-purple-400 hover:text-white transition-all duration-150 whitespace-nowrap cursor-pointer select-none"
-              style={{ minHeight: '44px' }}
-              title="Click to view coming soon sector parameters with dynamic TAGLINE."
-            >
-              🏥 Health [Coming]
-            </button>
           </div>
 
           {/* Feed Title & Sorter Control Bar */}
@@ -1482,6 +1331,47 @@ export default function HomeView({
               </div>
             </div>
 
+            {/* Selector: Manual Typed PKR Budget */}
+            <div className="space-y-1.5 animate-fade-in text-left">
+              <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Enter Manual Budget (Lacs/Crores):</label>
+              <div className="flex items-center gap-2 bg-[#080d19] border border-[#1e293b] focus-within:border-[#38BDF8]/40 px-3 py-2 rounded-xl text-left relative transition-colors h-11">
+                <span className="text-[#38BDF8] font-mono text-[10px] font-black">{currencyMode === 'USD' ? 'USD $' : 'Rs. '}</span>
+                <input
+                  type="text"
+                  value={budgetInputText}
+                  placeholder={currencyMode === 'USD' ? 'e.g., 150k' : 'e.g., 350 Lac'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setBudgetInputText(val);
+
+                    // Extract numeric content
+                    let parsedValue = parseFloat(val.replace(/[^0-9.]/g, '')) || 0;
+                    const lower = val.toLowerCase();
+
+                    if (currencyMode === 'USD') {
+                      if (lower.includes('k')) {
+                        parsedValue *= 1000;
+                      } else if (lower.includes('m')) {
+                        parsedValue *= 1000000;
+                      }
+                      const pkrEquivalent = Math.round(parsedValue * 278);
+                      setFilterPriceRange(pkrEquivalent);
+                    } else {
+                      if (lower.includes('lac') || lower.includes('lakh') || lower.includes('lacs')) {
+                        parsedValue *= 100000;
+                      } else if (lower.includes('crore') || lower.includes('crores')) {
+                        parsedValue *= 10000000;
+                      } else if (parsedValue < 1000 && parsedValue > 0) {
+                        parsedValue *= 100000;
+                      }
+                      setFilterPriceRange(parsedValue);
+                    }
+                  }}
+                  className="bg-transparent border-none text-[11px] font-sans font-extrabold text-[#38BDF8] focus:outline-none w-full p-0 font-mono tracking-tight"
+                />
+              </div>
+            </div>
+
             {/* Selector: Transmission Switch */}
             <div className="space-y-2">
               <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Transmission Gearbox:</label>
@@ -1500,6 +1390,37 @@ export default function HomeView({
                     {mode === 'All' ? 'ALL' : mode.substring(0, 4).toUpperCase()}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Selector: Manufacturing Year Range Selector */}
+            <div className="space-y-1.5 animate-fade-in text-left">
+              <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Manufacturing Year Range:</label>
+              <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                <div className="space-y-1">
+                  <span className="text-[7.5px] uppercase font-bold text-gray-500 block">Min Year:</span>
+                  <select
+                    value={filterYearMin}
+                    onChange={(e) => setFilterYearMin(parseInt(e.target.value))}
+                    className="w-full bg-[#080d19] border border-[#1e293b] text-white font-mono rounded-lg p-2 focus:outline-none focus:border-[#38BDF8] cursor-pointer"
+                  >
+                    {Array.from({ length: 27 }, (_, i) => 2000 + i).map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[7.5px] uppercase font-bold text-gray-500 block">Max Year:</span>
+                  <select
+                    value={filterYearMax}
+                    onChange={(e) => setFilterYearMax(parseInt(e.target.value))}
+                    className="w-full bg-[#080d19] border border-[#1e293b] text-white font-mono rounded-lg p-2 focus:outline-none focus:border-[#38BDF8] cursor-pointer"
+                  >
+                    {Array.from({ length: 27 }, (_, i) => 2000 + i).map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 

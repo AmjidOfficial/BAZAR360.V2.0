@@ -9,6 +9,7 @@ interface TopAppBarProps {
   currentUser: UserProfile | null;
   onLogout: () => void;
   onBackToGateway: () => void;
+  isWithTicker?: boolean;
 }
 
 export default function TopAppBar({ 
@@ -17,12 +18,13 @@ export default function TopAppBar({
   onPostAdClick, 
   currentUser,
   onLogout,
-  onBackToGateway
+  onBackToGateway,
+  isWithTicker
 }: TopAppBarProps) {
   const { currencyMode, changeCurrencyMode } = useCurrencyMode();
 
   return (
-    <header className="flex justify-between items-center w-full px-4 md:px-16 h-16 fixed top-0 z-50 bg-[#070c18]/90 backdrop-blur-md border-b border-white/5 shadow-lg">
+    <header className={`flex justify-between items-center w-full px-4 md:px-16 h-16 fixed ${isWithTicker ? 'top-8' : 'top-0'} z-50 bg-[#070c18]/90 backdrop-blur-md border-b border-white/5 shadow-lg transition-all`}>
       <div className="flex items-center gap-3">
         {/* Dedicated Back to Gateway page button */}
         <button
@@ -166,6 +168,18 @@ export default function TopAppBar({
           }`}
         >
           PORTAL FORMS
+        </button>
+
+        {/* Verified Showrooms Shortcut */}
+        <button
+          onClick={() => setTab('dealers')}
+          className={`hidden sm:flex items-center gap-1 text-[10px] font-mono font-bold tracking-tight px-2.5 py-1 rounded border transition-all ${
+            currentTab === 'dealers'
+              ? 'bg-[#38BDF8]/20 text-[#38BDF8] border-[#38BDF8]/40'
+              : 'bg-white/5 text-gray-400 border-white/10 hover:text-white hover:border-white/20'
+          }`}
+        >
+          🏬 SHOWROOMS
         </button>
 
         {/* Sign In / Register Button for Guest Customers */}

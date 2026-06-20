@@ -101,3 +101,41 @@ export interface IndustryConfig {
   heroBadge: string;
 }
 
+export interface VisitorLog {
+  id: string;
+  timestamp: string;
+  visitorId: string;
+  searchQueries: string[];
+  filterChanges: {
+    make?: string;
+    city?: string;
+    maxPrice?: number;
+    transmission?: string;
+  };
+  deviceMetrics: {
+    viewportWidth: number;
+    viewportHeight: number;
+    userAgent: string;
+  };
+}
+
+export interface RegisteredUserLog {
+  id: string;
+  timestamp: string;
+  userId: string;
+  userEmail: string;
+  savedAlerts: string[];
+  activityType: 'profile_view' | 'save_car' | 'message_sent' | 'comparative_eval';
+  queryDetails?: string;
+}
+
+export interface BargainOwnerLog {
+  id: string;
+  timestamp: string;
+  dealerId: string;
+  ownerEmail: string;
+  action: 'monetize_analytics' | 'inventory_health_update' | 'buyer_log_accessed' | 'uploaded_listing';
+  details: string;
+  inventoryCountSnapshot: number;
+}
+

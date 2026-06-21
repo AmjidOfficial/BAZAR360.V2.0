@@ -971,7 +971,8 @@ export default function App() {
 
         {/* Footer */}
         <div className="text-center text-gray-600 text-[10px] uppercase font-mono tracking-widest pb-[env(safe-area-inset-bottom)] md:pb-2 relative z-10">
-          BAZAR360 Pakistan Enterprise &copy; 2026. SECURED THROUGH ADVANCED LOCAL BLUEPRINT.
+          BAZAR360 PAKISTAN ENTERPRISE © 2026. SECURED THROUGH ADVANCED LOCAL BLUEPRINT.
+            Founder & CEO: Muhammad Amjid  |  amjid.psh@gmail.com  |  +92 314 9198403
         </div>
       </div>
     );

@@ -34,6 +34,27 @@ import ConciergeView from './components/ConciergeView';
 
 export default function App() {
   const { renderPrice } = useCurrencyMode();
+
+  const [theme, setTheme] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('bazar360_theme') || 'cosmic-dark';
+    }
+    return 'cosmic-dark';
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bazar360_theme', theme);
+      const themes = ['theme-cosmic-dark', 'theme-luxury-light', 'theme-mint-emerald', 'theme-obsidian-gold'];
+      themes.forEach(t => {
+        document.documentElement.classList.remove(t);
+        document.body.classList.remove(t);
+      });
+      document.documentElement.classList.add(`theme-${theme}`);
+      document.body.classList.add(`theme-${theme}`);
+    }
+  }, [theme]);
+
   const [currentTab, setTab] = useState<string>('home');
   const [selectedDealerId, setSelectedDealerId] = useState<string>('auto-choice-peshawar');
   const [selectedListing, setSelectedListing] = useState<CarListing | null>(null);
@@ -125,17 +146,31 @@ export default function App() {
     localStorage.setItem('bazar360_teaser_notified', teaserNotified ? 'true' : 'false');
   }, [teaserNotified]);
 
-  // Dynamic Tagline Rotation Logic
-  const [rotatingTagline, setRotatingTagline] = useState<string>('');
+  // Dynamic Tagline Rotation Logic with Variant Titles & Sub-Taglines
+  const [activeTaglineVariant, setActiveTaglineVariant] = useState<{title: string, sub: string}>({
+    title: "COMING SOON: A LOT MORE",
+    sub: "We are expanding from elite cars to everything you need. A complete mega marketplace is just around the corner."
+  });
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState<boolean>(false);
+
   useEffect(() => {
-    const taglines = [
-      "Unlocking Next-Gen Trade. Premium Ecosystems Loading.",
-      "The Marketplace is Expanding. New Spaces Initializing.",
-      "Evolving Beyond Borders. Next-Gen Portals Arriving Soon."
+    const variants = [
+      {
+        title: "COMING SOON: A LOT MORE",
+        sub: "We are expanding from elite cars to everything you need. A complete mega marketplace is just around the corner."
+      },
+      {
+        title: "THE ULTIMATE MEGA BAZAR",
+        sub: "Moving fast beyond vehicles. Get ready to browse retail, wholesale, and daily essentials all under one roof."
+      },
+      {
+        title: "FUTURE SECTORS UNLOCKING",
+        sub: "Your favorite stores are moving digital. Vote for your favorite category below to speed up the launch."
+      }
     ];
-    // Select exactly one tagline upon page load/visit
-    const randomIndex = Math.floor(Math.random() * taglines.length);
-    setRotatingTagline(taglines[randomIndex]);
+    // Select exactly one variant tagline object upon page load/visit
+    const randomIndex = Math.floor(Math.random() * variants.length);
+    setActiveTaglineVariant(variants[randomIndex]);
   }, []);
 
   const handleSetCategory = (cat: 'gateway' | 'auto' | 'footwear' | 'food') => {
@@ -510,6 +545,24 @@ export default function App() {
     const bidAmount = parseInt(offerInput) || 0;
     const listingDealer = dealers.find((d) => d.id === selectedListing?.dealerId);
 
+    // Save persistent Bargain Bid in real-time to Firestore database
+    import('./lib/dbService').then(({ dbSaveBargain }) => {
+      if (selectedListing) {
+        dbSaveBargain({
+          id: `offer-${Date.now()}`,
+          listingId: selectedListing.id,
+          vehicleTitle: selectedListing.title,
+          bidAmount,
+          buyerName: currentUser?.displayName || 'Guest Bargain Bidder',
+          buyerPhone: currentUser?.phoneNumber || '+92 314 3601212',
+          buyerEmail: currentUser?.email || 'prospect.buyer@bazar360.online',
+          dealerId: selectedListing.dealerId || 'private',
+          status: 'Pending',
+          createdAt: new Date().toISOString()
+        });
+      }
+    });
+
     setOfferSuccessMessage(
       `✓ Dynamic Offer of Rs. ${bidAmount.toLocaleString()} submitted successfully! ${
         listingDealer?.name || 'Seller'
@@ -717,101 +770,80 @@ export default function App() {
             </div>
           </div>
 
-          {/* Column 2: DYNAMIC COMING SOON TEASER MODULE */}
-          <div className="space-y-4 flex flex-col justify-between">
+          {/* Column 2: RESPONSIVE COMING SOON CONTENT BOX */}
+          <div className="space-y-4 flex flex-col justify-between" id="coming-soon-content-box">
             <div className="flex items-center justify-between px-1">
               <span className="text-[10px] font-mono tracking-widest text-[#38BDF8] uppercase font-black flex items-center gap-1.5">
-                <Sparkles size={12} className="text-cyan-400 animate-pulse" /> TARGET EXPANSION PIPELINE
+                <Sparkles size={12} className="text-cyan-400 animate-pulse" /> FUTURE SATELLITE PIPELINES
               </span>
               <span className="text-[8px] bg-sky-500/15 text-sky-400 font-mono px-2 py-0.5 border border-sky-500/20 rounded font-black tracking-widest uppercase animate-pulse">
-                Initializing
+                Expansion Active
               </span>
             </div>
 
             <div 
-              className="flex-1 bg-white/5 backdrop-blur-md border border-[#38BDF8]/20 rounded-[32px] p-6 md:p-8 flex flex-col justify-between transition-all duration-300 hover:border-cyan-500/40 hover:shadow-2xl hover:shadow-cyan-950/20 min-h-[480px] relative overflow-hidden group select-none"
+              className="flex-1 bg-gradient-to-b from-[#09152a] to-slate-950/95 border border-[#38BDF8]/20 rounded-[32px] p-6 md:p-8 flex flex-col justify-between transition-all duration-300 hover:border-cyan-500/50 hover:shadow-2xl hover:shadow-cyan-950/15 min-h-[480px] relative overflow-hidden group select-none"
             >
-              {/* Grid backdrop overlay */}
-              <div className="absolute inset-0 bg-[radial-gradient(#06b6d4_0.6px,transparent_0.6px)] [background-size:12px_12px] opacity-[0.07]"></div>
-              <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.01] to-transparent pointer-events-none"></div>
-              <div className="absolute -right-20 -top-20 w-44 h-44 rounded-full blur-[60px] opacity-10 bg-cyan-500"></div>
+              {/* Backdrops */}
+              <div className="absolute inset-0 bg-[radial-gradient(#06b6d4_0.6px,transparent_0.6px)] [background-size:12px_12px] opacity-10"></div>
+              <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none"></div>
 
-              <div className="space-y-5.5 relative z-10 text-left">
+              <div className="space-y-6 relative z-10 text-left">
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-mono text-cyan-400 font-black tracking-widest uppercase bg-cyan-500/10 px-3 py-1.5 rounded-lg border border-cyan-500/20">
-                    SECTORS 02 & 03 • RESERVED
+                  <span className="text-[10px] font-mono text-[#38BDF8] font-black tracking-widest uppercase bg-sky-500/10 px-3 py-1.5 rounded-lg border border-[#38BDF8]/20">
+                    Bazar360 Premium Expansion
                   </span>
                   
-                  {/* Notify Me Toggle button with Pulse animated states */}
+                  {/* Notify Me Toggle button */}
                   <button
                     onClick={() => setTeaserNotified(!teaserNotified)}
                     className={`p-2 rounded-xl border transition-all duration-300 cursor-pointer select-none flex items-center justify-center ${
                       teaserNotified 
-                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/50 animate-pulse' 
+                        ? 'bg-amber-500/20 text-amber-500 border-amber-500/50 animate-pulse' 
                         : 'bg-white/5 text-gray-500 hover:text-white border-white/10'
                     }`}
                     title={teaserNotified ? "Alert Registration Active" : "Notify Me on Launch"}
                   >
-                    <Bell size={14} className={teaserNotified ? "text-amber-400 shrink-0 animate-[swing_1s_ease-in-out_infinite]" : "text-gray-400 shrink-0"} />
+                    <Bell size={14} className={teaserNotified ? "text-amber-500 shrink-0" : "text-gray-400 shrink-0"} />
                     <span className="text-[9px] font-mono font-black uppercase tracking-wider ml-1.5 hidden sm:inline-block">
                       {teaserNotified ? "Notified" : "Notify Me"}
                     </span>
                   </button>
                 </div>
 
-                {/* Rotating Tagline Display with state validation & Live Loading Pulse Dot */}
-                <div className="bg-[#050912]/85 border border-[#38BDF8]/20 rounded-2xl p-4.5 min-h-[84px] flex items-center gap-3.5 transition-all">
-                  <span className="relative flex h-3 w-3 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                  </span>
-                  <p className="text-gray-200 text-xs md:text-[13px] font-bold leading-relaxed font-sans select-text">
-                    {rotatingTagline || "Unlocking Next-Gen Trade. Premium Ecosystems Loading."}
+                <div className="space-y-3.5">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <h2 className="text-xl md:text-2xl font-black font-sans text-white uppercase tracking-tight">
+                      {activeTaglineVariant.title}
+                    </h2>
+                  </div>
+                  <p className="text-gray-300 text-xs md:text-sm leading-relaxed font-sans">
+                    {activeTaglineVariant.sub}
                   </p>
                 </div>
 
-                {/* "Upcoming More Alot" Scalable Grid with Neon Placeholders */}
-                <div>
-                  <span className="text-[8px] uppercase tracking-wider text-gray-500 font-mono block font-black mb-2">
-                    RESERVED SYSTEM NODES (UPCOMING ECOSYSTEMS)
-                  </span>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { icon: "🏢", label: "Next-Gen Architecture", color: "border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/5", desc: "Sustainable residential villas and premium masterplans." },
-                      { icon: "🏥", label: "Premium Wellness", color: "border-purple-500/30 text-purple-400 hover:bg-purple-500/5", desc: "Digital diagnostics systems and healthcare partner routing." },
-                      { icon: "⚡", label: "Smart Living", color: "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/5", desc: "High precision automated appliances and power-indexing." },
-                      { icon: "📦", label: "Logistics Hub", color: "border-orange-500/30 text-orange-400 hover:bg-orange-500/5", desc: "Secure commercial vehicle routing and freight syncing." }
-                    ].map((badge, idx) => (
-                      <div 
-                        key={idx}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setComingSoonSector({
-                            title: badge.label,
-                            tagline: badge.desc,
-                            desc: `A highly anticipated digital pipeline designed to integrate verified trade catalog architectures into our high-speed trade sandbox. Currently mapping local supply metrics.`,
-                            icon: badge.icon,
-                            spec: `Seeding community consensus indices. Access protocols scheduled under Phase II/III roadmap updates.`
-                          });
-                        }}
-                        className={`flex items-center gap-2 p-2.5 rounded-xl border ${badge.color} hover:border-[#38BDF8]/40 transition-all duration-200 cursor-pointer text-left`}
-                      >
-                        <span className="text-base shrink-0">{badge.icon}</span>
-                        <div className="min-w-0">
-                          <p className="text-[10px] font-mono font-black uppercase tracking-tight text-white truncate">{badge.label}</p>
-                          <span className="text-[8px] text-gray-400 block leading-none font-mono font-bold mt-0.5">Pending Seeding</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                {/* Categories Mock List to look responsive and informational */}
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  {[
+                    { name: "🥾 Footwear Vault", votes: "2,410 interest" },
+                    { name: "🍕 Food Court Mesh", votes: "1,894 interest" },
+                    { name: "📱 PTA Mobile Club", votes: "3,115 interest" },
+                    { name: "🏢 Next-Gen Spaces", votes: "945 interest" }
+                  ].map((cat, idx) => (
+                    <div key={idx} className="bg-[#030712]/60 border border-white/5 rounded-xl p-3 flex flex-col justify-between hover:border-[#38BDF8]/20 transition-colors">
+                      <span className="text-[10px] font-bold text-white uppercase">{cat.name}</span>
+                      <span className="text-[8px] text-gray-400 font-mono mt-1 font-bold">{cat.votes}</span>
+                    </div>
+                  ))}
                 </div>
-
               </div>
 
-              {/* Voting Footer interaction area */}
+              {/* Voting Footer */}
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/5 pt-6 mt-4 relative z-10 w-full text-left">
-                
                 <div className="shrink-0">
                   <p className="text-[10px] uppercase font-mono font-extrabold text-gray-500 tracking-wider">
                     Community Interest Weight
@@ -840,7 +872,6 @@ export default function App() {
                 >
                   {userTeaserVoted ? "✓ Voted to Unlock" : "Vote to Unlock First"}
                 </button>
-
               </div>
             </div>
           </div>
@@ -1080,7 +1111,12 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
         onBackToGateway={() => handleSetCategory('gateway')}
+        currentTheme={theme}
+        onThemeChange={setTheme}
         isWithTicker={currentCategory === 'auto'}
+        currentCategory={currentCategory}
+        onCategoryChange={handleSetCategory}
+        onMobileMenuToggle={() => setIsMobileDrawerOpen(prev => !prev)}
       />
 
       {/* Super-Admin Multi-Role Gateway (Exclusive email interception) */}
@@ -1136,6 +1172,58 @@ export default function App() {
 
       {/* Main Container Core Shell */}
       <main className={`flex-grow max-w-[1440px] mx-auto w-full px-5 md:px-16 transition-all ${currentCategory === 'auto' ? 'pt-28' : 'pt-20'}`}>
+        
+        {/* PREMIUM REPOSITIONED & ACCELERATED BRAND SCROLL MARQUEE */}
+        <div className="mb-6 bg-[#0c1322] border border-white/5 py-3 rounded-2xl overflow-hidden relative shadow-inner select-none" id="repositioned-brand-marquee">
+          <div className="absolute top-0 left-0 w-16 h-full bg-gradient-to-r from-[#0b121f] to-transparent z-10 pointer-events-none"></div>
+          <div className="absolute top-0 right-0 w-16 h-full bg-gradient-to-l from-[#0b121f] to-transparent z-10 pointer-events-none"></div>
+
+          <div className="flex overflow-hidden relative w-full h-8 items-center">
+            <div className="animate-marquee flex gap-12 text-slate-500 font-mono text-[11px] font-black items-center min-w-full uppercase">
+              {['Suzuki', 'Toyota', 'Honda', 'BYD', 'Changan', 'Zeekr', 'Deepal'].map((brand, i) => (
+                <button
+                  key={`top-b1-${i}`}
+                  onClick={() => {
+                    setTab('inventory');
+                    setSearchQuery(brand);
+                  }}
+                  className="flex items-center gap-2 hover:text-white text-slate-400 font-mono text-[10px] uppercase font-black tracking-wider transition-all hover:scale-105 active:scale-95 duration-150 cursor-pointer border border-transparent hover:border-white/5 hover:bg-white/[0.02] px-3 py-1.5 rounded-xl group shrink-0"
+                >
+                  <span className="text-orange-500 font-black">✦</span>
+                  <span className="group-hover:text-orange-400">{brand}</span>
+                </button>
+              ))}
+              {/* Duplicate sequences for infinite effect */}
+              {['Suzuki', 'Toyota', 'Honda', 'BYD', 'Changan', 'Zeekr', 'Deepal'].map((brand, i) => (
+                <button
+                  key={`top-b2-${i}`}
+                  onClick={() => {
+                    setTab('inventory');
+                    setSearchQuery(brand);
+                  }}
+                  className="flex items-center gap-2 hover:text-white text-slate-400 font-mono text-[10px] uppercase font-black tracking-wider transition-all hover:scale-105 active:scale-95 duration-150 cursor-pointer border border-transparent hover:border-white/5 hover:bg-white/[0.02] px-3 py-1.5 rounded-xl group shrink-0"
+                >
+                  <span className="text-orange-500 font-black">✦</span>
+                  <span className="group-hover:text-orange-400">{brand}</span>
+                </button>
+              ))}
+              {/* Triplicated sequence */}
+              {['Suzuki', 'Toyota', 'Honda', 'BYD', 'Changan', 'Zeekr', 'Deepal'].map((brand, i) => (
+                <button
+                  key={`top-b3-${i}`}
+                  onClick={() => {
+                    setTab('inventory');
+                    setSearchQuery(brand);
+                  }}
+                  className="flex items-center gap-2 hover:text-white text-slate-400 font-mono text-[10px] uppercase font-black tracking-wider transition-all hover:scale-105 active:scale-95 duration-150 cursor-pointer border border-transparent hover:border-white/5 hover:bg-white/[0.02] px-3 py-1.5 rounded-xl group shrink-0"
+                >
+                  <span className="text-orange-500 font-black">✦</span>
+                  <span className="group-hover:text-orange-400">{brand}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
         
         {activeIndustry !== 'Automotive' && (
           <div className="mb-6 bg-slate-950/90 backdrop-blur-md border border-[#38BDF8]/30 p-5 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 animate-scale-fade shadow-xl">
@@ -1194,6 +1282,7 @@ export default function App() {
                 onToggleCompare={handleToggleCompare}
                 compareList={compareList}
                 currentCategory={currentCategory}
+                currentUser={currentUser}
               />
             )}
 
@@ -1208,6 +1297,8 @@ export default function App() {
                 onSelectListing={setSelectedListing}
                 onToggleCompare={handleToggleCompare}
                 compareList={compareList}
+                currentCategory={currentCategory}
+                currentUser={currentUser}
               />
             )}
 
@@ -1215,6 +1306,7 @@ export default function App() {
               <MediaFeedView
                 dealers={dealers}
                 currentUser={currentUser}
+                onForceLogin={() => setTab('portal')}
               />
             )}
 
@@ -1328,7 +1420,12 @@ export default function App() {
       </main>
 
       {/* Bottom Nav Bar (Mobile Only) */}
-      <BottomNavBar currentTab={currentTab} setTab={setTab} />
+      <BottomNavBar 
+        currentTab={currentTab} 
+        setTab={setTab} 
+        currentCategory={currentCategory} 
+        onCategoryChange={handleSetCategory} 
+      />
 
       {/* DYNAMIC LISTING DETAILS POPUP MODAL */}
       {selectedListing && (
@@ -1701,11 +1798,120 @@ export default function App() {
               </div>
 
             </div>
-
           </div>
         </div>
       )}
 
-    </div>
-  );
-}
+        {/* Mobile Side Drawer Backdrop (Viewport < 768px focus overlay) */}
+        {isMobileDrawerOpen && (
+          <div 
+            className="fixed inset-0 bg-[#030712]/75 backdrop-blur-[4px] z-50 md:hidden transition-all duration-300"
+            onClick={() => setIsMobileDrawerOpen(false)}
+            id="mobile-drawer-backdrop"
+          />
+        )}
+
+        {/* Mobile Side Drawer Sliding Panel */}
+        <div 
+          id="mobile-drawer"
+          className="fixed top-0 bottom-0 w-[280px] bg-[#070c18] z-50 border-r border-white/5 transition-all duration-300 flex flex-col justify-between shadow-2xl p-6 md:hidden text-left"
+          style={{ left: isMobileDrawerOpen ? '0' : '-280px' }}
+        >
+          {/* Drawer top branding container */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-white/5">
+              <div className="flex items-center space-x-2">
+                <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-slate-950 border border-orange-500/30">
+                  <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path>
+                  </svg>
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="text-sm font-black text-white tracking-widest leading-none">BAZAR<span className="text-orange-500 font-extrabold">360</span></span>
+                  <span className="text-[7px] font-bold text-[#38BDF8] tracking-[0.22em] uppercase leading-none mt-0.5">Ecosystem</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsMobileDrawerOpen(false)}
+                className="text-gray-400 hover:text-white p-2 bg-white/5 rounded-lg text-xs"
+                id="mobile-drawer-close-btn"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Nav Links */}
+            <nav className="flex flex-col gap-4 font-mono text-xs uppercase tracking-wider text-left">
+              <button
+                onClick={() => { setTab('home'); setIsMobileDrawerOpen(false); }}
+                className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === 'home' ? 'text-orange-500' : 'text-gray-400 hover:text-white'}`}
+              >
+                🏠 Home Feed
+              </button>
+              <button
+                onClick={() => { setTab('inventory'); setIsMobileDrawerOpen(false); }}
+                className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === 'inventory' || currentTab === 'search' ? 'text-orange-500' : 'text-gray-400 hover:text-white'}`}
+              >
+                📋 Active Inventory
+              </button>
+              <button
+                onClick={() => { setTab('media'); setIsMobileDrawerOpen(false); }}
+                className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === 'media' ? 'text-orange-500' : 'text-gray-400 hover:text-white'}`}
+              >
+                🎥 Showroom Media
+              </button>
+              <button
+                onClick={() => { setTab('insights'); setIsMobileDrawerOpen(false); }}
+                className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === 'insights' ? 'text-orange-500' : 'text-gray-400 hover:text-white'}`}
+              >
+                📈 Market Insights
+              </button>
+              <button
+                onClick={() => { setTab('concierge'); setIsMobileDrawerOpen(false); }}
+                className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === 'concierge' ? 'text-orange-500' : 'text-gray-400 hover:text-white'}`}
+              >
+                📞 Direct Concierge
+              </button>
+              <button
+                onClick={() => { handleSetCategory('gateway'); setIsMobileDrawerOpen(false); }}
+                className="font-black py-3 text-left text-orange-500 hover:text-orange-400 border-t border-white/5 pt-4 flex items-center gap-1.5 uppercase tracking-widest mt-2"
+              >
+                <span>🌐</span> Return to Gateway
+              </button>
+            </nav>
+          </div>
+
+          {/* Drawer bottom utilities */}
+          <div className="space-y-4 pt-6 border-t border-white/5 text-left">
+            {!currentUser ? (
+              <button
+                onClick={() => { setTab('portal'); setIsMobileDrawerOpen(false); }}
+                className="w-full text-center text-xs font-mono font-black uppercase text-[#38BDF8] border border-[#38BDF8]/30 bg-[#38BDF8]/5 py-3 rounded-xl cursor-pointer"
+              >
+                Sign In / Register
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 bg-[#121c32]/65 p-3 rounded-xl border border-white/5">
+                  <div className="w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center font-black text-xs uppercase shrink-0">
+                    {currentUser.displayName.substring(0, 1).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-white font-bold text-xs truncate leading-none">{currentUser.displayName}</p>
+                    <span className="text-[8px] text-orange-400 font-mono uppercase tracking-widest block mt-1">{currentUser.role}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { handleLogout(); setIsMobileDrawerOpen(false); }}
+                  className="w-full text-center text-xs font-mono font-black uppercase text-red-500 hover:bg-red-500/10 py-3 rounded-xl border border-red-500/20 cursor-pointer"
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+    );
+  }

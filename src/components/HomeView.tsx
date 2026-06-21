@@ -28,6 +28,7 @@ import {
 import { Dealer, CarListing } from '../types';
 import { useCurrencyMode } from '../lib/currency';
 import { PAKISTAN_CITIES_MATRIX, ALL_PAKISTAN_CITIES } from '../lib/cities';
+import { UserProfile, dbSaveLead } from '../lib/dbService';
 
 export const VEHICLE_DICTIONARY: Record<string, Array<{ make: string; model: string; price: number; description: string }>> = {
   SUV: [
@@ -61,10 +62,11 @@ interface HomeViewProps {
   setSelectedCategory: (category: string) => void;
   setSearchQuery: (query: string) => void;
   onSelectDealer: (id: string) => void;
-  onSelectListing: (listing: CarListing) => void;
+  onSelectListing: (car: CarListing) => void;
   onToggleCompare?: (car: CarListing) => void;
   compareList?: CarListing[];
   currentCategory?: string;
+  currentUser?: UserProfile | null;
 }
 
 export default function HomeView({
@@ -78,6 +80,7 @@ export default function HomeView({
   onToggleCompare,
   compareList = [],
   currentCategory = 'auto',
+  currentUser
 }: HomeViewProps) {
   const { currencyMode, renderPrice } = useCurrencyMode();
   const [budgetInputText, setBudgetInputText] = useState('350 Lac');
@@ -248,12 +251,34 @@ export default function HomeView({
         setMeshMessage('Please fill in your name and cell number');
         return;
       }
+      dbSaveLead({
+        id: `lead-insp-${Date.now()}`,
+        type: 'Inspection Booking',
+        title: 'Certified Doorstep Diagnostic Audit',
+        userName: meshInputs.inspName || currentUser?.displayName || 'Guest Prospect',
+        userPhone: meshInputs.inspPhone || currentUser?.phoneNumber || 'N/A',
+        userEmail: currentUser?.email || 'N/A',
+        city: 'Lahore',
+        details: `Requested physical inspection at home. Appointment Date: ${meshInputs.inspDate || 'Tomorrow'}`,
+        createdAt: new Date().toISOString()
+      });
       setMeshMessage(`✓ Physical Spot Inspection booked successfully! Our Auto Choice certified mechanic will visit on ${meshInputs.inspDate || 'tomorrow'}.`);
     } else if (tool === 'reg') {
       if (!meshInputs.regPlate) {
         setMeshMessage('Please enter a plate chassis sequence');
         return;
       }
+      dbSaveLead({
+        id: `lead-reg-${Date.now()}`,
+        type: 'Excise Query Check',
+        title: 'Excise Title Verification Lookup',
+        userName: currentUser?.displayName || 'Anonymous Visitor',
+        userPhone: currentUser?.phoneNumber || 'N/A',
+        userEmail: currentUser?.email || 'N/A',
+        city: 'Federal/KPK',
+        details: `Queried Plate sequences register check: ${meshInputs.regPlate.toUpperCase()}`,
+        createdAt: new Date().toISOString()
+      });
       setMeshMessage(`🔍 Query: Plated record ${meshInputs.regPlate.toUpperCase()} identified with KPK Excise. Verified clear. No active token liabilities.`);
     }
   };
@@ -332,15 +357,7 @@ export default function HomeView({
   };
 
   return (
-    <div id="bazar360-home-viewport" className="flex flex-col space-y-8 pb-16 animate-fade-in text-white">
-      
-      {/* Dynamic Header Badge banner */}
-      <div className="flex items-center gap-2 bg-[#0a1120] border border-white/5 py-3 px-5 rounded-2xl w-full order-1">
-        <Sparkles size={16} className="text-[#38BDF8] animate-pulse" />
-        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-white/90">
-          BAZAR360 Live Engine: <span className="text-orange-400 font-extrabold">{listings.length} verified products</span> online. In-house Auto Choice models verified.
-        </span>
-      </div>
+    <div id="bazar360-home-viewport" className="flex flex-col space-y-8 pb-16 animate-fade-in text-white font-sans">
 
       {/* Hero Welcome banner */}
       <section className="relative w-full rounded-2xl overflow-hidden bg-gradient-to-br from-[#121c30] via-[#080d19] to-[#121c30] p-6 md:p-8 border border-white/5 shadow-2xl order-1">
@@ -371,6 +388,47 @@ export default function HomeView({
               </p>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* 1. HIGHLY VISUAL CATEGORY/BRAND ICON GRID SPLIT */}
+      <section className="bg-slate-900/60 p-5 rounded-3xl border border-white/5 space-y-4 shadow-xl order-1">
+        <div className="flex justify-between items-center border-b border-white/5 pb-2">
+          <span className="text-[10px] font-mono font-black text-[#38BDF8] uppercase tracking-wider">
+            Explore Bazar360 Portals By Group
+          </span>
+          <span className="text-[9px] text-gray-500 font-mono uppercase">Direct Entry Points</span>
+        </div>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+          {[
+            { name: 'SUV & Jeeps', icon: '🚙', tag: 'SUV', count: listings.filter(l => l.tags?.some(t => t === 'SUV')).length + ' units' },
+            { name: 'Luxury Sedans', icon: '🚘', tag: 'Sedan', count: listings.filter(l => l.tags?.some(t => t === 'Sedan')).length + ' units' },
+            { name: 'Electric Motors', icon: '⚡', tag: 'Electric', count: listings.filter(l => l.tags?.some(t => t === 'Electric')).length + ' units' },
+            { name: 'Showroom VIPs', icon: '🏬', tab: 'dealers', count: dealers.length + ' showrooms' },
+            { name: 'Market Media', icon: '📣', tab: 'media', count: 'Live feeds' },
+            { name: 'Insights Center', icon: '📈', tab: 'insights', count: 'Escrow active' },
+          ].map((item, i) => (
+            <button
+              key={`cat-grid-${i}`}
+              type="button"
+              onClick={() => {
+                if (item.tag) {
+                  handleCategoryPress(item.tag);
+                  setTab('inventory');
+                } else if (item.tab) {
+                  setTab(item.tab);
+                }
+              }}
+              className="bg-[#0c1322] hover:bg-[#121a2a] border border-white/5 hover:border-orange-500/40 p-4.5 rounded-2xl flex flex-col items-center justify-center text-center gap-2 duration-150 active:scale-95 transition-all select-none cursor-pointer group"
+            >
+              <span className="text-2xl group-hover:scale-110 transition-transform duration-200">{item.icon}</span>
+              <div className="min-w-0">
+                <p className="text-[10.5px] font-bold text-white uppercase group-hover:text-orange-400 truncate tracking-tight">{item.name}</p>
+                <p className="text-[8.5px] text-gray-500 font-mono font-medium truncate mt-0.5">{item.count}</p>
+              </div>
+            </button>
+          ))}
         </div>
       </section>
 
@@ -563,11 +621,11 @@ export default function HomeView({
         </div>
       </section>
 
-      {/* 3. HORIZONTAL SERVICES MESH */}
+      {/* 3. HORIZONTAL AUTOMOTIVE SUPPORT SERVICES */}
       <section className="space-y-3.5 order-5">
         <div className="flex justify-between items-center">
           <h3 className="text-white font-black text-xs uppercase tracking-widest font-mono flex items-center gap-1.5">
-            <Wrench size={14} className="text-[#38BDF8]" /> Horizontal Services Mesh
+            <Wrench size={14} className="text-[#38BDF8]" /> Horizontal Automotive Support Services
           </h3>
           <span className="text-[9px] font-mono text-gray-500 uppercase">Swipeable Tool Integrations</span>
         </div>
@@ -823,59 +881,6 @@ export default function HomeView({
 
           </div>
         )}
-      </section>
-
-      {/* 4. MONOCHROMATIC BRAND SCROLL MARQUEE */}
-      <section className="bg-slate-950/80 border border-white/5 py-4.5 rounded-3xl overflow-hidden relative shadow-inner select-none order-5">
-        <div className="absolute top-0 left-0 w-20 h-full bg-gradient-to-r from-[#0B1121] to-transparent z-10 pointer-events-none"></div>
-        <div className="absolute top-0 right-0 w-20 h-full bg-gradient-to-l from-[#0B1121] to-transparent z-10 pointer-events-none"></div>
-
-        <div className="flex overflow-hidden relative w-full h-8">
-          <div className="animate-marquee flex gap-16 text-slate-500 font-mono text-xs tracking-wider font-black items-center min-w-full uppercase">
-            {/* First sequence */}
-            {brandList.map((brand, i) => (
-              <button
-                key={`b1-${i}`}
-                onClick={() => {
-                  setTab('inventory');
-                  setSearchQuery(brand);
-                }}
-                className="flex items-center gap-2 hover:text-white text-slate-400 font-mono text-[10.5px] uppercase font-black tracking-wider transition-all hover:scale-105 active:scale-95 duration-150 cursor-pointer border border-transparent hover:border-white/5 hover:bg-white/[0.02] px-3 py-1.5 rounded-xl group"
-              >
-                {getBrandLogoSvg(brand)}
-                <span className="group-hover:text-[#38BDF8]">{brand}</span>
-              </button>
-            ))}
-            {/* Duplicated sequence for endless illusion looping */}
-            {brandList.map((brand, i) => (
-              <button
-                key={`b2-${i}`}
-                onClick={() => {
-                  setTab('inventory');
-                  setSearchQuery(brand);
-                }}
-                className="flex items-center gap-2 hover:text-white text-slate-400 font-mono text-[10.5px] uppercase font-black tracking-wider transition-all hover:scale-105 active:scale-95 duration-150 cursor-pointer border border-transparent hover:border-white/5 hover:bg-white/[0.02] px-3 py-1.5 rounded-xl group"
-              >
-                {getBrandLogoSvg(brand)}
-                <span className="group-hover:text-[#38BDF8]">{brand}</span>
-              </button>
-            ))}
-            {/* Duplicated sequence 2 */}
-            {brandList.map((brand, i) => (
-              <button
-                key={`b3-${i}`}
-                onClick={() => {
-                  setTab('inventory');
-                  setSearchQuery(brand);
-                }}
-                className="flex items-center gap-2 hover:text-white text-slate-400 font-mono text-[10.5px] uppercase font-black tracking-wider transition-all hover:scale-105 active:scale-95 duration-150 cursor-pointer border border-transparent hover:border-white/5 hover:bg-white/[0.02] px-3 py-1.5 rounded-xl group"
-              >
-                {getBrandLogoSvg(brand)}
-                <span className="group-hover:text-[#38BDF8]">{brand}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* CORE 3-COLUMN ARCHITECTURE GRID */}
@@ -1588,6 +1593,19 @@ export default function HomeView({
             <form onSubmit={(e) => {
               e.preventDefault();
               const textMessage = `--- BAZAR360 DIRECT TRADE VIP QUERY ---\n\nManager: Muhammad Amjid\nClient Requirements: ${directTradeForm.requirements || 'N/A'}\nBudget Threshold: ${directTradeForm.budget || 'N/A'}\nFast-Track Query: ${directTradeForm.query || 'N/A'}`;
+              
+              dbSaveLead({
+                id: `lead-trade-${Date.now()}`,
+                type: 'VIP Direct Trade',
+                title: 'High-End VIP Sourcing Query',
+                userName: currentUser?.displayName || 'Guest Prospect',
+                userPhone: currentUser?.phoneNumber || 'N/A',
+                userEmail: currentUser?.email || 'N/A',
+                city: currentUser?.city || 'Lahore',
+                details: `Requirements: ${directTradeForm.requirements || 'N/A'}\nBudget Limit: ${directTradeForm.budget || 'N/A'}\nForm Notes: ${directTradeForm.query || 'N/A'}`,
+                createdAt: new Date().toISOString()
+              });
+
               const whatsappUrl = `https://wa.me/923149198403?text=${encodeURIComponent(textMessage)}`;
               window.open(whatsappUrl, '_blank');
               setIsDirectTradeOpen(false);

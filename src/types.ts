@@ -24,6 +24,21 @@ export interface CarListing {
   approved?: boolean;
   assignedSalesRepId?: string;
   region?: string;
+
+  // Auto Choice Exclusive strict properties
+  condition: 'New' | 'Used';
+  engineCC: number;
+  exteriorColor: string;
+  bodyCondition: 'Total Genuine' | 'Minor Touch-ups' | 'Major Repaint';
+  registrationCity: string;
+  documentType: 'Smart Card' | 'Original Book' | 'Duplicate';
+  tokenTaxPaid: boolean;
+  images: string[];
+  
+  // Requirement matrix extensions
+  assemblyType?: 'Local' | 'Imported';
+  dentPaintDescription?: string;
+  tokenTaxStatus?: 'Paid' | 'Outstanding';
 }
 
 export interface Dealer {

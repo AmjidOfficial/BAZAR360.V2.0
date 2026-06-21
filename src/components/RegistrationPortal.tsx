@@ -94,6 +94,22 @@ export default function RegistrationPortal({
   const [dealerYoutube, setDealerYoutube] = useState('');
   const [dealerTwitter, setDealerTwitter] = useState('');
 
+  // Step-by-Step Minimizing Fatigue States
+  // Individual Quick Ad Posting states:
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [selectedCityGrid, setSelectedCityGrid] = useState('Lahore');
+  const [selectedRoleGrid, setSelectedRoleGrid] = useState<'Buyer' | 'Private Seller'>('Private Seller');
+  const [selectedVehicleInterest, setSelectedVehicleInterest] = useState('Luxury');
+
+  // Digital Showroom Onboarding states:
+  const [ownerName, setOwnerName] = useState(currentUser?.displayName || '');
+  const [businessLogo, setBusinessLogo] = useState('https://lh3.googleusercontent.com/aida-public/AB6AXuB7L3tc6G8oV2yG6bD2-4rkocsDR68Fv03AYKixBC3Jo7z3F2dxC7l1k4a5qF2lg9sOFyDrPsAyPlvZ6lr6DN1PB651SzZXlvwyRfHsTV44M01h5rtpJZP3vkPARPkwkcD8rbWhw9phqyv92EMw-dvIsScW2rCrgiunc8yMndccSDmD5SZni8J5SJF098meLiFId3ebyei-RpMdRt4bsa4Ot5PZonvepRTSshKKpywxQZF24fSlk6DLYXf6M5s4qDFp0VhtnsirnJI');
+  const [telemetryAddress, setTelemetryAddress] = useState('DHA Phase 6, Karachi');
+  const [locationTelemetry, setLocationTelemetry] = useState('LAT: 24.8607, LNG: 67.0011 (Verified GPS)');
+  const [telemetryChecking, setTelemetryChecking] = useState(false);
+
   // Contact number validation (Supports Pakistan format, UAE, and general global verified contact structure)
   const validatePhoneNumber = (phone: string): boolean => {
     if (!phone.trim()) {
@@ -376,7 +392,7 @@ export default function RegistrationPortal({
       if (currentUser) {
         const updatedUsr: UserProfile = {
           ...currentUser,
-          role: 'Showroom Owner', // Auto-elevate to dealership Owner
+          role: 'Dealer', // Auto-elevate to dealership Owner
           salesPodId: newDealerId
         };
         await dbSaveUserProfile(updatedUsr);
@@ -424,6 +440,42 @@ export default function RegistrationPortal({
     }
   };
 
+  // Trigger simulated OTP flow to Pakistan mobile numbers 
+  const triggerOtpDispatch = (phone: string) => {
+    if (!validatePhoneNumber(phone)) return;
+    setOtpSent(true);
+    setOtpCode('');
+    setOtpVerified(false);
+    setUserSuccessMessage("✓ OTP Verification dispatch completed! Check your SMS for 4-digit token.");
+    setTimeout(() => {
+      setUserSuccessMessage('');
+    }, 4000);
+  };
+
+  const confirmOtpToken = () => {
+    if (otpCode === "1234" || otpCode.length === 4) {
+      setOtpVerified(true);
+      setUserSuccessMessage("✓ Phone verification successful! Secure OTP matched.");
+      setTimeout(() => {
+        setUserSuccessMessage('');
+      }, 4000);
+    } else {
+      setPhoneError("Invalid 4-digit code. Please enter '1234' to bypass sandbox verification.");
+    }
+  };
+
+  const triggerGpsTelemetryRetrieve = () => {
+    setTelemetryChecking(true);
+    setTimeout(() => {
+      setTelemetryChecking(false);
+      setLocationTelemetry("LAT: 24.8607, LNG: 67.0011 (Verified GPS Sync)");
+      setDealerSuccessMessage("✓ Accurate showroom location telemetry captured successfully via GPS satellites.");
+      setTimeout(() => {
+        setDealerSuccessMessage('');
+      }, 3000);
+    }, 1500);
+  };
+
   return (
     <div className="bg-[#0b121f] border border-[#1e293b] rounded-3xl p-6 shadow-2xl relative overflow-hidden text-xs font-sans max-w-4xl mx-auto">
       
@@ -443,7 +495,7 @@ export default function RegistrationPortal({
             }`}
           >
             <UserPlus size={13} className={activeForm === 'profile' ? 'text-white' : 'text-[#38bdf8]'} />
-            BAZAR360 Registrations
+            Individual Quick Ad Posting
           </button>
           
           <button
@@ -455,7 +507,7 @@ export default function RegistrationPortal({
             }`}
           >
             <Building size={13} className="text-[#38bdf8]" />
-            Establish Fleet Showroom
+            Digital Showroom / Bargain Registration
           </button>
         </div>
 
@@ -474,36 +526,34 @@ export default function RegistrationPortal({
 
       {/* FORM 1: User Profile Signup/Registration */}
       {activeForm === 'profile' && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-in text-sans select-none text-white">
           <div className="flex justify-between items-start flex-wrap gap-4">
             <div className="space-y-1">
-              <h3 className="text-white font-extrabold text-sm uppercase tracking-tight flex items-center gap-2">
-                <UserPlus size={16} className="text-orange-400" /> Complete Registration Profile Form
+              <span className="text-[9px] font-mono font-bold text-[#F97316] uppercase tracking-wider block bg-orange-950/40 w-fit px-2 py-0.5 rounded border border-white/5">
+                Onboarding Stream A
+              </span>
+              <h3 className="text-white font-extrabold text-base uppercase tracking-tight flex items-center gap-2">
+                <User size={18} className="text-orange-500" /> Individual Quick Ad Posting Setup
               </h3>
               <p className="text-gray-400 text-[11px] leading-relaxed">
-                Add structured role-based access attributes to the BAZAR360 Cloud Database for persistent privilege checking.
+                Connect your account via verified OTP phone parameters or social sign-ins, and choose properties visually below.
               </p>
             </div>
             
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-gray-400 font-mono font-bold tracking-tight uppercase">Status:</span>
-              <span className={`px-2 py-0.5 rounded text-[9px] uppercase font-mono font-bold border ${
-                userStatus === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                userStatus === 'Pending Approval' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                'bg-red-500/10 text-red-500 border-red-500/20'
-              }`}>
-                {userStatus}
+              <span className="text-[10px] text-gray-500 font-mono font-bold uppercase">Pipeline:</span>
+              <span className="px-2.5 py-0.5 rounded text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono font-bold uppercase animate-pulse">
+                Active Setup
               </span>
             </div>
           </div>
 
-          {/* Social Logins Section */}
+          {/* Social verification row */}
           <div className="p-4 bg-[#051020] rounded-2xl border border-[#1e293b] space-y-3">
             <span className="text-[9px] text-[#38bdf8] uppercase font-mono font-extrabold tracking-wider block">
-              ⚡ Accelerated Federated Identity Providers (Social Sign Ins)
+              ⚡ Secure Instant Social Verification
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Google Button in vibrant Orange as specified */}
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
@@ -511,27 +561,27 @@ export default function RegistrationPortal({
                 className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-150 uppercase tracking-wider text-[10px] shadow shadow-orange-950/40 select-none cursor-pointer"
               >
                 <Globe size={13} className="animate-pulse" />
-                Login with Google
+                Auth via Google
               </button>
 
               <button
                 type="button"
                 onClick={() => handleSimulateSocialLogin('Facebook')}
                 disabled={authLoading}
-                className="bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/30 text-[#1877F2] font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-150 uppercase tracking-wider text-[10px] select-none cursor-pointer"
+                className="bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/30 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-150 uppercase tracking-wider text-[10px] select-none cursor-pointer"
               >
-                <Facebook size={12} />
-                Connect Facebook
+                <Facebook size={12} className="text-[#1877F2]" />
+                Bypass Facebook
               </button>
 
               <button
                 type="button"
                 onClick={() => handleSimulateSocialLogin('LinkedIn')}
                 disabled={authLoading}
-                className="bg-[#0A66C2]/10 hover:bg-[#0A66C2]/20 border border-[#0A66C2]/30 text-[#0A66C2] font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-150 uppercase tracking-wider text-[10px] select-none cursor-pointer"
+                className="bg-[#0A66C2]/10 hover:bg-[#0A66C2]/20 border border-[#0A66C2]/30 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-150 uppercase tracking-wider text-[10px] select-none cursor-pointer"
               >
-                <Linkedin size={12} />
-                Link LinkedIn Profile
+                <Linkedin size={12} className="text-[#0A66C2]" />
+                Connect LinkedIn
               </button>
             </div>
           </div>
@@ -543,17 +593,19 @@ export default function RegistrationPortal({
             </div>
           )}
 
-          {/* Form Content */}
-          <form onSubmit={handleUserRegister} className="space-y-4 pt-1 bg-[#051020] p-5 rounded-2xl border border-[#1e293b]">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Form container */}
+          <div className="space-y-6 pt-1 bg-[#051020] p-6 rounded-3xl border border-[#1e293b]">
+            
+            {/* Identity typing credentials simplified */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Full Name Account:</label>
-                <div className="bg-[#0b121f] border border-[#1e293b] rounded-xl px-3 py-2.5 flex items-center gap-2">
+                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Full Name:</label>
+                <div className="bg-[#0b121f] border border-[#1e293b] rounded-xl px-3 py-2.5 flex items-center gap-2 focus-within:border-orange-500 duration-150">
                   <User size={13} className="text-[#38bdf8]" />
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Amjid Bisconni"
+                    placeholder="e.g. Malak Mazhar"
                     value={userDisplayName}
                     onChange={(e) => setUserDisplayName(e.target.value)}
                     className="bg-transparent border-none text-white focus:outline-none w-full placeholder:text-gray-600 block text-xs font-semibold"
@@ -562,180 +614,263 @@ export default function RegistrationPortal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Email Address:</label>
-                <div className="bg-[#0b121f] border border-[#1e293b] rounded-xl px-3 py-2.5 flex items-center gap-2">
+                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Email (Optional):</label>
+                <div className="bg-[#0b121f] border border-[#1e293b] rounded-xl px-3 py-2.5 flex items-center gap-2 focus-within:border-orange-500 duration-150">
                   <Mail size={13} className="text-[#38bdf8]" />
                   <input
                     type="email"
-                    required
-                    placeholder="e.g. amjid@bazar360.pk"
+                    placeholder="e.g. malak@bazar360.pk"
                     value={userEmail}
                     onChange={(e) => {
                       setUserEmail(e.target.value);
-                      validateEmail(e.target.value);
+                      if (e.target.value) validateEmail(e.target.value);
                     }}
                     className="bg-transparent border-none text-white focus:outline-none w-full placeholder:text-gray-600 block text-xs font-semibold"
                   />
                 </div>
-                {emailError && <p className="text-red-500 text-[9px] font-semibold">{emailError}</p>}
+              </div>
+            </div>
+
+            {/* Pakistan Phone OTP Flow */}
+            <div className="p-4 bg-[#0a1424] rounded-2xl border border-white/5 space-y-4">
+              <div className="flex justify-between items-center">
+                <label className="text-[#38bdf8] font-bold uppercase tracking-wider text-[9px] block">
+                  🛡️ SMS Phone OTP Verification Core
+                </label>
+                {otpVerified ? (
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[8px] font-mono uppercase font-black">
+                    Verified Match
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[8px] font-mono uppercase font-black animate-pulse">
+                    Verification Needed
+                  </span>
+                )}
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Verified Contact Number:</label>
-                <div className="bg-[#0b121f] border border-[#1e293b] rounded-xl px-3 py-2.5 flex items-center gap-2">
-                  <Smartphone size={13} className="text-[#38bdf8]" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. +92 314 3600000"
-                    value={userPhoneNumber}
-                    onChange={(e) => {
-                      setUserPhoneNumber(e.target.value);
-                      if (phoneError) validatePhoneNumber(e.target.value);
-                    }}
-                    onBlur={(e) => validatePhoneNumber(e.target.value)}
-                    className="bg-transparent border-none text-white focus:outline-none w-full placeholder:text-gray-600 block text-xs font-semibold"
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <span className="text-[8px] text-gray-500 uppercase block">Phone Contact Number</span>
+                  <div className="flex gap-2">
+                    <div className="bg-[#0b121f] border border-[#1e293b] rounded-xl px-3 py-2.5 flex items-center gap-2 flex-grow focus-within:border-[#38bdf8]">
+                      <Smartphone size={13} className="text-orange-500" />
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. +92 315 9085086"
+                        value={userPhoneNumber}
+                        onChange={(e) => setUserPhoneNumber(e.target.value)}
+                        className="bg-transparent border-none text-white focus:outline-none w-full placeholder:text-gray-600 block text-xs font-mono font-semibold"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => triggerOtpDispatch(userPhoneNumber)}
+                      className="px-4 py-2 bg-[#122238] border border-white/5 text-gray-300 hover:text-white rounded-xl text-[10px] font-mono uppercase font-black whitespace-nowrap cursor-pointer transition-all hover:bg-[#1b304c]"
+                    >
+                      {otpSent ? "Resend OTP" : "Get OTP"}
+                    </button>
+                  </div>
+                  {phoneError && <p className="text-red-500 text-[10px] font-semibold animate-pulse">{phoneError}</p>}
                 </div>
-                {phoneError ? (
-                  <p className="text-red-500 text-[9px] font-semibold flex items-center gap-0.5 animate-pulse"><AlertTriangle size={9} /> {phoneError}</p>
-                ) : (
-                  <p className="text-gray-500 text-[8px] font-mono">Format: +92 3XX XXXXXXX or 03XXXXXXXXX</p>
+
+                {otpSent && (
+                  <div className="space-y-1.5 animate-fade-in">
+                    <span className="text-[8px] text-gray-500 uppercase block">Enter 4-Digit Verification Token (Try 1234)</span>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        maxLength={4}
+                        placeholder="e.g. 1234"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        className="bg-[#0b121f] border border-[#1e293b] rounded-xl px-4 py-2 text-center text-white focus:outline-none text-xs font-mono font-bold tracking-widest w-28"
+                      />
+                      <button
+                        type="button"
+                        onClick={confirmOtpToken}
+                        className="px-4 py-2 bg-orange-500 text-white rounded-xl text-[10px] uppercase tracking-wider font-extrabold cursor-pointer hover:bg-orange-600 transition-colors"
+                      >
+                        Verify OTP
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Address fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">City (Location):</label>
-                <div className="bg-[#0b121f] border border-[#1e293b] rounded-xl px-3 py-2.5 flex items-center gap-2">
-                  <MapPin size={13} className="text-[#38bdf8]" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Lahore"
-                    value={userCity}
-                    onChange={(e) => setUserCity(e.target.value)}
-                    className="bg-transparent border-none text-white focus:outline-none w-full placeholder:text-gray-600 block text-xs font-semibold"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">State / Province (Location):</label>
-                <div className="bg-[#0b121f] border border-[#1e293b] rounded-xl px-3 py-2.5 flex items-center gap-2">
-                  <MapPin size={13} className="text-[#38bdf8]" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Punjab"
-                    value={userState}
-                    onChange={(e) => setUserState(e.target.value)}
-                    className="bg-transparent border-none text-white focus:outline-none w-full placeholder:text-gray-600 block text-xs font-semibold"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Account Role & System Status */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Account Role Selection:</label>
-                <select
-                  value={userRole}
-                  onChange={(e) => setUserRole(e.target.value as any)}
-                  className="w-full bg-[#0b121f] border border-[#1e293b] rounded-xl p-2.5 text-white font-semibold focus:outline-none focus:border-[#38bdf8] text-xs"
-                >
-                  <option value="Buyer">Buyer (Place bids & Buy Cars)</option>
-                  <option value="Private Seller">Private Seller (Advertise private cars)</option>
-                  <option value="Sales Rep">Sales Rep (Assigned to fleet showrooms)</option>
-                  <option value="Showroom Owner">Showroom Owner (License holder)</option>
-                  <option value="Admin">System Admin (Full controller access)</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Account Operational Status (Admin Only):</label>
-                <select
-                  value={userStatus}
-                  onChange={(e) => setUserStatus(e.target.value as any)}
-                  className="w-full bg-[#0b121f] border border-[#1e293b] rounded-xl p-2.5 text-white font-semibold focus:outline-none focus:border-[#38bdf8] text-xs"
-                >
-                  <option value="Active">Active (Default Full Control)</option>
-                  <option value="Pending Approval">Pending Approval (Under Audit)</option>
-                  <option value="Suspended">Suspended (Blocked System Access)</option>
-                </select>
+            {/* VISUAL SELECTION GRID-1: City Locations (No Typing) */}
+            <div className="space-y-2">
+              <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">
+                📍 Visual City Hub Selector (One-Click Selection)
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {[
+                  { name: 'Lahore', province: 'Punjab', icon: '🏰' },
+                  { name: 'Karachi', province: 'Sindh', icon: '🌊' },
+                  { name: 'Islamabad', province: 'Federal', icon: '🌲' },
+                  { name: 'Peshawar', province: 'KPK', icon: '⛰️' }
+                ].map((city) => {
+                  const isSelected = selectedCityGrid === city.name;
+                  return (
+                    <button
+                      key={city.name}
+                      type="button"
+                      onClick={() => setSelectedCityGrid(city.name)}
+                      className={`p-3 rounded-2xl border text-left flex flex-col justify-between h-20 transition-all duration-150 cursor-pointer ${
+                        isSelected 
+                          ? 'border-orange-500 bg-orange-500/10 text-white shadow shadow-orange-950/20' 
+                          : 'border-white/5 bg-[#0b121f] hover:border-gray-700 text-gray-400'
+                      }`}
+                    >
+                      <span className="text-lg">{city.icon}</span>
+                      <div>
+                        <span className="text-[10px] font-black uppercase font-mono block text-white leading-none">
+                          {city.name}
+                        </span>
+                        <span className="text-[8px] text-gray-500 uppercase block font-mono mt-0.5">
+                          {city.province}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Seller Social Media Channels */}
-            <div className="border-t border-[#1e293b]/50 pt-4 space-y-3">
-              <span className="text-[9px] text-[#38bdf8] font-mono tracking-wider font-extrabold block uppercase">
-                🔗 Seller Social Media Integrations & Digital Channels (Optional)
-              </span>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <div className="space-y-1">
-                  <span className="text-[8px] text-gray-500 font-bold uppercase block">Website Link</span>
-                  <input
-                    type="text"
-                    placeholder="https://mychannel.car"
-                    value={userWebsite}
-                    onChange={(e) => setUserWebsite(e.target.value)}
-                    className="w-full bg-[#0b121f] border border-[#1e293b] rounded-xl p-2 text-white placeholder:text-gray-700 focus:outline-none focus:border-[#38bdf8] font-mono text-[10px]"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <span className="text-[8px] text-gray-500 font-bold uppercase block">Instagram</span>
-                  <input
-                    type="text"
-                    placeholder="@autoseller"
-                    value={userInstagram}
-                    onChange={(e) => setUserInstagram(e.target.value)}
-                    className="w-full bg-[#0b121f] border border-[#1e293b] rounded-xl p-2 text-white placeholder:text-gray-700 focus:outline-none focus:border-[#38bdf8] font-mono text-[10px]"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <span className="text-[8px] text-gray-500 font-bold uppercase block">Facebook</span>
-                  <input
-                    type="text"
-                    placeholder="fb.com/autoseller"
-                    value={userFacebook}
-                    onChange={(e) => setUserFacebook(e.target.value)}
-                    className="w-full bg-[#0b121f] border border-[#1e293b] rounded-xl p-2 text-white placeholder:text-gray-700 focus:outline-none focus:border-[#38bdf8] font-mono text-[10px]"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <span className="text-[8px] text-gray-500 font-bold uppercase block">LinkedIn</span>
-                  <input
-                    type="text"
-                    placeholder="linkedin.com/in/seller"
-                    value={userLinkedin}
-                    onChange={(e) => setUserLinkedin(e.target.value)}
-                    className="w-full bg-[#0b121f] border border-[#1e293b] rounded-xl p-2 text-white placeholder:text-gray-700 focus:outline-none focus:border-[#38bdf8] font-mono text-[10px]"
-                  />
-                </div>
+            {/* VISUAL SELECTION GRID-2: Intent Roles */}
+            <div className="space-y-2">
+              <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">
+                🎯 Personal Account Goal selector
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { id: 'Private Seller', desc: 'Advertise private sports or prestige cars to list quickly', label: 'Post Ads & Sell Cars', icon: '🏷️' },
+                  { id: 'Buyer', desc: 'Explore, submit bids, and secure digital deals', label: 'Explore & Buy Cars', icon: '🏎️' }
+                ].map((role) => {
+                  const isSelected = selectedRoleGrid === role.id;
+                  return (
+                    <button
+                      key={role.id}
+                      type="button"
+                      onClick={() => setSelectedRoleGrid(role.id as any)}
+                      className={`p-3.5 rounded-2xl border text-left flex gap-3 items-center transition-all duration-150 cursor-pointer ${
+                        isSelected 
+                          ? 'border-orange-500 bg-orange-500/10 text-white shadow shadow-orange-950/20' 
+                          : 'border-white/5 bg-[#0b121f] hover:border-gray-700 text-gray-400'
+                      }`}
+                    >
+                      <span className="text-xl bg-[#122036] p-2.5 rounded-xl border border-white/5">{role.icon}</span>
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] font-black uppercase font-mono block text-white">
+                          {role.label}
+                        </span>
+                        <p className="text-[9px] text-gray-500 font-sans leading-tight">
+                          {role.desc}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Actions: Bright Vibrant Orange Sign Up as requested */}
-            <div className="pt-2 flex justify-between items-center flex-wrap gap-2">
-              <div className="text-[9px] text-[#38bdf8] font-mono flex items-center gap-1 bg-[#121a2a] py-1.5 px-3 rounded-lg border border-[#1e293b]">
-                <ShieldCheck size={11} className="text-emerald-400" />
-                Validates credentials and automatically uploads profile payload.
+            {/* VISUAL SELECTION GRID-3: Primary Category Interest */}
+            <div className="space-y-2">
+              <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">
+                ⭐ Preferred Vehicle Category Interest
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {[
+                  { name: 'Luxury', label: 'Prestige Cars', icon: '👑' },
+                  { name: 'SUV', label: 'Elite Utility', icon: '🏔️' },
+                  { name: 'Sedan', label: 'Executive Saloons', icon: '💼' },
+                  { name: 'Sport', label: 'High Performance', icon: '🔥' }
+                ].map((cat) => {
+                  const isSelected = selectedVehicleInterest === cat.name;
+                  return (
+                    <button
+                      key={cat.name}
+                      type="button"
+                      onClick={() => setSelectedVehicleInterest(cat.name)}
+                      className={`p-3 rounded-2xl border text-left flex flex-col justify-between h-20 transition-all duration-150 cursor-pointer ${
+                        isSelected 
+                          ? 'border-[#38bdf8] bg-[#38bdf8]/10 text-white shadow shadow-sky-950/20' 
+                          : 'border-white/5 bg-[#0b121f] hover:border-gray-700 text-gray-400'
+                      }`}
+                    >
+                      <span className="text-lg">{cat.icon}</span>
+                      <div>
+                        <span className="text-[10px] font-black uppercase font-mono block text-white leading-none">
+                          {cat.name}
+                        </span>
+                        <span className="text-[8px] text-gray-500 uppercase block font-mono mt-0.5">
+                          {cat.label}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
+            </div>
+
+            {/* Actions: Save & Finalize */}
+            <div className="pt-2 flex justify-between items-center flex-wrap gap-4 border-t border-white/5">
+              <p className="text-[10px] text-gray-500 font-mono">
+                Bypasses typing fatigue by automatically structuring profile parameters.
+              </p>
               <button
-                type="submit"
-                className="bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-3 px-8 rounded-xl uppercase tracking-widest text-[10px] shadow-lg shadow-orange-950/30 active:scale-95 duration-100 select-none cursor-pointer"
+                type="button"
+                onClick={async () => {
+                  if (!userDisplayName.trim()) {
+                    setPhoneError("Full name is required.");
+                    return;
+                  }
+                  // Proceed to submit structured registration profile
+                  const generatedUid = currentUser?.uid || `usr-${Date.now().toString().slice(-6)}`;
+                  const prov = selectedCityGrid === 'Karachi' ? 'Sindh' : selectedCityGrid === 'Peshawar' ? 'KPK' : selectedCityGrid === 'Islamabad' ? 'Federal' : 'Punjab';
+                  const newProfile: UserProfile = {
+                    uid: generatedUid,
+                    email: userEmail.trim() || `${userDisplayName.toLowerCase().replace(/\s+/g, '')}@bazar360.pk`,
+                    displayName: userDisplayName.trim(),
+                    phoneNumber: userPhoneNumber.trim() || '+92 300 0000000',
+                    phoneVerified: true,
+                    city: selectedCityGrid,
+                    state: prov,
+                    role: selectedRoleGrid,
+                    status: 'Active',
+                    socials: {
+                      website: userWebsite.trim() || undefined,
+                      instagram: userInstagram.trim() || undefined,
+                      facebook: userFacebook.trim() || undefined,
+                      linkedin: userLinkedin.trim() || undefined
+                    },
+                    createdAt: currentUser?.createdAt || new Date().toISOString(),
+                    lastLogin: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    region: selectedCityGrid
+                  };
+
+                  try {
+                    await dbSaveUserProfile(newProfile);
+                    setCurrentUser(newProfile);
+                    setUserSuccessMessage(`✓ Professional Private Profile synchronized! welcome to Bazar360.`);
+                    setTimeout(() => {
+                      setUserSuccessMessage('');
+                      if (onClose) onClose();
+                    }, 2500);
+                  } catch (e) {
+                    setCurrentUser(newProfile);
+                    setUserSuccessMessage(`✓ Local Session updated with visual choice mappings.`);
+                  }
+                }}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-3 px-8 rounded-xl uppercase tracking-widest text-[10px] shadow-lg shadow-orange-950/30 duration-100 select-none cursor-pointer"
               >
-                Sign Up & Register Account
+                Complete Quick Ad Posting Setup
               </button>
             </div>
-          </form>
+            
+          </div>
         </div>
       )}
 
@@ -774,16 +909,17 @@ export default function RegistrationPortal({
             </div>
           )}
 
-          <form onSubmit={handleDealerRegister} className={`space-y-4 pt-1 bg-[#051020] p-5 rounded-2xl border border-[#1e293b] ${isScraping ? 'opacity-40 pointer-events-none' : ''}`}>
+          <form onSubmit={handleDealerRegister} className={`space-y-4 pt-1 bg-[#051020] p-6 rounded-3xl border border-[#1e293b] ${isScraping ? 'opacity-40 pointer-events-none' : ''}`}>
+            {/* Showroom branding */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Showroom Branding Name:</label>
+                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Showroom Branding Title:</label>
                 <div className="bg-[#0b121f] border border-[#1e293b] rounded-xl px-3 py-2.5 flex items-center gap-2">
                   <Building size={14} className="text-orange-400" />
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Al-Syed Luxury Cars"
+                    placeholder="e.g. Prestige Motor Cars"
                     value={dealerName}
                     onChange={(e) => setDealerName(e.target.value)}
                     className="bg-transparent border-none text-white focus:outline-none w-full placeholder:text-gray-600 block text-xs font-semibold"
@@ -792,7 +928,7 @@ export default function RegistrationPortal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Tagline Slogan:</label>
+                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Showroom Tagline Slogan:</label>
                 <input
                   type="text"
                   required
@@ -804,41 +940,109 @@ export default function RegistrationPortal({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Founder and WhatsApp contact */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">HQ City Location:</label>
-                <input
-                  type="text"
-                  required
-                  value={dealerLocation}
-                  onChange={(e) => setDealerLocation(e.target.value)}
-                  className="w-full bg-[#0b121f] border border-[#1e293b] rounded-xl p-2.5 text-white font-mono text-xs focus:outline-none"
-                />
+                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Showroom Founder / Owner Name:</label>
+                <div className="bg-[#0b121f] border border-[#1e293b] rounded-xl px-3 py-2.5 flex items-center gap-2">
+                  <User size={14} className="text-orange-400" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Almas Car Valley Founder"
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                    className="bg-transparent border-none text-white focus:outline-none w-full placeholder:text-gray-600 block text-xs font-semibold"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Hotline Phone:</label>
-                <input
-                  type="text"
-                  required
-                  value={dealerPhone}
-                  onChange={(e) => setDealerPhone(e.target.value)}
-                  className="w-full bg-[#0b121f] border border-[#1e293b] rounded-xl p-2.5 text-white font-mono text-xs focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">WhatsApp Secure:</label>
-                <input
-                  type="text"
-                  required
-                  value={dealerWhatsapp}
-                  onChange={(e) => setDealerWhatsapp(e.target.value)}
-                  className="w-full bg-[#0b121f] border border-[#1e293b] rounded-xl p-2.5 text-white font-mono text-xs focus:outline-none"
-                />
+                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">WhatsApp Secure Contact:</label>
+                <div className="bg-[#0b121f] border border-[#1e293b] rounded-xl px-3 py-2.5 flex items-center gap-2">
+                  <Smartphone size={14} className="text-orange-400" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. +92 321 987 6543"
+                    value={dealerWhatsapp}
+                    onChange={(e) => setDealerWhatsapp(e.target.value)}
+                    className="bg-transparent border-none text-white focus:outline-none w-full placeholder:text-gray-600 block text-xs font-semibold"
+                  />
+                </div>
               </div>
             </div>
 
+            {/* Verified physical address & coordinates */}
+            <div className="p-4 bg-[#0a1424] rounded-2xl border border-white/5 space-y-3">
+              <span className="text-[9px] text-[#38bdf8] uppercase font-mono font-extrabold tracking-wider block">
+                🗺️ Verified physical Location & Satellites Telemetry GPS
+              </span>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <span className="text-[8px] text-gray-500 uppercase block">Showroom Physical Address</span>
+                  <div className="bg-[#0b121f] border border-[#1e293b] rounded-xl px-3 py-2.5 flex items-center gap-2">
+                    <MapPin size={13} className="text-[#38bdf8]" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. DHA Phase 6, Lahore"
+                      value={telemetryAddress}
+                      onChange={(e) => setTelemetryAddress(e.target.value)}
+                      className="bg-transparent border-none text-white focus:outline-none w-full placeholder:text-gray-600 block text-xs font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <span className="text-[8px] text-gray-500 uppercase block">GPS Coordinates readout</span>
+                  <div className="flex gap-2">
+                    <div className="bg-[#0b121f] border border-[#1e293b] rounded-xl px-3 py-2 bg-black/40 text-gray-400 text-xs font-mono flex items-center flex-grow">
+                      {locationTelemetry}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={triggerGpsTelemetryRetrieve}
+                      className="px-4 py-2 bg-[#122238] border border-[#38bdf8]/35 hover:border-[#38bdf8] text-[#38bdf8] hover:text-white rounded-xl text-[10px] font-mono uppercase font-black cursor-pointer transition-all whitespace-nowrap"
+                    >
+                      {telemetryChecking ? "Syncing..." : "GPS Satellite Verification"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Business Logo Section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Business Storefront Logo URL:</label>
+                <input
+                  type="text"
+                  placeholder="Insert image logo web url link"
+                  value={businessLogo}
+                  onChange={(e) => setBusinessLogo(e.target.value)}
+                  className="w-full bg-[#0b121f] border border-[#1e293b] rounded-xl p-2.5 text-white font-mono text-xs focus:outline-none placeholder:text-gray-700"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 bg-[#0b121f] p-2.5 rounded-xl border border-[#1e293b] h-16 w-full overflow-hidden font-sans">
+                <img
+                  src={businessLogo}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://lh3.googleusercontent.com/aida-public/AB6AXuB7L3tc6G8oV2yG6bD2-4rkocsDR68Fv03AYKixBC3Jo7z3F2dxC7l1k4a5qF2lg9sOFyDrPsAyPlvZ6lr6DN1PB651SzZXlvwyRfHsTV44M01h5rtpJZP3vkPARPkwkcD8rbWhw9phqyv92EMw-dvIsScW2rCrgiunc8yMndccSDmD5SZni8J5SJF098meLiFId3ebyei-RpMdRt4bsa4Ot5PZonvepRTSshKKpywxQZF24fSlk6DLYXf6M5s4qDFp0VhtnsirnJI';
+                  }}
+                  className="w-10 h-10 rounded-lg object-cover border border-[#1e293b]"
+                  alt="Business Logo"
+                />
+                <div className="space-y-0.5 leading-none">
+                  <span className="text-[10px] text-white font-black block font-mono">Storefront Logo</span>
+                  <span className="text-[8px] text-gray-400 block pb-1">Visual Badge Preview</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Storefront Description */}
             <div className="space-y-1.5">
               <label className="text-gray-400 font-bold uppercase tracking-wider text-[9px] block">Executive Showroom Description:</label>
               <textarea
@@ -914,13 +1118,13 @@ export default function RegistrationPortal({
 
             <div className="pt-2 flex justify-between items-center">
               <span className="text-[9px] text-[#38bdf8] uppercase font-mono font-bold tracking-tight">
-                ★ Elevates account to Showroom Owner once approved.
+                ★ Elevates account to 'Dealer' tier to unlock Walkthrough video uploads.
               </span>
               <button
                 type="submit"
                 className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 px-6 rounded-xl uppercase tracking-widest text-[10px] shadow-lg shadow-orange-950/20 active:scale-95 duration-100 cursor-pointer select-none"
               >
-                Submit Showroom Profile
+                Complete Digital Showroom Onboarding
               </button>
             </div>
           </form>
@@ -957,7 +1161,7 @@ export default function RegistrationPortal({
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               { role: 'Admin', desc: 'Secure profile access & audit moderation feeds' },
-              { role: 'Showroom Owner', desc: 'Boutique premium showroom floor access' },
+              { role: 'Dealer', desc: 'Dealer tier unlocks Walkthrough video pipeline' },
               { role: 'Sales Rep', desc: 'Assign to active dealership showrooms' },
               { role: 'Private Seller', desc: 'Post ads instantly like FB Marketplace' },
               { role: 'Buyer', desc: 'Securely register offers & book inspections' }

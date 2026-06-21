@@ -169,7 +169,18 @@ export default function SellWithAIView({ onAddListing, setTab, currentUser }: Se
         engineSize: '2.0L Turbo',
         horspower: '190 hp',
         regionalSpecs: 'Pak/Japanese Specs'
-      }
+      },
+      condition: 'Used',
+      engineCC: 2000,
+      exteriorColor: 'Slick Finish',
+      bodyCondition: 'Total Genuine',
+      registrationCity: 'Lahore',
+      documentType: 'Smart Card',
+      tokenTaxPaid: true,
+      images: [CAR_STOCK_IMAGE_CHOICES[selectedPhotoIndex].url],
+      assemblyType: 'Imported',
+      dentPaintDescription: 'Pristine, zero touchups.',
+      tokenTaxStatus: 'Paid'
     };
 
     onAddListing(finalAd);

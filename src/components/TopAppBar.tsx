@@ -1,4 +1,4 @@
-import { Bell, PlusCircle, User, ShieldAlert, LogOut, DollarSign, Wallet } from 'lucide-react';
+import { Bell, PlusCircle, User, ShieldAlert, LogOut, DollarSign, Wallet, Menu } from 'lucide-react';
 import { UserProfile } from '../lib/dbService';
 import { useCurrencyMode } from '../lib/currency';
 
@@ -9,7 +9,12 @@ interface TopAppBarProps {
   currentUser: UserProfile | null;
   onLogout: () => void;
   onBackToGateway: () => void;
+  currentTheme: string;
+  onThemeChange: (theme: string) => void;
   isWithTicker?: boolean;
+  currentCategory?: 'gateway' | 'auto' | 'footwear' | 'food';
+  onCategoryChange?: (category: 'gateway' | 'auto' | 'footwear' | 'food') => void;
+  onMobileMenuToggle: () => void;
 }
 
 export default function TopAppBar({ 
@@ -19,17 +24,22 @@ export default function TopAppBar({
   currentUser,
   onLogout,
   onBackToGateway,
-  isWithTicker
+  currentTheme,
+  onThemeChange,
+  isWithTicker,
+  currentCategory = 'gateway',
+  onCategoryChange,
+  onMobileMenuToggle
 }: TopAppBarProps) {
   const { currencyMode, changeCurrencyMode } = useCurrencyMode();
 
   return (
-    <header className={`flex justify-between items-center w-full px-4 md:px-16 h-16 fixed ${isWithTicker ? 'top-8' : 'top-0'} z-50 bg-[#070c18]/90 backdrop-blur-md border-b border-white/5 shadow-lg transition-all`}>
-      <div className="flex items-center gap-3">
+    <header className={`flex justify-between items-center w-full px-4 md:px-12 h-16 fixed ${isWithTicker ? 'top-8' : 'top-0'} z-50 bg-[#070c18] border-b border-white/5 shadow-2xl transition-all`}>
+      <div className="flex items-center gap-4">
         {/* Dedicated Back to Gateway page button */}
         <button
           onClick={onBackToGateway}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#121c32]/80 hover:bg-[#1a2d4f] text-gray-300 hover:text-white border border-[#38BDF8]/20 rounded-xl text-[10px] font-mono font-bold tracking-wider uppercase transition-all duration-150 cursor-pointer select-none active:scale-95"
+          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-[#121c32]/50 hover:bg-[#1a2d4f] text-gray-400 hover:text-white border border-white/10 rounded-xl text-[10px] font-mono font-bold tracking-wider uppercase transition-all duration-150 cursor-pointer select-none active:scale-95"
           title="Return to Master Gateway View"
         >
           ← Gate
@@ -37,29 +47,64 @@ export default function TopAppBar({
 
         <div className="cursor-pointer active:scale-95 transition-transform" onClick={() => setTab('home')}>
           {/* BAZAR360 Premium Responsive Logo Component */}
-          <div className="flex items-center space-x-2 select-none tracking-tight">
+          <div className="flex items-center space-x-2 select-none">
             {/* Interactive 360-Degree Orbital Icon */}
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-slate-900 to-blue-950 border border-blue-500/30 shadow-lg group active:scale-95 transition-transform">
-              <svg className="w-6 h-6 text-orange-500 animate-[spin_20s_linear_infinite]" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-slate-950 border border-white/10 shadow-lg transition-transform">
+              <svg className="w-5 h-5 text-orange-500 animate-[spin_20s_linear_infinite]" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path>
               </svg>
-              <span className="absolute text-[10px] font-black text-sky-400 tracking-tighter">360</span>
+              <span className="absolute text-[9px] font-black text-sky-400 tracking-tighter">360</span>
             </div>
             {/* Typography Wrapper */}
             <div className="flex flex-col">
-              <span className="text-xl font-black text-white tracking-widest leading-none">BAZAR<span className="text-orange-500 font-extrabold">360</span></span>
-              <span className="text-[9px] font-bold text-sky-400 tracking-[0.25em] uppercase pl-0.5">Ecosystem</span>
+              <span className="text-[17px] font-black text-white tracking-widest leading-none">BAZAR<span className="text-orange-500">360</span></span>
+              <span className="text-[8px] font-bold text-sky-450 tracking-[0.22em] uppercase pl-0.5">Ecosystem</span>
             </div>
           </div>
         </div>
 
-        {/* Dynamic active Auto Choice brand signature */}
-        <div className="flex items-center gap-1.5 px-3 py-1 bg-sky-500/15 border border-sky-500/30 rounded-xl text-[9.5px] font-mono font-black text-sky-400 tracking-widest uppercase">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-sky-400"></span>
-          </span>
-          🚗 Auto Choice
+        {/* Premium Sector Switcher Tabs */}
+        <div className="hidden lg:flex items-center bg-[#0d1424] border border-white/5 rounded-2xl p-1 gap-1" id="desktop-sector-tabs">
+          <button
+            onClick={() => onCategoryChange?.('gateway')}
+            className={`px-3 py-1.5 text-[9.5px] font-black rounded-xl uppercase tracking-wider transition-all duration-150 cursor-pointer flex items-center gap-1.5 ${
+              currentCategory === 'gateway'
+                ? 'bg-orange-500 text-[#070c18] font-black'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <span>🌐</span> Gateway
+          </button>
+          <button
+            onClick={() => onCategoryChange?.('auto')}
+            className={`px-3 py-1.5 text-[9.5px] font-black rounded-xl uppercase tracking-wider transition-all duration-150 cursor-pointer flex items-center gap-1.5 ${
+              currentCategory === 'auto'
+                ? 'bg-orange-500 text-[#070c18] font-black'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <span>🚗</span> Auto Choice
+          </button>
+          <button
+            onClick={() => onCategoryChange?.('footwear')}
+            className={`px-3 py-1.5 text-[9.5px] font-black rounded-xl uppercase tracking-wider transition-all duration-150 cursor-pointer flex items-center gap-1.5 ${
+              currentCategory === 'footwear'
+                ? 'bg-orange-500 text-[#070c18] font-black'
+                : 'text-gray-450 hover:text-white'
+            }`}
+          >
+            <span>🥾</span> Footwear
+          </button>
+          <button
+            onClick={() => onCategoryChange?.('food')}
+            className={`px-3 py-1.5 text-[9.5px] font-black rounded-xl uppercase tracking-wider transition-all duration-150 cursor-pointer flex items-center gap-1.5 ${
+              currentCategory === 'food'
+                ? 'bg-orange-500 text-[#070c18] font-black'
+                : 'text-gray-450 hover:text-white'
+            }`}
+          >
+            <span>🍕</span> Food Court
+          </button>
         </div>
       </div>
 
@@ -117,7 +162,8 @@ export default function TopAppBar({
         </button>
       </nav>
 
-      <div className="flex items-center gap-4">
+      {/* Desktop Navigation & Utilities (hidden on mobile < 768px) */}
+      <div className="hidden md:flex items-center gap-4" id="desktop-right-utilities">
         {/* Universal Pricing Switcher: PKR / USD / Dual */}
         <div className="flex items-center bg-slate-950/80 border border-white/5 rounded-xl p-1" id="global-currency-switcher-root">
           <button
@@ -161,7 +207,7 @@ export default function TopAppBar({
         {/* Portal Forms Toggle Shortcut */}
         <button
           onClick={() => setTab('portal')}
-          className={`hidden lg:flex items-center gap-1 text-[10px] font-mono font-bold tracking-tight px-2.5 py-1 rounded border transition-all ${
+          className={`flex items-center gap-1 text-[10px] font-mono font-bold tracking-tight px-2.5 py-1 rounded border transition-all ${
             currentTab === 'portal'
               ? 'bg-[#38BDF8]/20 text-[#38BDF8] border-[#38BDF8]/40'
               : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
@@ -173,7 +219,7 @@ export default function TopAppBar({
         {/* Verified Showrooms Shortcut */}
         <button
           onClick={() => setTab('dealers')}
-          className={`hidden sm:flex items-center gap-1 text-[10px] font-mono font-bold tracking-tight px-2.5 py-1 rounded border transition-all ${
+          className={`flex items-center gap-1 text-[10px] font-mono font-bold tracking-tight px-2.5 py-1 rounded border transition-all ${
             currentTab === 'dealers'
               ? 'bg-[#38BDF8]/20 text-[#38BDF8] border-[#38BDF8]/40'
               : 'bg-white/5 text-gray-400 border-white/10 hover:text-white hover:border-white/20'
@@ -194,7 +240,7 @@ export default function TopAppBar({
           <div className="flex items-center gap-2">
             <div 
               onClick={() => setTab('portal')}
-              className="hidden lg:flex items-center gap-2 bg-[#121c32]/80 border border-white/10 rounded-full py-1 pl-1.5 pr-3 cursor-pointer text-[10px] select-none hover:border-[#38BDF8]/40 transition-colors"
+              className="flex items-center gap-2 bg-[#121c32]/80 border border-white/10 rounded-full py-1 pl-1.5 pr-3 cursor-pointer text-[10px] select-none hover:border-[#38BDF8]/40 transition-colors"
               title="Manage profile & showroom roles"
             >
               <div className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center font-extrabold text-[9px] uppercase font-mono">
@@ -227,12 +273,22 @@ export default function TopAppBar({
 
         <button
           onClick={onPostAdClick}
-          className="hidden md:flex bg-[#F97316] text-white px-5 py-2 rounded-xl text-xs font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-900/20 items-center gap-2 border border-white/5 duration-150 tracking-wider uppercase cursor-pointer"
+          className="flex bg-[#F97316] text-white px-5 py-2 rounded-xl text-xs font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-900/20 items-center gap-2 border border-white/5 duration-150 tracking-wider uppercase cursor-pointer"
         >
           <PlusCircle size={15} />
           AI Selling Engine
         </button>
       </div>
+
+      {/* Mobile-Only Burger Menu Trigger Button (Visible only < 768px viewports) */}
+      <button
+        onClick={onMobileMenuToggle}
+        className="flex md:hidden text-white hover:text-orange-500 transition-all p-2 bg-[#121c32]/40 rounded-xl border border-white/5 cursor-pointer active:scale-95"
+        id="mobile-drawer-toggle-btn"
+        title="Open Navigation Menu"
+      >
+        <Menu size={20} />
+      </button>
     </header>
   );
 }

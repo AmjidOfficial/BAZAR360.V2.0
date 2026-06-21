@@ -329,7 +329,18 @@ export default function ShowroomHQHub({
       },
       approved: true, // Auto-approved since showowner is posting it!
       assignedSalesRepId: currentUser?.uid || 'ceo-authorized',
-      region: profLocation.includes('Lahore') ? 'Lahore' : profLocation.includes('Karachi') ? 'Karachi' : 'Islamabad'
+      region: profLocation.includes('Lahore') ? 'Lahore' : profLocation.includes('Karachi') ? 'Karachi' : 'Islamabad',
+      condition: 'Used',
+      engineCC: parseInt(carDisplacement) || 1500,
+      exteriorColor: carColor || 'Default Finish',
+      bodyCondition: 'Total Genuine',
+      registrationCity: carRegCity || 'Lahore',
+      documentType: 'Smart Card',
+      tokenTaxPaid: true,
+      images: [carImgUrl],
+      assemblyType: 'Imported',
+      dentPaintDescription: 'Pristine, minor wear compatible with mileage.',
+      tokenTaxStatus: 'Paid'
     };
 
     onAddListing(finalAd);

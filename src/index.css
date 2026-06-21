@@ -8,9 +8,54 @@
 }
 
 body {
-  background-color: #0B1121;
-  color: #ffffff;
+  background-color: var(--brand-bg);
+  color: var(--brand-text);
   font-family: var(--font-sans);
+  transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+}
+
+:root {
+  --brand-bg: #0B1121;
+  --brand-text: #ffffff;
+  --brand-text-muted: #94a3b8;
+  --brand-card: #121c32;
+  --brand-border: rgba(255, 255, 255, 0.05);
+  --brand-accent: #f97316;
+  --brand-accent-hover: #ea580c;
+  --brand-accent-rgb: 249, 115, 22;
+}
+
+.theme-luxury-light {
+  --brand-bg: #f8fafc;
+  --brand-text: #0f172a;
+  --brand-text-muted: #475569;
+  --brand-card: #ffffff;
+  --brand-border: #e2e8f0;
+  --brand-accent: #f97316;
+  --brand-accent-hover: #ea580c;
+  --brand-accent-rgb: 249, 115, 22;
+}
+
+.theme-mint-emerald {
+  --brand-bg: #03140F;
+  --brand-text: #e2f0ec;
+  --brand-text-muted: #5e8a7f;
+  --brand-card: #08211a;
+  --brand-border: rgba(16, 185, 129, 0.15);
+  --brand-accent: #10b981;
+  --brand-accent-hover: #059669;
+  --brand-accent-rgb: 16, 185, 129;
+}
+
+.theme-obsidian-gold {
+  --brand-bg: #050505;
+  --brand-text: #f4f4f5;
+  --brand-text-muted: #8e8e93;
+  --brand-card: #0f0f12;
+  --brand-border: rgba(217, 119, 6, 0.20);
+  --brand-accent: #eab308;
+  --brand-accent-hover: #ca8a04;
+  --brand-accent-rgb: 234, 179, 8;
 }
 
 /* Custom scrollbar for premium lists */
@@ -93,7 +138,7 @@ input[type="range"]::-moz-range-thumb:hover {
 .animate-marquee {
   display: flex;
   width: max-content;
-  animation: marquee 25s linear infinite;
+  animation: marquee 5s linear infinite;
 }
 
 .animate-fast-ticker {

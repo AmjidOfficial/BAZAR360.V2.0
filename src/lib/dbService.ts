@@ -25,7 +25,7 @@ export interface UserProfile {
   phoneVerified?: boolean;
   city?: string;
   state?: string;
-  role: 'Admin' | 'Showroom Owner' | 'Sales Rep' | 'Private Seller' | 'Buyer';
+  role: 'Admin' | 'Showroom Owner' | 'Sales Rep' | 'Private Seller' | 'Buyer' | 'Dealer';
   status: 'Active' | 'Pending Approval' | 'Suspended';
   socials?: {
     website?: string;
@@ -53,7 +53,18 @@ export async function seedDatabaseIfEmpty() {
   }
 
   try {
-    console.log('Synchronizing initial dealers & listings to Firestore in parallel...');
+    // Check sentinel document first to avoid 20+ parallel read queries
+    const sentinelRef = doc(db, 'system', 'seeded');
+    const sentinelSnap = await getDoc(sentinelRef);
+    if (sentinelSnap.exists() && sentinelSnap.data()?.completed === true) {
+      console.log('Firestore backend reports database is already fully seeded. Saving Client index.');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('bazar360_db_seeded', 'true');
+      }
+      return;
+    }
+
+    console.log('Sentinel document missing. Synchronizing initial dealers & listings to Firestore in parallel...');
     
     // Concurrently verify and write dealers
     const dealerPromises = INITIAL_DEALERS.map(async (d) => {
@@ -118,6 +129,9 @@ export async function seedDatabaseIfEmpty() {
 
     // Run ALL checks and writes concurrently
     await Promise.all([...dealerPromises, ...listingPromises, ...reviewPromises]);
+
+    // Set the sentinel document to true
+    await setDoc(sentinelRef, { completed: true, timestamp: new Date().toISOString() });
 
     if (typeof window !== 'undefined') {
       localStorage.setItem('bazar360_db_seeded', 'true');
@@ -193,11 +207,24 @@ export async function dbFetchListings(): Promise<CarListing[]> {
         createdAt: data.createdAt || new Date().toISOString(),
         tags: Array.isArray(data.tags) ? data.tags : [],
         specs: data.specs || {
-          color: 'Standard',
-          engineSize: '2.0L',
+          color: data.exteriorColor || 'Standard',
+          engineSize: data.engineCC ? `${data.engineCC} CC` : '2000 CC',
           horspower: '150 hp',
-          regionalSpecs: 'Pak/Japanese Specs'
-        }
+          regionalSpecs: data.assemblyType || 'Local'
+        },
+        
+        // Auto Choice strict mapping with defaults
+        condition: data.condition || 'Used',
+        engineCC: Number(data.engineCC) || 2000,
+        exteriorColor: data.exteriorColor || data.specs?.color || 'Standard White',
+        bodyCondition: data.bodyCondition || 'Total Genuine',
+        registrationCity: data.registrationCity || 'Peshawar',
+        documentType: data.documentType || 'Smart Card',
+        tokenTaxPaid: data.tokenTaxPaid !== false,
+        images: Array.isArray(data.images) ? data.images : (data.imageUrl ? [data.imageUrl] : []),
+        assemblyType: data.assemblyType || 'Local',
+        dentPaintDescription: data.dentPaintDescription || '',
+        tokenTaxStatus: data.tokenTaxStatus || 'Paid'
       });
     });
     return list;
@@ -335,5 +362,122 @@ export async function dbFetchReviews(dealerId: string): Promise<Review[]> {
   } catch (err) {
     console.error('dbFetchReviews Error:', err);
     return INITIAL_REVIEWS[dealerId] || [];
+  }
+}
+
+// 10. Bargains & Leads DB layer
+export interface Bargain {
+  id: string;
+  listingId: string;
+  vehicleTitle: string;
+  bidAmount: number;
+  buyerName: string;
+  buyerPhone: string;
+  buyerEmail: string;
+  dealerId: string;
+  status: 'Pending' | 'Approved' | 'Countered' | 'Rejected';
+  createdAt: string;
+}
+
+export interface Lead {
+  id: string;
+  type: string;
+  title: string;
+  userName: string;
+  userPhone: string;
+  userEmail: string;
+  city?: string;
+  details?: string;
+  metadata?: Record<string, any>;
+  createdAt: string;
+}
+
+export async function dbSaveBargain(bargain: Bargain): Promise<void> {
+  try {
+    await setDoc(doc(db, 'bargains', bargain.id), {
+      ...bargain,
+      createdAt: bargain.createdAt || new Date().toISOString()
+    });
+    console.log('Bargain saved:', bargain.id);
+  } catch (err) {
+    console.warn('Silent bargain save issue:', err);
+  }
+}
+
+export async function dbFetchBargains(): Promise<Bargain[]> {
+  try {
+    const snap = await getDocs(collection(db, 'bargains'));
+    const list: Bargain[] = [];
+    snap.forEach((doc) => {
+      const data = doc.data();
+      list.push({
+        id: doc.id,
+        listingId: data.listingId || '',
+        vehicleTitle: data.vehicleTitle || 'Unknown Vehicle',
+        bidAmount: Number(data.bidAmount) || 0,
+        buyerName: data.buyerName || 'Anonymous',
+        buyerPhone: data.buyerPhone || '',
+        buyerEmail: data.buyerEmail || '',
+        dealerId: data.dealerId || '',
+        status: data.status || 'Pending',
+        createdAt: data.createdAt || new Date().toISOString()
+      });
+    });
+    return list;
+  } catch (err) {
+    console.error('dbFetchBargains Error:', err);
+    return [];
+  }
+}
+
+export async function dbSaveLead(lead: Lead): Promise<void> {
+  try {
+    await setDoc(doc(db, 'leads', lead.id), {
+      ...lead,
+      createdAt: lead.createdAt || new Date().toISOString()
+    });
+    console.log('Lead saved:', lead.id);
+  } catch (err) {
+    console.warn('Silent lead save issue:', err);
+  }
+}
+
+export async function dbFetchLeads(): Promise<Lead[]> {
+  try {
+    const snap = await getDocs(collection(db, 'leads'));
+    const list: Lead[] = [];
+    snap.forEach((doc) => {
+      const data = doc.data();
+      list.push({
+        id: doc.id,
+        type: data.type || 'General Inquiry',
+        title: data.title || 'Inquiry',
+        userName: data.userName || 'Anonymous Visitor',
+        userPhone: data.userPhone || '',
+        userEmail: data.userEmail || '',
+        city: data.city || '',
+        details: data.details || '',
+        metadata: data.metadata || {},
+        createdAt: data.createdAt || new Date().toISOString()
+      });
+    });
+    return list;
+  } catch (err) {
+    console.error('dbFetchLeads Error:', err);
+    return [];
+  }
+}
+
+export async function dbFetchAllUsers(): Promise<UserProfile[]> {
+  try {
+    const snap = await getDocs(collection(db, 'users'));
+    const list: UserProfile[] = [];
+    snap.forEach((doc) => {
+      list.push(doc.data() as UserProfile);
+    });
+    return list;
+  } catch (err) {
+    console.error('dbFetchAllUsers Error:', err);
+    return [];
   }
 }

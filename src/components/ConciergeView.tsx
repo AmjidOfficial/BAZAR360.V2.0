@@ -132,11 +132,11 @@ export default function ConciergeView({ dealers }: ConciergeViewProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Left Column: Interactive 4-Block services mesh (inspired by screenshot rules) */}
+        {/* Left Column: Interactive 4-Block services (inspired by screenshot rules) */}
         <div className="lg:col-span-2 space-y-6">
           <div className="space-y-3">
             <h3 className="text-white font-black text-xs uppercase tracking-widest font-mono flex items-center gap-2">
-              <span>● Ecosystem Services Mesh Matrix</span>
+              <span>● Premium Automotive Support Services</span>
               <span className="text-[10px] text-orange-500 lowercase font-normal">(select card to inspect specifications)</span>
             </h3>
             

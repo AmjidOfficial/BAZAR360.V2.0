@@ -34,6 +34,7 @@ interface VideoFeedItem {
 interface MediaFeedViewProps {
   dealers: Dealer[];
   currentUser: UserProfile | null;
+  onForceLogin?: () => void;
 }
 
 const PRELOADED_VIDEOS: VideoFeedItem[] = [
@@ -91,7 +92,7 @@ const PRELOADED_VIDEOS: VideoFeedItem[] = [
   }
 ];
 
-export default function MediaFeedView({ dealers, currentUser }: MediaFeedViewProps) {
+export default function MediaFeedView({ dealers, currentUser, onForceLogin }: MediaFeedViewProps) {
   const [videoFeed, setVideoFeed] = useState<VideoFeedItem[]>(() => {
     const saved = localStorage.getItem('bazar360_videos');
     if (saved) {
@@ -109,6 +110,7 @@ export default function MediaFeedView({ dealers, currentUser }: MediaFeedViewPro
   const [adminPassword, setAdminPassword] = useState('');
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [authGateIntercept, setAuthGateIntercept] = useState(false);
 
   // Form Submit states
   const [newTitle, setNewTitle] = useState('');
@@ -157,6 +159,28 @@ export default function MediaFeedView({ dealers, currentUser }: MediaFeedViewPro
   const handleSubmitVideo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newDesc.trim()) return;
+
+    // Enforce authentication & role requirements
+    const isOwnerOrModerator = currentUser && (
+      currentUser.role === 'Showroom Owner' || 
+      currentUser.role === 'Dealer' || 
+      currentUser.role === 'Admin' || 
+      currentUser.email === 'amjid.bisconni@gmail.com'
+    );
+
+    // If duration exceeds 30 seconds, enforce matching credentials
+    if (newDuration > 30) {
+      if (!isOwnerOrModerator) {
+        setAuthGateIntercept(true);
+        return;
+      }
+    }
+
+    // Require basic login authentication for any asset upload
+    if (!currentUser) {
+      setAuthGateIntercept(true);
+      return;
+    }
 
     const chosenDealerName = dealers.find(d => d.id === selectedDealerId)?.name || 'Auto Choice';
 
@@ -570,6 +594,58 @@ export default function MediaFeedView({ dealers, currentUser }: MediaFeedViewPro
               </div>
             )}
             
+          </div>
+        </div>
+      )}
+
+      {/* Security Verification Gateway Intercept Modal */}
+      {authGateIntercept && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0b121f] border border-[#EF4444]/30 rounded-2xl w-full max-w-md p-6 text-xs font-sans relative shadow-2xl flex flex-col space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-[#EF4444]/10 p-2.5 rounded-xl border border-[#EF4444]/20 shrink-0">
+                <Lock size={20} className="text-[#EF4444] animate-pulse" />
+              </div>
+              <div className="space-y-0.5">
+                <h4 className="text-[#EF4444] font-mono font-black text-xs uppercase tracking-widest">
+                  Security Gateway Intercept
+                </h4>
+                <p className="text-white mt-1 font-bold text-[11px] leading-tight-none uppercase font-mono">
+                  Owner/Moderator Only Authorization
+                </p>
+              </div>
+            </div>
+
+            <p className="text-gray-300 text-[10.5px] leading-relaxed">
+              To upload high-resolution showcase walkaround clips exceeding 30 seconds, you must have an active authenticated and verified <span className="text-orange-500 font-extrabold">Showroom Owner</span> or <span className="text-sky-400 font-extrabold">System Moderator</span> profile session.
+            </p>
+
+            <div className="bg-[#070c12] p-3 rounded-xl border border-white/5 space-y-1">
+              <p className="text-[9px] font-mono text-gray-500 uppercase font-black">Current session profile:</p>
+              <p className="text-white font-mono font-bold text-[10px] uppercase">
+                {currentUser ? `${currentUser.displayName} (${currentUser.role})` : 'Guest Visitor Session (Offline)'}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={() => {
+                  setAuthGateIntercept(false);
+                  if (onForceLogin) {
+                    onForceLogin();
+                  }
+                }}
+                className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg text-center cursor-pointer font-sans"
+              >
+                Authenticate / Register Dealer Portal 🔑
+              </button>
+              <button
+                onClick={() => setAuthGateIntercept(false)}
+                className="w-full py-2 bg-white/5 hover:bg-white/10 text-gray-400 font-mono text-[9px] uppercase rounded-xl transition-all border border-white/10 cursor-pointer"
+              >
+                ✕ Cancel and Keep Demo Loop
+              </button>
+            </div>
           </div>
         </div>
       )}

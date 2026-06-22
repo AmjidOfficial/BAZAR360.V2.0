@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { initializeFirestore, setLogLevel } from 'firebase/firestore';
+import { initializeFirestore, setLogLevel, doc, getDocFromServer } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -14,6 +14,17 @@ export const db = initializeFirestore(app, {
 export const auth = getAuth();
 export const googleProvider = new GoogleAuthProvider();
 export const functions = getFunctions(app, 'us-central1'); // Defaulting to us-central1 (or project default)
+
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'system', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration.");
+    }
+  }
+}
+testConnection();
 
 export enum OperationType {
   CREATE = 'create',

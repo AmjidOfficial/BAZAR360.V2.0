@@ -32,6 +32,7 @@ import AdminModerationDeck from './components/AdminModerationDeck';
 import MediaFeedView from './components/MediaFeedView';
 import MarketInsightsView from './components/MarketInsightsView';
 import ConciergeView from './components/ConciergeView';
+import { motion } from 'motion/react';
 
 const METRIC_TABS_DATA = {
   Design: [
@@ -812,7 +813,12 @@ export default function App() {
         </header>
 
         {/* Hero Console */}
-        <div className="flex flex-col items-center justify-center text-center mt-2 mb-10 space-y-4 relative z-10 max-w-2xl mx-auto">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="flex flex-col items-center justify-center text-center mt-2 mb-10 space-y-4 relative z-10 max-w-2xl mx-auto"
+        >
           <span className="text-[10px] uppercase font-mono font-black tracking-[0.3em] text-[#38BDF8] bg-sky-500/10 px-4 py-1.5 rounded-full border border-sky-500/20 shadow-md">
             Pakistan's Premium Multi-Tenant Trade Network
           </span>
@@ -822,7 +828,7 @@ export default function App() {
           <p className="text-xs text-gray-400 leading-relaxed font-sans max-w-xl">
             Switch sectors instantly to explore specialized inventories, localized financial scales, and high-resolution verified trade assets under one cryptographic catalog gateway.
           </p>
-        </div>
+        </motion.div>
 
         {/* Redesigned 2-Column Responsive Layout Grid */}
         <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch relative z-10 px-4 mb-20 animate-fade-in">
@@ -1334,7 +1340,13 @@ export default function App() {
       <main className={`flex-grow max-w-[1440px] mx-auto w-full px-5 md:px-16 transition-all ${currentCategory === 'auto' ? 'pt-28' : 'pt-20'}`}>
         
         {/* PREMIUM REPOSITIONED & ACCELERATED BRAND SCROLL MARQUEE */}
-        <div className="mb-6 bg-[#0c1322] border border-white/5 py-3 rounded-2xl overflow-hidden relative shadow-inner select-none" id="repositioned-brand-marquee">
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="mb-6 bg-[#0c1322] border border-white/5 py-3 rounded-2xl overflow-hidden relative shadow-inner select-none" 
+          id="repositioned-brand-marquee"
+        >
           <div className="absolute top-0 left-0 w-16 h-full bg-gradient-to-r from-[#0b121f] to-transparent z-10 pointer-events-none"></div>
           <div className="absolute top-0 right-0 w-16 h-full bg-gradient-to-l from-[#0b121f] to-transparent z-10 pointer-events-none"></div>
 
@@ -1383,7 +1395,7 @@ export default function App() {
               ))}
             </div>
           </div>
-        </div>
+        </motion.div>
         
         {activeIndustry !== 'Automotive' && (
           <div className="mb-6 bg-slate-950/90 backdrop-blur-md border border-[#38BDF8]/30 p-5 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 animate-scale-fade shadow-xl">

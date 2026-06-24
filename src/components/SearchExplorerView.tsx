@@ -26,6 +26,8 @@ import {
 import { CarListing, Dealer } from '../types';
 import { useCurrencyMode } from '../lib/currency';
 import { dbSaveLead, dbSaveBargain } from '../lib/dbService';
+import { VehicleCard } from './VehicleCard';
+import { VEHICLE_DICTIONARY } from './HomeView';
 
 interface SearchExplorerViewProps {
   listings: CarListing[];
@@ -168,6 +170,7 @@ export default function SearchExplorerView({
   
   // High-conversion Double-sided Vehicle Matrix parameters
   const [selectedMake, setSelectedMake] = useState<string>('All');
+  const [selectedModel, setSelectedModel] = useState<string>('All');
   const [selectedCondition, setSelectedCondition] = useState<string>('All');
   const [selectedTransmission, setSelectedTransmission] = useState<string>('All');
   const [selectedFuelType, setSelectedFuelType] = useState<string>('All');
@@ -175,6 +178,56 @@ export default function SearchExplorerView({
   const [selectedAssemblyType, setSelectedAssemblyType] = useState<string>('All');
   const [selectedDocumentType, setSelectedDocumentType] = useState<string>('All');
   const [selectedTokenTaxStatus, setSelectedTokenTaxStatus] = useState<string>('All');
+
+  // Collapsible mobile drawer/bottom sheet state for faceted search
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
+
+  // Predictive search suggestions state
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
+
+  // Memoized search suggestions matching VEHICLE_DICTIONARY and listings
+  const predictiveSuggestions = useMemo(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) return [];
+    const query = searchQuery.toLowerCase().trim();
+    const matches: Array<{ make: string; model: string; label: string }> = [];
+
+    // Search dictionary
+    Object.keys(VEHICLE_DICTIONARY).forEach((category) => {
+      VEHICLE_DICTIONARY[category].forEach((car) => {
+        const fullName = `${car.make} ${car.model}`.toLowerCase();
+        if (fullName.includes(query) || car.make.toLowerCase().includes(query) || car.model.toLowerCase().includes(query)) {
+          matches.push({ make: car.make, model: car.model, label: `${car.make} ${car.model}` });
+        }
+      });
+    });
+
+    // Search unique listings
+    listings.forEach((car) => {
+      const fullName = `${car.make} ${car.model}`.toLowerCase();
+      if (fullName.includes(query) || car.make.toLowerCase().includes(query) || car.model.toLowerCase().includes(query)) {
+        if (!matches.some(m => m.model.toLowerCase() === car.model.toLowerCase())) {
+          matches.push({ make: car.make, model: car.model, label: `${car.make} ${car.model}` });
+        }
+      }
+    });
+
+    return matches.slice(0, 5); // top 5
+  }, [searchQuery, listings]);
+
+  // Dynamically derive models for the selected make to emulate PakWheels form factor
+  const modelsForSelectedMake = useMemo(() => {
+    if (selectedMake === 'All') {
+      const allModels = listings.map(car => car.model);
+      return Array.from(new Set(allModels)).filter(Boolean).sort();
+    }
+    const filtered = listings.filter(car => car.make.toLowerCase() === selectedMake.toLowerCase());
+    return Array.from(new Set(filtered.map(car => car.model))).filter(Boolean).sort();
+  }, [listings, selectedMake]);
+
+  // Reset selected model when make changes to avoid mismatched state queries
+  useEffect(() => {
+    setSelectedModel('All');
+  }, [selectedMake]);
   
   // Detailed Modal state for non-automobile B2C products
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -221,6 +274,11 @@ export default function SearchExplorerView({
         return false;
       }
 
+      // Model Filter
+      if (selectedModel !== 'All' && car.model.toLowerCase() !== selectedModel.toLowerCase()) {
+        return false;
+      }
+
       // Condition Filter
       if (selectedCondition !== 'All') {
         if (selectedCondition.toLowerCase() !== car.condition.toLowerCase()) return false;
@@ -261,7 +319,7 @@ export default function SearchExplorerView({
 
       return true;
     });
-  }, [listings, searchQuery, selectedCategory, minPrice, maxPrice, onlyVerified, cityFilter, selectedMake, selectedCondition, selectedTransmission, selectedFuelType, maxMileage, selectedAssemblyType, selectedDocumentType, selectedTokenTaxStatus]);
+  }, [listings, searchQuery, selectedCategory, minPrice, maxPrice, onlyVerified, cityFilter, selectedMake, selectedModel, selectedCondition, selectedTransmission, selectedFuelType, maxMileage, selectedAssemblyType, selectedDocumentType, selectedTokenTaxStatus]);
 
   // 2. Products Filter algorithm
   const filteredProducts = useMemo(() => {
@@ -327,6 +385,7 @@ export default function SearchExplorerView({
     setOnlyVerified(false);
     setCityFilter('All');
     setSelectedMake('All');
+    setSelectedModel('All');
     setSelectedCondition('All');
     setSelectedTransmission('All');
     setSelectedFuelType('All');
@@ -385,6 +444,230 @@ export default function SearchExplorerView({
     }, 2800);
   };
 
+  const renderFilterControls = () => {
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+          <span className="text-[#38BDF8] font-mono text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+            <Sliders size={12} /> Refine Inventory
+          </span>
+          {(searchQuery || selectedCategory !== 'All' || minPrice > 0 || maxPrice < 350000000 || onlyVerified || cityFilter !== 'All' || selectedMake !== 'All' || selectedModel !== 'All' || selectedCondition !== 'All' || selectedTransmission !== 'All' || selectedFuelType !== 'All' || maxMileage < 500000) && (
+            <button
+              onClick={clearFilters}
+              className="text-orange-400 font-mono text-[9px] font-black uppercase hover:underline cursor-pointer"
+            >
+              Reset All
+            </button>
+          )}
+        </div>
+
+        {/* Brand / Make Filter */}
+        <div className="space-y-1.5">
+          <label className="text-gray-400 block font-bold text-[9px] uppercase font-mono">Make / Brand</label>
+          <select
+            className="w-full bg-[#070c12] border border-white/5 text-[11px] text-white p-2.5 rounded-xl focus:outline-none focus:border-[#38BDF8]"
+            value={selectedMake}
+            onChange={(e) => setSelectedMake(e.target.value)}
+          >
+            <option value="All">All Brands</option>
+            <option value="Toyota">Toyota</option>
+            <option value="Honda">Honda</option>
+            <option value="Porsche">Porsche</option>
+            <option value="BMW">BMW</option>
+            <option value="Mercedes-Benz">Mercedes-Benz</option>
+            <option value="Suzuki">Suzuki</option>
+            <option value="Hyundai">Hyundai</option>
+            <option value="Kia">Kia</option>
+          </select>
+        </div>
+
+        {/* Model Filter */}
+        <div className="space-y-1.5">
+          <label className="text-gray-400 block font-bold text-[9px] uppercase font-mono">Model</label>
+          <select
+            className="w-full bg-[#070c12] border border-white/5 text-[11px] text-white p-2.5 rounded-xl focus:outline-none focus:border-[#38BDF8]"
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            disabled={modelsForSelectedMake.length === 0}
+          >
+            <option value="All">All Models</option>
+            {modelsForSelectedMake.map((model) => (
+              <option key={model} value={model}>
+                {model}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Budget Slider & Manual Input */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center text-gray-400 font-mono text-[9px] uppercase tracking-wider">
+            <span>Price (Budget)</span>
+            <span className="text-[#F97316] font-black text-[10px]">
+              {minPrice > 0 ? `${renderPrice(minPrice)} - ` : ''}{renderPrice(maxPrice)}
+            </span>
+          </div>
+          <input
+            type="range"
+            min="1000"
+            max="350000000"
+            step="200000"
+            className="w-full accent-[#F97316] h-1.5 bg-[#070c12] rounded-lg cursor-pointer"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(parseInt(e.target.value))}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <span className="text-[8px] text-gray-400 uppercase font-mono block">Min (Rs):</span>
+              <input
+                type="number"
+                placeholder="Min"
+                className="w-full bg-[#070c12] border border-white/5 text-[10px] font-mono text-white px-2 py-1.5 rounded-xl focus:outline-none focus:border-orange-500"
+                value={minPrice || ''}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  setMinPrice(isNaN(val) ? 0 : val);
+                }}
+              />
+            </div>
+            <div>
+              <span className="text-[8px] text-gray-400 uppercase font-mono block">Max (Rs):</span>
+              <input
+                type="number"
+                placeholder="Max"
+                className="w-full bg-[#070c12] border border-white/5 text-[10px] font-mono text-white px-2 py-1.5 rounded-xl focus:outline-none focus:border-orange-500"
+                value={maxPrice === 350000000 ? '' : maxPrice}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  setMaxPrice(isNaN(val) || val === 0 ? 350000000 : val);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Max Mileage Slider */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center text-gray-400 font-mono text-[9px] uppercase font-bold">
+            <span>Max Mileage:</span>
+            <span className="text-[#38BDF8]">{maxMileage.toLocaleString()} KM</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="500000"
+            step="5000"
+            className="w-full accent-[#38BDF8] h-1.5 bg-[#070c12] rounded-lg cursor-pointer"
+            value={maxMileage}
+            onChange={(e) => setMaxMileage(parseInt(e.target.value))}
+          />
+        </div>
+
+        {/* Region / City Filter */}
+        <div className="space-y-1.5">
+          <label className="text-gray-400 block font-bold text-[9px] uppercase font-mono">Region</label>
+          <select
+            className="w-full bg-[#070c12] border border-white/5 text-[11px] text-white p-2.5 rounded-xl focus:outline-none focus:border-[#38BDF8]"
+            value={cityFilter}
+            onChange={(e) => setCityFilter(e.target.value)}
+          >
+            <option value="All">All Regions PK</option>
+            <option value="Peshawar">Peshawar (KP HQ)</option>
+            <option value="Lahore">Lahore (Punjab Hub)</option>
+            <option value="Karachi">Karachi (Sindh Port)</option>
+            <option value="Islamabad">Islamabad (Federal)</option>
+          </select>
+        </div>
+
+        {/* Condition Filter */}
+        <div className="space-y-1.5">
+          <label className="text-gray-400 block font-bold text-[9px] uppercase font-mono">Condition</label>
+          <select
+            className="w-full bg-[#070c12] border border-white/5 text-[11px] text-white p-2.5 rounded-xl focus:outline-none focus:border-[#38BDF8]"
+            value={selectedCondition}
+            onChange={(e) => setSelectedCondition(e.target.value)}
+          >
+            <option value="All">All Conditions</option>
+            <option value="New">New</option>
+            <option value="Used">Used</option>
+          </select>
+        </div>
+
+        {/* Transmission Filter */}
+        <div className="space-y-1.5">
+          <label className="text-gray-400 block font-bold text-[9px] uppercase font-mono">Transmission</label>
+          <select
+            className="w-full bg-[#070c12] border border-white/5 text-[11px] text-white p-2.5 rounded-xl focus:outline-none focus:border-[#38BDF8]"
+            value={selectedTransmission}
+            onChange={(e) => setSelectedTransmission(e.target.value)}
+          >
+            <option value="All">All Transmissions</option>
+            <option value="Automatic">Automatic</option>
+            <option value="Manual">Manual</option>
+          </select>
+        </div>
+
+        {/* Fuel Type Filter */}
+        <div className="space-y-1.5">
+          <label className="text-gray-400 block font-bold text-[9px] uppercase font-mono">Fuel Type</label>
+          <select
+            className="w-full bg-[#070c12] border border-white/5 text-[11px] text-white p-2.5 rounded-xl focus:outline-none focus:border-[#38BDF8]"
+            value={selectedFuelType}
+            onChange={(e) => setSelectedFuelType(e.target.value)}
+          >
+            <option value="All">All Fuel Types</option>
+            <option value="Petrol">Petrol</option>
+            <option value="Diesel">Diesel</option>
+            <option value="Hybrid">Hybrid</option>
+            <option value="Electric">Electric</option>
+          </select>
+        </div>
+
+        {/* Body Type / Category */}
+        <div className="space-y-1.5">
+          <label className="text-gray-400 block font-bold text-[9px] uppercase font-mono">Body Type</label>
+          <select
+            className="w-full bg-[#070c12] border border-white/5 text-[11px] text-white p-2.5 rounded-xl focus:outline-none focus:border-[#38BDF8]"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            <option value="All">All Body Types</option>
+            <option value="SUV">SUVs & Jeeps</option>
+            <option value="Sedan">Sedans</option>
+            <option value="Electric">Electric</option>
+            <option value="Luxury">Luxury Grade</option>
+            <option value="Classic">Classics</option>
+            <option value="Sport">Sport Series</option>
+          </select>
+        </div>
+
+        {/* Verified Entity Toggle */}
+        <div className="flex items-center gap-3 bg-[#070c12]/50 p-2.5 rounded-2xl border border-white/5">
+          <button
+            type="button"
+            onClick={() => setOnlyVerified(!onlyVerified)}
+            className="focus:outline-none shrink-0 cursor-pointer"
+          >
+            <div
+              className={`w-9 h-5 rounded-full flex items-center p-0.5 transition-colors duration-200 ${
+                onlyVerified ? 'bg-orange-500' : 'bg-[#1E293B] border border-white/10'
+              }`}
+            >
+              <div
+                className={`bg-white w-4 h-4 rounded-full shadow-lg transform transition-transform duration-200 ${
+                  onlyVerified ? 'translate-x-4' : 'translate-x-0'
+                }`}
+              ></div>
+            </div>
+          </button>
+          <div className="min-w-0">
+            <span className="text-white font-bold block text-[10px] uppercase">Pre-Vetted Only</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 pb-16" id="search-explorer-view-container">
       
@@ -434,8 +717,205 @@ export default function SearchExplorerView({
         </button>
       </div>
 
-      {/* Universal Search Explorer Filter Bento Box */}
-      <section className="bg-slate-900/90 border border-white/5 p-4 sm:p-6 rounded-3xl shadow-xl space-y-4 font-sans">
+      {marketTab === 'Vehicles' ? (
+        <div className="lg:grid lg:grid-cols-4 lg:gap-6 items-start" id="vehicles-faceted-search-layout">
+          
+          {/* Faceted Search Sidebar (Desktop) */}
+          <aside className="hidden lg:block lg:col-span-1 bg-slate-900/95 border border-white/5 p-5 rounded-3xl space-y-5 sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar">
+            {renderFilterControls()}
+          </aside>
+
+          {/* Results Area */}
+          <div className="lg:col-span-3 space-y-5">
+            {/* Sticky/Header Search Bar and Mobile Filter Trigger */}
+            <div className="bg-[#121c32]/80 border border-white/5 p-3 rounded-2xl flex items-center justify-between gap-3 lg:hidden">
+              <div className="flex-grow flex items-center bg-[#070c12] border border-white/5 px-3 py-2.5 rounded-xl relative">
+                <Search className="text-gray-500 mr-2 shrink-0" size={13} />
+                <input
+                  className="w-full bg-transparent border-none text-white focus:outline-none text-[11px] font-mono placeholder-gray-600"
+                  placeholder="Quick search brand/model..."
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setShowSuggestions(false)}
+                />
+                
+                {/* Suggestions Dropdown (Mobile) */}
+                {showSuggestions && predictiveSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 divide-y divide-white/5 font-sans">
+                    {predictiveSuggestions.map((suggestion, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onMouseDown={() => {
+                          setSearchQuery(suggestion.label);
+                          setSelectedMake(suggestion.make);
+                          setSelectedModel(suggestion.model);
+                          setShowSuggestions(false);
+                        }}
+                        className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors flex items-center justify-between text-xs cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Search size={11} className="text-gray-400" />
+                          <span className="text-white font-bold">{suggestion.make}</span>
+                          <span className="text-gray-300">{suggestion.model}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setIsMobileFilterOpen(true)}
+                className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-mono text-[10px] font-black px-4 py-3 rounded-xl uppercase tracking-wider flex items-center gap-1.5 shrink-0 cursor-pointer"
+                style={{ minHeight: '40px' }}
+              >
+                <SlidersHorizontal size={13} />
+                <span>Filters</span>
+                {/* Active Filter Badge */}
+                {((selectedMake !== 'All' ? 1 : 0) + (selectedModel !== 'All' ? 1 : 0) + (minPrice > 0 ? 1 : 0) + (maxPrice < 350000000 ? 1 : 0) + (maxMileage < 500000 ? 1 : 0) + (selectedCondition !== 'All' ? 1 : 0) + (selectedTransmission !== 'All' ? 1 : 0) + (selectedFuelType !== 'All' ? 1 : 0) + (cityFilter !== 'All' ? 1 : 0)) > 0 && (
+                  <span className="bg-white text-slate-950 rounded-full w-4 h-4 text-[9px] font-black flex items-center justify-center">
+                    {(selectedMake !== 'All' ? 1 : 0) + (selectedModel !== 'All' ? 1 : 0) + (minPrice > 0 ? 1 : 0) + (maxPrice < 350000000 ? 1 : 0) + (maxMileage < 500000 ? 1 : 0) + (selectedCondition !== 'All' ? 1 : 0) + (selectedTransmission !== 'All' ? 1 : 0) + (selectedFuelType !== 'All' ? 1 : 0) + (cityFilter !== 'All' ? 1 : 0)}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Desktop Quick Text Search Bar to sync seamlessly */}
+            <div className="hidden lg:flex items-center bg-slate-900/95 border border-white/5 px-4 py-3 rounded-2xl relative">
+              <Search className="text-gray-500 mr-2.5 shrink-0" size={14} />
+              <input
+                className="w-full bg-transparent border-none text-white focus:outline-none text-[11px] font-mono placeholder-gray-600"
+                placeholder="Search Toyota Fortuner, Mercedes G63, specs, manual/auto..."
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setShowSuggestions(false)}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="text-[#94a3b8] hover:text-white cursor-pointer px-1">
+                  <X size={13} />
+                </button>
+              )}
+
+              {/* Suggestions Dropdown (Desktop) */}
+              {showSuggestions && predictiveSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 divide-y divide-white/5 font-sans">
+                  {predictiveSuggestions.map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onMouseDown={() => {
+                        setSearchQuery(suggestion.label);
+                        setSelectedMake(suggestion.make);
+                        setSelectedModel(suggestion.model);
+                        setShowSuggestions(false);
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors flex items-center justify-between text-xs cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Search size={11} className="text-gray-400 group-hover:text-orange-400 transition-colors" />
+                        <span className="text-white font-bold">{suggestion.make}</span>
+                        <span className="text-gray-300">{suggestion.model}</span>
+                      </div>
+                      <span className="text-[9px] font-mono text-orange-400 uppercase tracking-wider bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20 font-black">Preset Match</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Statistics Row */}
+            <div className="flex justify-between items-center px-1 font-mono text-[9px] uppercase tracking-wider text-[#94a3b8]">
+              <p>
+                Showing <span className="text-white font-bold">{filteredVehicles.length}</span> luxury classifieds mapped
+              </p>
+              <span className="text-orange-400 font-bold flex items-center gap-1">● Live Inventory Sync</span>
+            </div>
+
+            {/* Vehicle Card Grid */}
+            {filteredVehicles.length === 0 ? (
+              <div className="bg-[#121c32]/80 border border-white/5 rounded-3xl p-10 text-center max-w-md mx-auto space-y-4 shadow-xl">
+                <div className="w-10 h-10 bg-orange-500/10 text-orange-400 rounded-2xl flex items-center justify-center mx-auto border border-orange-500/20">
+                  <Sliders size={18} />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-white font-bold uppercase tracking-tight text-xs">No Premium Cars Found</h4>
+                  <p className="text-gray-400 text-[10px] max-w-xs mx-auto">
+                    No luxury car listings match your filters. Reset or widen your search.
+                  </p>
+                </div>
+                <button onClick={clearFilters} className="bg-orange-500 text-slate-950 font-mono font-black text-[9px] py-2 px-4 rounded-xl uppercase tracking-wider hover:bg-orange-600 transition-colors cursor-pointer">
+                  Reset Filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                {filteredVehicles.map((car) => {
+                  const dealerObj = dealers.find((d) => d.id === car.dealerId);
+                  return (
+                    <VehicleCard
+                      key={car.id}
+                      car={car}
+                      dealer={dealerObj}
+                      variant="grid"
+                      onSelect={onSelectListing}
+                      onToggleCompare={onToggleCompare}
+                      isComparing={compareList ? compareList.some(item => item.id === car.id) : false}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Collapsible Bottom-Sheet Drawer for Mobile Filters */}
+          {isMobileFilterOpen && (
+            <div className="fixed inset-0 z-50 flex flex-col justify-end lg:hidden" id="mobile-filter-drawer">
+              {/* Backdrop Overlay with smooth transition click-to-close */}
+              <div
+                className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+                onClick={() => setIsMobileFilterOpen(false)}
+              />
+              
+              {/* Slidable Bottom-Sheet Content Panel */}
+              <div className="relative bg-slate-900 border-t border-white/10 rounded-t-[2.5rem] shadow-2xl z-10 flex flex-col max-h-[85vh] overflow-hidden">
+                {/* Drag handle decoration */}
+                <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-3 shrink-0" />
+                
+                {/* Scrollable Filter Inputs Container */}
+                <div className="p-6 overflow-y-auto space-y-6 pb-24">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-white font-extrabold text-sm uppercase tracking-tight">Refine Options</h3>
+                    <button
+                      onClick={() => setIsMobileFilterOpen(false)}
+                      className="text-gray-400 hover:text-white p-1"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  {renderFilterControls()}
+                </div>
+
+                {/* Floating "View Results" Button Row */}
+                <div className="absolute bottom-0 inset-x-0 bg-slate-900/90 backdrop-blur-md border-t border-white/5 p-4 flex items-center gap-3">
+                  <button
+                    onClick={() => setIsMobileFilterOpen(false)}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-slate-950 font-mono font-black py-3.5 rounded-2xl uppercase text-xs tracking-wider cursor-pointer shadow-lg"
+                  >
+                    View {filteredVehicles.length} Luxury Cars
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Universal Search Explorer Filter Bento Box */}
+          <section className="bg-slate-900/90 border border-white/5 p-4 sm:p-6 rounded-3xl shadow-xl space-y-4 font-sans">
         
         {/* Core Search input field & Quick Filters */}
         <div className="flex flex-col lg:flex-row gap-3">
@@ -446,7 +926,6 @@ export default function SearchExplorerView({
             <input
               className="w-full bg-transparent border-none text-white focus:outline-none text-[11px] font-mono placeholder-gray-600 block"
               placeholder={
-                marketTab === 'Vehicles' ? "Search Toyota Fortuner, Mercedes G63, specs, manual/auto..." :
                 marketTab === 'Products' ? "Search electronics, traditional menswear, home appliances..." :
                 "Search Peshawar car villages, Hafeez Plaza hubs, authorized showrooms, retailers..."
               }
@@ -470,17 +949,7 @@ export default function SearchExplorerView({
               onChange={(e) => setSelectedCategory(e.target.value)}
               style={{ minHeight: '44px' }}
             >
-              {marketTab === 'Vehicles' && (
-                <>
-                  <option value="All">All Body Types</option>
-                  <option value="SUV">SUVs & Jeeps</option>
-                  <option value="Sedan">Sedans</option>
-                  <option value="Electric">Electric</option>
-                  <option value="Luxury">Luxury Grade</option>
-                  <option value="Classic">Classics</option>
-                  <option value="Sport">Sport Series</option>
-                </>
-              )}
+
               {marketTab === 'Products' && (
                 <>
                   <option value="All">All Items Directories</option>
@@ -620,142 +1089,7 @@ export default function SearchExplorerView({
           </div>
         )}
 
-        {/* Auto Choice Advanced Matrix Filters (Only for Vehicles) */}
-        {marketTab === 'Vehicles' && (
-          <div className="bg-[#121c32]/50 border border-white/5 p-4 rounded-2xl mt-4 space-y-4 text-[11px] font-sans">
-            <div className="flex items-center gap-1.5 border-b border-white/5 pb-2">
-              <span className="text-[#38BDF8]">🛠️</span>
-              <span className="text-white font-mono uppercase font-black text-[10px] tracking-wider">Advanced Inventory Filters</span>
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {/* Make Filter Dropdown */}
-              <div className="space-y-1">
-                <label className="text-gray-400 block font-bold text-[9px] uppercase font-mono">Make / Brand:</label>
-                <select
-                  className="w-full bg-[#070c12] border border-white/5 text-[10px] text-white p-2.5 rounded-xl focus:outline-none focus:border-[#38BDF8]"
-                  value={selectedMake}
-                  onChange={(e) => setSelectedMake(e.target.value)}
-                >
-                  <option value="All">All Brands</option>
-                  <option value="Toyota">Toyota</option>
-                  <option value="Honda">Honda</option>
-                  <option value="Porsche">Porsche</option>
-                  <option value="BMW">BMW</option>
-                  <option value="Mercedes-Benz">Mercedes-Benz</option>
-                  <option value="Suzuki">Suzuki</option>
-                  <option value="Hyundai">Hyundai</option>
-                  <option value="Kia">Kia</option>
-                </select>
-              </div>
 
-              {/* Condition Filter */}
-              <div className="space-y-1">
-                <label className="text-gray-400 block font-bold text-[9px] uppercase font-mono">Condition:</label>
-                <select
-                  className="w-full bg-[#070c12] border border-white/5 text-[10px] text-white p-2.5 rounded-xl focus:outline-none focus:border-[#38BDF8]"
-                  value={selectedCondition}
-                  onChange={(e) => setSelectedCondition(e.target.value)}
-                >
-                  <option value="All">All Conditions</option>
-                  <option value="New">New</option>
-                  <option value="Used">Used</option>
-                </select>
-              </div>
-
-              {/* Transmission */}
-              <div className="space-y-1">
-                <label className="text-gray-400 block font-bold text-[9px] uppercase font-mono">Transmission:</label>
-                <select
-                  className="w-full bg-[#070c12] border border-white/5 text-[10px] text-white p-2.5 rounded-xl focus:outline-none focus:border-[#38BDF8]"
-                  value={selectedTransmission}
-                  onChange={(e) => setSelectedTransmission(e.target.value)}
-                >
-                  <option value="All">All Transmissions</option>
-                  <option value="Automatic">Automatic</option>
-                  <option value="Manual">Manual</option>
-                </select>
-              </div>
-
-              {/* Fuel Type */}
-              <div className="space-y-1">
-                <label className="text-gray-400 block font-bold text-[9px] uppercase font-mono">Fuel Type:</label>
-                <select
-                  className="w-full bg-[#070c12] border border-white/5 text-[10px] text-white p-2.5 rounded-xl focus:outline-none focus:border-[#38BDF8]"
-                  value={selectedFuelType}
-                  onChange={(e) => setSelectedFuelType(e.target.value)}
-                >
-                  <option value="All">All Fuel Strategies</option>
-                  <option value="Petrol">Petrol</option>
-                  <option value="Diesel">Diesel</option>
-                  <option value="Hybrid">Hybrid</option>
-                  <option value="Electric">Electric</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {/* Assembly Type */}
-              <div className="space-y-1">
-                <label className="text-gray-400 block font-bold text-[9px] uppercase font-mono">Assembly / Made Type:</label>
-                <select
-                  className="w-full bg-[#070c12] border border-white/5 text-[10px] text-white p-2.5 rounded-xl focus:outline-none focus:border-[#38BDF8]"
-                  value={selectedAssemblyType}
-                  onChange={(e) => setSelectedAssemblyType(e.target.value)}
-                >
-                  <option value="All">All Assemblies</option>
-                  <option value="Locally Assembled">Locally Assembled</option>
-                  <option value="Imported">Imported</option>
-                </select>
-              </div>
-
-              {/* Document Type */}
-              <div className="space-y-1">
-                <label className="text-gray-400 block font-bold text-[9px] uppercase font-mono">Document Type:</label>
-                <select
-                  className="w-full bg-[#070c12] border border-white/5 text-[10px] text-white p-2.5 rounded-xl focus:outline-none focus:border-[#38BDF8]"
-                  value={selectedDocumentType}
-                  onChange={(e) => setSelectedDocumentType(e.target.value)}
-                >
-                  <option value="All">All Document Types</option>
-                  <option value="Original Book">Original Register Book</option>
-                  <option value="Smart Card">Smart Card available</option>
-                </select>
-              </div>
-
-              {/* Token Tax */}
-              <div className="space-y-1">
-                <label className="text-gray-400 block font-bold text-[9px] uppercase font-mono">Token Tax Status:</label>
-                <select
-                  className="w-full bg-[#070c12] border border-white/5 text-[10px] text-white p-2.5 rounded-xl focus:outline-none focus:border-[#38BDF8]"
-                  value={selectedTokenTaxStatus}
-                  onChange={(e) => setSelectedTokenTaxStatus(e.target.value)}
-                >
-                  <option value="All">All Statuses</option>
-                  <option value="Paid">Paid up-to-date</option>
-                  <option value="Outstanding">Outstanding</option>
-                </select>
-              </div>
-
-              {/* Max Mileage Slider */}
-              <div className="space-y-1 flex flex-col justify-end">
-                <div className="flex justify-between items-center text-gray-400 font-mono text-[9px] uppercase font-bold">
-                  <span>Max Mileage:</span>
-                  <span className="text-[#38BDF8]">{maxMileage.toLocaleString()} KM</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="500000"
-                  step="5000"
-                  className="w-full accent-[#38BDF8] h-1.5 bg-[#070c12] rounded-lg cursor-pointer my-2"
-                  value={maxMileage}
-                  onChange={(e) => setMaxMileage(parseInt(e.target.value))}
-                />
-              </div>
-            </div>
-          </div>
-        )}
 
       </section>
 
@@ -767,123 +1101,13 @@ export default function SearchExplorerView({
           <p>
             Showing{' '}
             <span className="text-white font-bold">
-              {marketTab === 'Vehicles' ? filteredVehicles.length :
-               marketTab === 'Products' ? filteredProducts.length :
+              {marketTab === 'Products' ? filteredProducts.length :
                filteredBusinesses.length}
             </span>{' '}
             verified classified nodes mapped
           </p>
           <span className="text-orange-400 font-bold hidden sm:inline">● Live Escrow Channel Active</span>
         </div>
-
-        {/* 1. VEHICLES RENDER SECTION */}
-        {marketTab === 'Vehicles' && (
-          filteredVehicles.length === 0 ? (
-            <div className="bg-[#121c32]/80 border border-white/5 rounded-3xl p-10 text-center max-w-md mx-auto space-y-4 shadow-xl">
-              <div className="w-10 h-10 bg-orange-500/10 text-orange-400 rounded-2xl flex items-center justify-center mx-auto border border-orange-500/20">
-                <Sliders size={18} />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-white font-bold uppercase tracking-tight text-xs">No Premium Cars Found</h4>
-                <p className="text-gray-400 text-[10px] max-w-xs mx-auto">
-                  No luxury car listings match your filters. Expand your filter queries to crawl wider.
-                </p>
-              </div>
-              <button onClick={clearFilters} className="bg-orange-500 text-slate-950 font-mono font-black text-[9px] py-2 px-4 rounded-xl uppercase tracking-wider hover:bg-orange-600 transition-colors cursor-pointer">
-                Reset General Queries
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredVehicles.map((car) => {
-                const dealerObj = dealers.find((d) => d.id === car.dealerId);
-                return (
-                  <div
-                    key={car.id}
-                    onClick={() => onSelectListing(car)}
-                    className="bg-[#121c32]/80 border border-white/5 rounded-2xl overflow-hidden group hover:-translate-y-1 transition-all duration-350 shadow-xl cursor-pointer hover:border-orange-500/45 flex flex-col justify-between"
-                  >
-                    <div className="relative h-44 bg-[#070c12]/90 overflow-hidden">
-                      <img
-                        alt={car.title}
-                        className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500"
-                        src={car.imageUrl}
-                        referrerPolicy="no-referrer"
-                      />
-                      
-                      {car.dealerId === 'auto-choice-peshawar' ? (
-                        <div className="absolute top-2.5 left-2.5 bg-orange-500/95 px-2 py-0.5 rounded-lg text-slate-950 text-[7px] font-mono font-black uppercase flex items-center gap-1 shadow border border-orange-400/30">
-                          <Sparkles size={8} /> Flagship Verification
-                        </div>
-                      ) : car.verified ? (
-                        <div className="absolute top-2.5 left-2.5 bg-slate-950/90 border border-white/10 px-2 py-0.5 rounded-lg text-white text-[7.5px] font-mono font-bold uppercase flex items-center gap-1 shadow">
-                          <ShieldCheck size={9} className="text-[#38BDF8]" /> Verified
-                        </div>
-                      ) : null}
-
-                      {onToggleCompare && compareList && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleCompare(car);
-                          }}
-                          className={`absolute top-2.5 right-2.5 px-2 py-1 rounded-lg border text-[8px] font-mono font-extrabold uppercase transition-all cursor-pointer ${
-                            compareList.some(item => item.id === car.id)
-                              ? 'bg-orange-500 text-slate-950 border-orange-400 font-extrabold'
-                              : 'bg-black/80 text-gray-400 border-white/10 hover:text-white'
-                          }`}
-                          style={{ minHeight: '22px' }}
-                        >
-                          {compareList.some(item => item.id === car.id) ? '✓ Matched' : '+ Compare'}
-                        </button>
-                      )}
-                      
-                      <div className="absolute bottom-2.5 right-2.5 bg-slate-950/95 px-2 py-0.5 rounded text-[8.5px] font-mono text-[#38BDF8] font-bold border border-white/5">
-                        {car.year} Model
-                      </div>
-                    </div>
-
-                    <div className="p-4 space-y-3 flex-grow flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-center justify-between gap-1 mb-1.5">
-                          <span className="text-[8.5px] text-[#38BDF8] font-mono font-black uppercase tracking-wider">{car.make}</span>
-                          <span className="text-[8.5px] bg-slate-950 px-2 py-0.5 rounded-full border border-white/5 text-gray-400 font-mono flex items-center gap-0.5"><MapPin size={8} className="text-orange-500" /> {car.region || 'Peshawar'}</span>
-                        </div>
-                        
-                        <h3 className="text-[12.5px] font-extrabold text-white truncate pr-1 group-hover:text-orange-400 transition-colors uppercase tracking-tight">
-                          {car.title}
-                        </h3>
-                        
-                        <div className="text-[10px] text-gray-400 font-mono mt-2 bg-slate-950/40 p-2 rounded-xl border border-white/5 flex items-center justify-between gap-1 divide-x divide-white/10 uppercase">
-                          <span className="flex-1 text-center font-bold text-white">{car.year}</span>
-                          <span className="flex-grow text-center pl-1">{(car.mileage).toLocaleString()} km</span>
-                          <span className="flex-1 text-center pl-1 text-[8.5px] text-[#38BDF8] font-black">{car.fuelType[0] + car.fuelType.substring(1, 2).toLowerCase()}</span>
-                        </div>
-                      </div>
-
-                      <div className="pt-3 border-t border-white/5 flex justify-between items-center">
-                        <div className="flex flex-col">
-                          <span className="text-[7.5px] font-mono uppercase tracking-widest text-[#38BDF8] font-bold">Offer Value</span>
-                          <span className="text-sm font-black text-orange-400 font-mono">
-                            {renderPrice(car.price)}
-                          </span>
-                        </div>
-                        
-                        <div className="text-right font-mono text-[9px]">
-                          <span className="text-[7.5px] uppercase tracking-wider text-gray-500 block">Sellers Node</span>
-                          <span className="text-[9.5px] font-black text-[#38BDF8] truncate max-w-[85px] block">
-                            {dealerObj?.name ? dealerObj.name : 'Collector'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )
-        )}
 
         {/* 2. PRODUCTS E-COMMERCE RENDER SECTION */}
         {marketTab === 'Products' && (
@@ -995,14 +1219,14 @@ export default function SearchExplorerView({
               {filteredBusinesses.map((store) => (
                 <div
                   key={store.id}
-                  className="bg-[#121c32]/80 border border-white/5 p-4 sm:p-5 rounded-2xl hover:border-[#38BDF8] transition-all flex flex-col justify-between gap-4"
+                  className="bg-bg-secondary border border-border-main p-4 sm:p-5 rounded-xl hover:border-accent-main/40 shadow-sm transition-all flex flex-col justify-between gap-4"
                 >
                   <div className="flex gap-4">
                     {/* Avatar structure */}
-                    <div className="w-16 h-16 rounded-xl bg-orange-500 text-slate-950 font-black text-sm uppercase flex items-center justify-center shrink-0 border border-white/5 relative">
+                    <div className="w-16 h-16 rounded-xl bg-accent-main text-white font-black text-sm uppercase flex items-center justify-center shrink-0 border border-border-main relative">
                       {store.avatarLetter || store.name.substring(0,2)}
                       {store.flagshipVerified && (
-                        <div className="absolute -top-1.5 -right-1.5 bg-orange-500 text-slate-950 p-0.5 rounded-full border border-slate-950">
+                        <div className="absolute -top-1.5 -right-1.5 bg-orange-500 text-slate-950 p-0.5 rounded-full border border-border-main">
                           <Check size={9} />
                         </div>
                       )}
@@ -1010,16 +1234,16 @@ export default function SearchExplorerView({
 
                     <div className="space-y-1.5 min-w-0">
                       <div className="flex items-center gap-1">
-                        <h4 className="text-sm font-extrabold text-white uppercase truncate tracking-tight">{store.name}</h4>
-                        <span className="text-[7.5px] font-mono px-1.5 py-0.5 bg-orange-500/10 text-orange-400 rounded border border-orange-500/20">★ {store.rating}</span>
+                        <h4 className="text-sm font-extrabold text-text-main uppercase truncate tracking-tight">{store.name}</h4>
+                        <span className="text-[7.5px] font-mono px-1.5 py-0.5 bg-accent-main/10 text-accent-main rounded border border-accent-main/20">★ {store.rating}</span>
                       </div>
-                      <p className="text-[#38BDF8] font-mono text-[9.5px] italic leading-tight">{store.subtitle}</p>
-                      <p className="text-gray-400 text-[10px] flex items-center gap-0.5 font-sans"><MapPin size={10} className="text-orange-500" /> {store.location}</p>
+                      <p className="text-accent-hover font-mono text-[9.5px] italic leading-tight">{store.subtitle}</p>
+                      <p className="text-text-muted text-[10px] flex items-center gap-0.5 font-sans"><MapPin size={10} className="text-accent-main" /> {store.location}</p>
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-white/5">
-                    <p className="text-gray-400 text-[10px] leading-relaxed line-clamp-2 pr-1 font-sans">{store.description}</p>
+                  <div className="pt-3 border-t border-border-main">
+                    <p className="text-text-muted text-[10px] leading-relaxed line-clamp-2 pr-1 font-sans">{store.description}</p>
                   </div>
 
                   <div className="flex items-center justify-between pt-1 gap-2 flex-wrap sm:flex-nowrap">
@@ -1052,6 +1276,9 @@ export default function SearchExplorerView({
         )}
 
       </section>
+
+        </>
+      )}
 
       {/* POPUP DETAIL MODAL FOR E-COMMERCE PRODUCTS */}
       {selectedProduct && (

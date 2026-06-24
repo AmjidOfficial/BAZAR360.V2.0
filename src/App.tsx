@@ -1,225 +1,143 @@
-import React, { useState, useEffect } from "react";
-import {
-  X,
-  ShieldCheck,
-  MapPin,
-  Gauge,
-  Fuel,
-  Milestone,
-  Star,
-  Award,
-  DollarSign,
-  Send,
-  Hourglass,
-  Bell,
-  Sparkles,
-} from "lucide-react";
-import { CarListing, Dealer, Review } from "./types";
-import { INITIAL_DEALERS, INITIAL_LISTINGS, INITIAL_REVIEWS } from "./data";
+import React, { useState, useEffect } from 'react';
+import { X, ShieldCheck, MapPin, Gauge, Fuel, Milestone, Star, Award, DollarSign, Send, Hourglass, Bell, Sparkles } from 'lucide-react';
+import { CarListing, Dealer, Review } from './types';
+import { INITIAL_DEALERS, INITIAL_LISTINGS, INITIAL_REVIEWS } from './data';
 
-import {
-  dbFetchDealers,
-  dbFetchListings,
-  dbSaveListing,
-  dbRegisterDealership,
-  dbApproveListing,
-  dbAddReview,
+import { 
+  dbFetchDealers, 
+  dbFetchListings, 
+  dbSaveListing, 
+  dbRegisterDealership, 
+  dbApproveListing, 
+  dbAddReview, 
   dbFetchReviews,
   dbSaveUserProfile,
   dbFetchUserProfile,
   UserProfile,
   seedDatabaseIfEmpty,
-  dbSaveSuggestion,
-} from "./lib/dbService";
-import { auth } from "./firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { useCurrencyMode } from "./lib/currency";
+  dbSaveSuggestion
+} from './lib/dbService';
+import { auth } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { useCurrencyMode } from './lib/currency';
+import { ThemeProvider, useTheme } from './components/ThemeContext';
+import ThemeEngine from './components/ThemeEngine';
 
-import TopAppBar from "./components/TopAppBar";
-import BottomNavBar from "./components/BottomNavBar";
-import HomeView from "./components/HomeView";
-import DealerStorefrontView from "./components/DealerStorefrontView";
-import SellWithAIView from "./components/SellWithAIView";
-import SearchExplorerView from "./components/SearchExplorerView";
-import RegistrationPortal from "./components/RegistrationPortal";
-import AdminModerationDeck from "./components/AdminModerationDeck";
-import MediaFeedView from "./components/MediaFeedView";
-import MarketInsightsView from "./components/MarketInsightsView";
-import ConciergeView from "./components/ConciergeView";
+import TopAppBar from './components/TopAppBar';
+import BottomNavBar from './components/BottomNavBar';
+import Footer from './components/Footer';
+import HomeView from './components/HomeView';
+import DealerStorefrontView from './components/DealerStorefrontView';
+import SellWithAIView from './components/SellWithAIView';
+import SearchExplorerView from './components/SearchExplorerView';
+import RegistrationPortal from './components/RegistrationPortal';
+import AdminModerationDeck from './components/AdminModerationDeck';
+import MediaFeedView from './components/MediaFeedView';
+import MarketInsightsView from './components/MarketInsightsView';
+import ConciergeView from './components/ConciergeView';
+import { motion } from 'motion/react';
+import { initializeVisitorTracking, trackSearchQuery, trackVehicleView } from './lib/visitorTracking';
+import LuxuryPortal from './components/luxury/LuxuryPortal';
 
 const METRIC_TABS_DATA = {
   Design: [
     { label: "Aerodynamic Drag Coefficient", value: "0.24 Cd" },
-    {
-      label: "Chassis Composition",
-      value: "High-Tensile Carbon-Infused Steel Ring",
-    },
-    {
-      label: "Ground Physics",
-      value: "Underbody Ground-Effect Venturi Tunnels",
-    },
+    { label: "Chassis Composition", value: "High-Tensile Carbon-Infused Steel Ring" },
+    { label: "Ground Physics", value: "Underbody Ground-Effect Venturi Tunnels" }
   ],
   Safety: [
     { label: "ADAS Autonomous Level", value: "Level 2+ Lidar lane-keep" },
     { label: "Structural anchors", value: "Isofix rigid alloy bindings" },
-    {
-      label: "Collision Mitigation",
-      value: "Dynamic automated front & rear braking",
-    },
+    { label: "Collision Mitigation", value: "Dynamic automated front & rear braking" }
   ],
   Luxury: [
-    {
-      label: "Acoustic Insulation",
-      value: "Triple-pane laminated quiet-glass",
-    },
-    {
-      label: "Climate Diffuser",
-      value: "Ionized active forest breezer module",
-    },
-    {
-      label: "Showroom Audio Setup",
-      value: "Burmester 3D Surround sound structure",
-    },
+    { label: "Acoustic Insulation", value: "Triple-pane laminated quiet-glass" },
+    { label: "Climate Diffuser", value: "Ionized active forest breezer module" },
+    { label: "Showroom Audio Setup", value: "Burmester 3D Surround sound structure" }
   ],
   Performance: [
     { label: "0-100 Speed Sprint", value: "3.8 seconds" },
-    {
-      label: "Torque Vectoring",
-      value: "Dual-motor active traction differential",
-    },
-    {
-      label: "Gearbox Synchro Ratio",
-      value: "8-speed twin-clutch direct-shift",
-    },
-  ],
+    { label: "Torque Vectoring", value: "Dual-motor active traction differential" },
+    { label: "Gearbox Synchro Ratio", value: "8-speed twin-clutch direct-shift" }
+  ]
 };
 
 const HOTSPOTS_LIST = [
-  {
-    id: "engine",
-    name: "Piston block & Engine layout",
-    text: "Dual overhead cam 24-valve configuration optimized for PKR fuel gradients.",
-    x: "25%",
-    y: "45%",
-  },
-  {
-    id: "suspension",
-    name: "Suspension compression ratio",
-    text: "Adaptive pneumatic damping ring with dynamic rebound control on broken roads.",
-    x: "65%",
-    y: "55%",
-  },
-  {
-    id: "exhaust",
-    name: "Exhaust airflow channel",
-    text: "Quad low-back-pressure active exhaust ports with carbon acoustic resonators.",
-    x: "88%",
-    y: "65%",
-  },
+  { id: 'engine', name: 'Piston block & Engine layout', text: 'Dual overhead cam 24-valve configuration optimized for PKR fuel gradients.', x: '25%', y: '45%' },
+  { id: 'suspension', name: 'Suspension compression ratio', text: 'Adaptive pneumatic damping ring with dynamic rebound control on broken roads.', x: '65%', y: '55%' },
+  { id: 'exhaust', name: 'Exhaust airflow channel', text: 'Quad low-back-pressure active exhaust ports with carbon acoustic resonators.', x: '88%', y: '65%' },
 ];
 
-export default function App() {
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import ShowroomProfile from './pages/ShowroomProfile';
+
+export default function AppWrapper() {
+  return (
+    <ThemeProvider>
+      <ThemeEngine />
+      <Router>
+        <Routes>
+          <Route path="/" element={<App />} />
+          <Route path="/dealers/:showroomSlug" element={<ShowroomProfile />} />
+          <Route path="/showroom/:showroomSlug" element={<ShowroomProfile />} />
+        </Routes>
+      </Router>
+    </ThemeProvider>
+  );
+}
+
+function App() {
   const { renderPrice } = useCurrencyMode();
+  const { theme, resolvedTheme, setTheme } = useTheme();
 
-  const [theme, setTheme] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("bazar360_theme") || "cosmic-dark";
-    }
-    return "cosmic-dark";
-  });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("bazar360_theme", theme);
-      const themes = [
-        "theme-cosmic-dark",
-        "theme-luxury-light",
-        "theme-mint-emerald",
-        "theme-obsidian-gold",
-      ];
-      themes.forEach((t) => {
-        document.documentElement.classList.remove(t);
-        document.body.classList.remove(t);
-      });
-      document.documentElement.classList.add(`theme-${theme}`);
-      document.body.classList.add(`theme-${theme}`);
-    }
-  }, [theme]);
-
-  const [currentTab, setTab] = useState<string>("home");
-  const [selectedDealerId, setSelectedDealerId] = useState<string>(
-    "auto-choice-peshawar",
-  );
-  const [selectedListing, setSelectedListing] = useState<CarListing | null>(
-    null,
-  );
-  const [activeDetailTab, setActiveDetailTab] = useState<
-    "Design" | "Safety" | "Luxury" | "Performance"
-  >("Design");
+  const [currentTab, setTab] = useState<string>('home');
+  const [selectedDealerId, setSelectedDealerId] = useState<string>('auto-choice-peshawar');
+  const [selectedListing, setSelectedListing] = useState<CarListing | null>(null);
+  const [activeDetailTab, setActiveDetailTab] = useState<'Design' | 'Safety' | 'Luxury' | 'Performance'>('Design');
   const [activeHotspotId, setActiveHotspotId] = useState<string | null>(null);
   const [compareList, setCompareList] = useState<CarListing[]>([]);
-  const [showComparisonModal, setShowComparisonModal] =
-    useState<boolean>(false);
-  const [activeIndustry, setActiveIndustry] = useState<
-    "Automotive" | "Footwear" | "Apparel" | "Electronics"
-  >("Automotive");
-  const [currentCategory, setCurrentCategory] = useState<
-    "gateway" | "auto" | "footwear" | "food"
-  >("auto");
-  const [comingSoonSector, setComingSoonSector] = useState<{
-    title: string;
-    tagline: string;
-    desc: string;
-    icon: string;
-    spec: string;
-  } | null>(null);
+  const [showComparisonModal, setShowComparisonModal] = useState<boolean>(false);
+  const [activeIndustry, setActiveIndustry] = useState<'Automotive' | 'Footwear' | 'Apparel' | 'Electronics'>('Automotive');
+  const [currentCategory, setCurrentCategory] = useState<'gateway' | 'auto' | 'footwear' | 'food'>('gateway');
+  const [comingSoonSector, setComingSoonSector] = useState<{ title: string; tagline: string; desc: string; icon: string; spec: string } | null>(null);
 
   // Ecosystem Gateway gamified voting & notification registers
   const [votes, setVotes] = useState<Record<string, number>>(() => {
     try {
-      const saved = localStorage.getItem("bazar360_votes");
-      return saved
-        ? JSON.parse(saved)
-        : {
-            architecture: 1104,
-            wellness: 872,
-            smartLiving: 615,
-            logistics: 439,
-          };
-    } catch (e) {
-      return {
+      const saved = localStorage.getItem('bazar360_votes');
+      return saved ? JSON.parse(saved) : {
         architecture: 1104,
         wellness: 872,
         smartLiving: 615,
-        logistics: 439,
+        logistics: 439
       };
+    } catch (e) {
+      return { architecture: 1104, wellness: 872, smartLiving: 615, logistics: 439 };
     }
   });
 
   const [userVoted, setUserVoted] = useState<Record<string, boolean>>(() => {
     try {
-      const saved = localStorage.getItem("bazar360_user_voted");
+      const saved = localStorage.getItem('bazar360_user_voted');
       return saved ? JSON.parse(saved) : {};
     } catch (e) {
       return {};
     }
   });
 
-  const [notifications, setNotifications] = useState<Record<string, boolean>>(
-    () => {
-      try {
-        const saved = localStorage.getItem("bazar360_notifications");
-        return saved ? JSON.parse(saved) : {};
-      } catch (e) {
-        return {};
-      }
-    },
-  );
+  const [notifications, setNotifications] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('bazar360_notifications');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
 
   // State-controlled teaser voting & notifications
   const [teaserVotes, setTeaserVotes] = useState<number>(() => {
     try {
-      const saved = localStorage.getItem("bazar360_teaser_votes");
+      const saved = localStorage.getItem('bazar360_teaser_votes');
       return saved ? parseInt(saved, 10) : 1240;
     } catch {
       return 1240;
@@ -227,14 +145,14 @@ export default function App() {
   });
   const [userTeaserVoted, setUserTeaserVoted] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("bazar360_user_teaser_voted") === "true";
+      return localStorage.getItem('bazar360_user_teaser_voted') === 'true';
     } catch {
       return false;
     }
   });
   const [teaserNotified, setTeaserNotified] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("bazar360_teaser_notified") === "true";
+      return localStorage.getItem('bazar360_teaser_notified') === 'true';
     } catch {
       return false;
     }
@@ -242,81 +160,59 @@ export default function App() {
 
   // Persist gamified registers
   useEffect(() => {
-    localStorage.setItem("bazar360_votes", JSON.stringify(votes));
+    try { localStorage.setItem('bazar360_votes', JSON.stringify(votes)); } catch (e) { /* ignore */ }
   }, [votes]);
 
   useEffect(() => {
-    localStorage.setItem("bazar360_user_voted", JSON.stringify(userVoted));
+    try { localStorage.setItem('bazar360_user_voted', JSON.stringify(userVoted)); } catch (e) { /* ignore */ }
   }, [userVoted]);
 
   useEffect(() => {
-    localStorage.setItem(
-      "bazar360_notifications",
-      JSON.stringify(notifications),
-    );
+    try { localStorage.setItem('bazar360_notifications', JSON.stringify(notifications)); } catch (e) { /* ignore */ }
   }, [notifications]);
 
   useEffect(() => {
-    localStorage.setItem("bazar360_teaser_votes", teaserVotes.toString());
+    try { localStorage.setItem('bazar360_teaser_votes', teaserVotes.toString()); } catch (e) { /* ignore */ }
   }, [teaserVotes]);
 
   useEffect(() => {
-    localStorage.setItem(
-      "bazar360_user_teaser_voted",
-      userTeaserVoted ? "true" : "false",
-    );
+    try { localStorage.setItem('bazar360_user_teaser_voted', userTeaserVoted ? 'true' : 'false'); } catch (e) { /* ignore */ }
   }, [userTeaserVoted]);
 
   useEffect(() => {
-    localStorage.setItem(
-      "bazar360_teaser_notified",
-      teaserNotified ? "true" : "false",
-    );
+    try { localStorage.setItem('bazar360_teaser_notified', teaserNotified ? 'true' : 'false'); } catch (e) { /* ignore */ }
   }, [teaserNotified]);
 
   // Dynamic Tagline Rotation Logic with Variant Titles & Sub-Taglines
-  const [activeTaglineVariant, setActiveTaglineVariant] = useState<{
-    title: string;
-    sub: string;
-  }>({
+  const [activeTaglineVariant, setActiveTaglineVariant] = useState<{title: string, sub: string}>({
     title: "COMING SOON: A LOT MORE",
-    sub: "We are expanding from elite cars to everything you need. A complete mega marketplace is just around the corner.",
+    sub: "We are expanding from elite cars to everything you need. A complete mega marketplace is just around the corner."
   });
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState<boolean>(false);
 
   // Suggestion Engine States
-  const [suggestionText, setSuggestionText] = useState<string>("");
-  const [isSubmittingSuggestion, setIsSubmittingSuggestion] =
-    useState<boolean>(false);
-  const [suggestionMessage, setSuggestionMessage] = useState<{
-    text: string;
-    isError: boolean;
-  } | null>(null);
+  const [suggestionText, setSuggestionText] = useState<string>('');
+  const [isSubmittingSuggestion, setIsSubmittingSuggestion] = useState<boolean>(false);
+  const [suggestionMessage, setSuggestionMessage] = useState<{ text: string, isError: boolean } | null>(null);
 
   const handleOnSubmitSuggestion = async () => {
     if (!suggestionText.trim()) return;
     setIsSubmittingSuggestion(true);
     setSuggestionMessage(null);
     try {
-      const suggestionId = "sug-" + Math.random().toString(36).substring(2, 11);
+      const suggestionId = 'sug-' + Math.random().toString(36).substring(2, 11);
       const userId = auth.currentUser?.uid || null;
       await dbSaveSuggestion({
         id: suggestionId,
         user_id: userId,
         suggestion_text: suggestionText.trim(),
-        submitted_at: new Date().toISOString(),
+        submitted_at: new Date().toISOString()
       });
-      setSuggestionText("");
-      setSuggestionMessage({
-        text: "Thank you! Your marketplace suggestion has been logged.",
-        isError: false,
-      });
+      setSuggestionText('');
+      setSuggestionMessage({ text: 'Thank you! Your marketplace suggestion has been logged.', isError: false });
     } catch (e: any) {
       console.error(e);
-      setSuggestionMessage({
-        text: "Failed to submit suggestion. Please try again.",
-        isError: true,
-      });
+      setSuggestionMessage({ text: 'Failed to submit suggestion. Please try again.', isError: true });
     } finally {
       setIsSubmittingSuggestion(false);
     }
@@ -326,35 +222,35 @@ export default function App() {
     const variants = [
       {
         title: "COMING SOON: A LOT MORE",
-        sub: "We are expanding from elite cars to everything you need. A complete mega marketplace is just around the corner.",
+        sub: "We are expanding from elite cars to everything you need. A complete mega marketplace is just around the corner."
       },
       {
         title: "THE ULTIMATE MEGA BAZAR",
-        sub: "Moving fast beyond vehicles. Get ready to browse retail, wholesale, and daily essentials all under one roof.",
+        sub: "Moving fast beyond vehicles. Get ready to browse retail, wholesale, and daily essentials all under one roof."
       },
       {
         title: "FUTURE SECTORS UNLOCKING",
-        sub: "Your favorite stores are moving digital. Vote for your favorite category below to speed up the launch.",
-      },
+        sub: "Your favorite stores are moving digital. Vote for your favorite category below to speed up the launch."
+      }
     ];
     // Select exactly one variant tagline object upon page load/visit
     const randomIndex = Math.floor(Math.random() * variants.length);
     setActiveTaglineVariant(variants[randomIndex]);
   }, []);
 
-  const handleSetCategory = (cat: "gateway" | "auto" | "footwear" | "food") => {
+  const handleSetCategory = (cat: 'gateway' | 'auto' | 'footwear' | 'food') => {
     // RAM memory reset protocols: Completely flush comparison list, search text, and filter selections.
     setCompareList([]);
-    setSearchQuery("");
-    setSelectedCategory("All");
+    setSearchQuery('');
+    setSelectedCategory('All');
     setCurrentCategory(cat);
   };
 
   const handleToggleCompare = (car: CarListing) => {
     setCompareList((prev) => {
-      const exists = prev.some((item) => item.id === car.id);
+      const exists = prev.some(item => item.id === car.id);
       if (exists) {
-        return prev.filter((item) => item.id !== car.id);
+        return prev.filter(item => item.id !== car.id);
       }
       if (prev.length >= 2) {
         return [prev[1], car];
@@ -372,18 +268,23 @@ export default function App() {
   // Bidirectional SPA Routing and browser history synchronization engine
   useEffect(() => {
     // 1. Compute target pathname based on current state variables
-    let targetPath = "/";
+    let targetPath = '/';
     if (selectedListing) {
-      targetPath = `/dealers/${selectedListing.dealerId || "private"}/listings/${selectedListing.id}`;
-    } else if (currentTab === "dealer-storefront" && selectedDealerId) {
+      targetPath = `/dealers/${selectedListing.dealerId || 'private'}/listings/${selectedListing.id}`;
+    } else if (currentTab === 'dealer-storefront' && selectedDealerId) {
       targetPath = `/dealers/${selectedDealerId}`;
-    } else if (currentTab !== "home") {
+    } else if (currentTab !== 'home') {
       targetPath = `/${currentTab}`;
     }
 
     // 2. Reflect state changes in browser URL bar if needed
     if (window.location.pathname !== targetPath) {
-      window.history.pushState(null, "", targetPath);
+      try {
+        window.history.pushState(null, '', targetPath);
+      } catch (e) {
+        // Suppress security block warnings inside restricted sandbox contexts
+        console.warn('Navigation state sync bypassed due to sandbox restrictions:', e);
+      }
     }
   }, [currentTab, selectedDealerId, selectedListing]);
 
@@ -392,43 +293,34 @@ export default function App() {
     const parseUrl = () => {
       const path = window.location.pathname;
       const activeListings = listings.length > 0 ? listings : INITIAL_LISTINGS;
-
-      if (path === "/" || path === "") {
-        setTab("home");
+      
+      if (path === '/' || path === '') {
+        setTab('home');
         setSelectedListing(null);
-      } else if (path.startsWith("/dealers/")) {
-        const segments = path.split("/").filter(Boolean);
+      } else if (path.startsWith('/dealers/')) {
+        const segments = path.split('/').filter(Boolean);
         const dId = segments[1];
         if (dId) {
-          if (segments[2] === "listings" && segments[3]) {
+          if (segments[2] === 'listings' && segments[3]) {
             const lId = segments[3];
-            const found = activeListings.find((l) => l.id === lId);
+            const found = activeListings.find(l => l.id === lId);
             if (found) {
               setSelectedListing(found);
               setSelectedDealerId(dId);
             } else {
               setSelectedDealerId(dId);
-              setTab("dealer-storefront");
+              setTab('dealer-storefront');
               setSelectedListing(null);
             }
           } else {
             setSelectedDealerId(dId);
-            setTab("dealer-storefront");
+            setTab('dealer-storefront');
             setSelectedListing(null);
           }
         }
       } else {
         const tName = path.slice(1);
-        const validTabs = [
-          "inventory",
-          "media",
-          "insights",
-          "concierge",
-          "dealers",
-          "sell",
-          "portal",
-          "search",
-        ];
+        const validTabs = ['inventory', 'media', 'insights', 'concierge', 'dealers', 'sell', 'portal', 'search'];
         if (validTabs.includes(tName)) {
           setTab(tName);
           setSelectedListing(null);
@@ -436,27 +328,28 @@ export default function App() {
       }
     };
 
-    window.addEventListener("popstate", parseUrl);
-
+    window.addEventListener('popstate', parseUrl);
+    
     // Parse on initial load or transition when database listings/dealers populate
     parseUrl();
 
-    return () => window.removeEventListener("popstate", parseUrl);
+    return () => window.removeEventListener('popstate', parseUrl);
   }, [listings, dealers]);
 
   // Active Session User Profile
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
-    const saved = localStorage.getItem("bazar360_user");
+    let saved = null;
+    try { saved = localStorage.getItem('bazar360_user'); } catch (e) { /* ignore */ }
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === "object") {
+        if (parsed && typeof parsed === 'object') {
           // Migration: Auto-inject standard metadata fields required by the latest rules
           return {
-            status: "Active",
+            status: 'Active',
             lastLogin: new Date().toISOString(),
             createdAt: new Date().toISOString(),
-            ...parsed,
+            ...parsed
           };
         }
       } catch (e) {
@@ -468,33 +361,46 @@ export default function App() {
   });
 
   // Filter trackers
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Memory and Media Optimization: Switch categories wipes comparisons to reclaim RAM
   useEffect(() => {
     if (compareList.length > 0) {
-      console.log(
-        "[BAZAR360 Memory Safe] Tenant category shift. Wiping active auto comparison arrays...",
-      );
+      console.log("[BAZAR360 Memory Safe] Tenant category shift. Wiping active auto comparison arrays...");
       setCompareList([]);
     }
   }, [selectedCategory]);
 
+  // Automated Visitor clickstream tracking for vehicle views
+  useEffect(() => {
+    if (selectedListing) {
+      trackVehicleView(selectedListing.id).catch(err => console.warn('Vehicle view track bypass:', err));
+    }
+  }, [selectedListing]);
+
+  // Automated Visitor debounced clickstream tracking for search keywords
+  useEffect(() => {
+    if (searchQuery.trim().length > 3) {
+      const timer = setTimeout(() => {
+        trackSearchQuery(searchQuery.trim()).catch(err => console.warn('Search query track bypass:', err));
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [searchQuery]);
+
   // Bid interaction state inside Detail modal
-  const [offerInput, setOfferInput] = useState("");
-  const [offerSuccessMessage, setOfferSuccessMessage] = useState("");
+  const [offerInput, setOfferInput] = useState('');
+  const [offerSuccessMessage, setOfferSuccessMessage] = useState('');
 
   // Sync session profile to standard storage
   useEffect(() => {
     if (currentUser) {
-      localStorage.setItem("bazar360_user", JSON.stringify(currentUser));
+      try { localStorage.setItem('bazar360_user', JSON.stringify(currentUser)); } catch (e) { /* ignore */ }
       // Save profile to database
-      dbSaveUserProfile(currentUser).catch((err) =>
-        console.warn("Bypass profile save:", err),
-      );
+      dbSaveUserProfile(currentUser).catch(err => console.warn('Bypass profile save:', err));
     } else {
-      localStorage.removeItem("bazar360_user");
+      try { localStorage.removeItem('bazar360_user'); } catch (e) { /* ignore */ }
     }
   }, [currentUser]);
 
@@ -502,31 +408,23 @@ export default function App() {
   useEffect(() => {
     async function initDatabase() {
       setDbLoading(true);
-
+      
       // Fast connection race-timer to guarantee instant rendering even if connection is firewalled or slow
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(
-          () =>
-            reject(
-              new Error(
-                "Firebase connection timeout - loading high speed local layout",
-              ),
-            ),
-          4500,
-        ),
+        setTimeout(() => reject(new Error('Firebase connection timeout - loading high speed local layout')), 4500)
       );
 
       try {
         await Promise.race([
           (async () => {
             await seedDatabaseIfEmpty();
-
+            
             const fetchedDealers = await dbFetchDealers();
             const fetchedListings = await dbFetchListings();
-
+            
             setDealers(fetchedDealers);
             setListings(fetchedListings);
-
+            
             // Load reviews in record
             const revsRecord: Record<string, Review[]> = {};
             for (const dl of fetchedDealers) {
@@ -534,14 +432,14 @@ export default function App() {
             }
             setReviewsMap(revsRecord);
           })(),
-          timeoutPromise,
+          timeoutPromise
         ]);
       } catch (err) {
-        console.warn("Sandbox local sync fallback activated due to:", err);
+        console.warn('Sandbox local sync fallback activated due to:', err);
         // Load highly responsive mock data instantly so the layout works flawlessly in offline / slow connection modes
         setDealers(INITIAL_DEALERS);
         setListings(INITIAL_LISTINGS);
-
+        
         // Build reviews record from local backups
         const revsRecord: Record<string, Review[]> = {};
         for (const dl of INITIAL_DEALERS) {
@@ -552,17 +450,16 @@ export default function App() {
         setDbLoading(false);
       }
     }
-    initDatabase();
+    initDatabase().then(() => {
+      initializeVisitorTracking().catch(err => console.warn('Visitor tracking engine bypass:', err));
+    });
   }, []);
 
   // Listen for Firebase Auth state changes to sync active user profile details
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        console.log(
-          "Firebase Auth active session detected for UID:",
-          firebaseUser.uid,
-        );
+        console.log("Firebase Auth active session detected for UID:", firebaseUser.uid);
         try {
           const fetchedProfile = await dbFetchUserProfile(firebaseUser.uid);
           if (fetchedProfile) {
@@ -571,38 +468,31 @@ export default function App() {
             // First-time signup fallback: create a robust, rules-compliant profile
             const fallbackProfile: UserProfile = {
               uid: firebaseUser.uid,
-              email: firebaseUser.email || "amjid.bisconni@gmail.com",
-              displayName: firebaseUser.displayName || "Amjid B.",
-              phoneNumber: firebaseUser.phoneNumber || "+92 314 3600000",
+              email: firebaseUser.email || 'amjid.bisconni@gmail.com',
+              displayName: firebaseUser.displayName || 'Amjid B.',
+              phoneNumber: firebaseUser.phoneNumber || '+92 314 3600000',
               phoneVerified: !!firebaseUser.phoneNumber,
-              city: "Lahore",
-              state: "Punjab",
-              role:
-                firebaseUser.email === "amjid.bisconni@gmail.com"
-                  ? "Admin"
-                  : "Buyer",
-              status: "Active",
+              city: 'Lahore',
+              state: 'Punjab',
+              role: firebaseUser.email === 'amjid.bisconni@gmail.com' ? 'Admin' : 'Buyer',
+              status: 'Active',
               socials: {
-                facebook: "https://facebook.com/amjid.bazar360",
-                instagram: "https://instagram.com/amjid_b360",
+                facebook: 'https://facebook.com/amjid.bazar360',
+                instagram: 'https://instagram.com/amjid_b360'
               },
               createdAt: new Date().toISOString(),
               lastLogin: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
-              region: "Lahore",
+              region: 'Lahore'
             };
             setCurrentUser(fallbackProfile);
-            await dbSaveUserProfile(fallbackProfile).catch((err) =>
-              console.warn("Fallback profile save skip:", err),
-            );
+            await dbSaveUserProfile(fallbackProfile).catch(err => console.warn("Fallback profile save skip:", err));
           }
         } catch (err) {
           console.error("Auth state loading error:", err);
         }
       } else {
-        console.log(
-          "No active Firebase Auth session. App running in offline guest mode.",
-        );
+        console.log("No active Firebase Auth session. App running in offline guest mode.");
       }
     });
     return () => unsubscribe();
@@ -610,65 +500,57 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      const { signOut } = await import("firebase/auth");
+      const { signOut } = await import('firebase/auth');
       await signOut(auth);
     } catch (err) {
       console.warn("Silent auth signout warning:", err);
     }
     setCurrentUser(null);
-    localStorage.removeItem("bazar360_user");
-    setTab("home");
+    try { localStorage.removeItem('bazar360_user'); } catch (e) { /* ignore */ }
+    setTab('home');
   };
 
-  const handleRoleSwap = (
-    role: "Admin" | "Showroom Owner" | "Private Seller",
-  ) => {
+  const handleRoleSwap = (role: 'Admin' | 'Showroom Owner' | 'Private Seller') => {
     if (!currentUser) return;
-
-    let displayName = "Amjid B.";
+    
+    let displayName = 'Amjid B.';
     let salesPodId: string | undefined = undefined;
-    if (role === "Admin") {
-      displayName = "Amjid B. (Super Admin)";
-    } else if (role === "Showroom Owner") {
-      displayName = "Amjid B. (Showroom Owner / Dealer)";
-      salesPodId = "auto-choice-peshawar"; // Hard link to Auto Choice Peshawar for live sandbox tests!
-    } else if (role === "Private Seller") {
-      displayName = "Amjid B. (Ad Poster / Private Seller)";
+    if (role === 'Admin') {
+      displayName = 'Amjid B. (Super Admin)';
+    } else if (role === 'Showroom Owner') {
+      displayName = 'Amjid B. (Showroom Owner / Dealer)';
+      salesPodId = 'auto-choice-peshawar'; // Hard link to Auto Choice Peshawar for live sandbox tests!
+    } else if (role === 'Private Seller') {
+      displayName = 'Amjid B. (Ad Poster / Private Seller)';
     }
-
+    
     const updatedUser: UserProfile = {
       ...currentUser,
       role,
       displayName,
-      salesPodId,
+      salesPodId
     };
-
+    
     setCurrentUser(updatedUser);
   };
 
   const onSelectDealer = (id: string) => {
     setSelectedDealerId(id);
-    setTab("dealer-storefront");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTab('dealer-storefront');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleAddListing = async (newListing: CarListing) => {
     // 1. Determine permission default values
-    const isApprovedByDefault =
-      currentUser?.role === "Admin" ||
-      currentUser?.role === "Showroom Owner" ||
-      currentUser?.role === "Private Seller";
-
+    const isApprovedByDefault = currentUser?.role === 'Admin' || currentUser?.role === 'Showroom Owner' || currentUser?.role === 'Private Seller';
+    
     const finalListing: CarListing = {
       ...newListing,
       approved: isApprovedByDefault,
-      assignedSalesRepId: currentUser?.uid || "guest-seller",
+      assignedSalesRepId: currentUser?.uid || 'guest-seller',
       // If of Showroom Owner role, assign to their showroom
-      dealerId:
-        currentUser?.role === "Showroom Owner" && currentUser?.salesPodId
-          ? currentUser.salesPodId
-          : "private",
-      createdAt: new Date().toISOString(),
+      dealerId: currentUser?.role === 'Showroom Owner' && currentUser?.salesPodId ? currentUser.salesPodId : 'private',
+      createdAt: new Date().toISOString()
     };
 
     // 2. Commit to database
@@ -681,13 +563,13 @@ export default function App() {
     // 3. Update React views instantly
     setListings((prev) => [finalListing, ...prev]);
 
-    if (finalListing.dealerId !== "private") {
+    if (finalListing.dealerId !== 'private') {
       setDealers((prevDealers) =>
         prevDealers.map((d) =>
           d.id === finalListing.dealerId
             ? { ...d, vehiclesCount: d.vehiclesCount + 1 }
-            : d,
-        ),
+            : d
+        )
       );
     }
   };
@@ -699,15 +581,15 @@ export default function App() {
       console.warn(err);
     }
     setListings((prev) =>
-      prev.map((l) => (l.id === listingId ? { ...l, approved: true } : l)),
+      prev.map((l) => (l.id === listingId ? { ...l, approved: true } : l))
     );
   };
 
   const handleRejectListing = async (listingId: string) => {
     try {
-      const { doc, deleteDoc } = await import("firebase/firestore");
-      const { db } = await import("./firebase");
-      await deleteDoc(doc(db, "listings", listingId));
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      const { db } = await import('./firebase');
+      await deleteDoc(doc(db, 'listings', listingId));
     } catch (err) {
       console.warn(err);
     }
@@ -717,13 +599,9 @@ export default function App() {
   const handleAddReview = async (comment: string, rating: number) => {
     const newRev: Review = {
       id: `rev-${Date.now()}`,
-      author: currentUser?.displayName || "Aamir G. (Verified Buyer)",
+      author: currentUser?.displayName || 'Aamir G. (Verified Buyer)',
       rating,
-      date: new Date().toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
+      date: new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }),
       comment,
     };
 
@@ -749,7 +627,7 @@ export default function App() {
           return { ...d, rating: computedAvg };
         }
         return d;
-      }),
+      })
     );
   };
 
@@ -758,25 +636,25 @@ export default function App() {
       prevDealers.map((d) =>
         d.id === dealerId
           ? { ...d, activityFeed: [post, ...(d.activityFeed || [])] }
-          : d,
-      ),
+          : d
+      )
     );
 
     try {
-      const { doc, getDoc, updateDoc } = await import("firebase/firestore");
-      const { db } = await import("./firebase");
-      const dealerRef = doc(db, "dealers", dealerId);
+      const { doc, getDoc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('./firebase');
+      const dealerRef = doc(db, 'dealers', dealerId);
       const dSnap = await getDoc(dealerRef);
       if (dSnap.exists()) {
         const dData = dSnap.data();
         const currentFeed = dData.activityFeed || [];
         await updateDoc(dealerRef, {
           activityFeed: [post, ...currentFeed],
-          updatedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         });
       }
     } catch (err) {
-      console.warn("Silent activity feed persistence warning:", err);
+      console.warn('Silent activity feed persistence warning:', err);
     }
   };
 
@@ -785,75 +663,70 @@ export default function App() {
       prevDealers.map((d) => {
         if (d.id === dealerId) {
           const updatedFeed = (d.activityFeed || []).map((post) =>
-            post.id === postId
-              ? { ...post, status: "approved" as const }
-              : post,
+            post.id === postId ? { ...post, status: 'approved' as const } : post
           );
           return { ...d, activityFeed: updatedFeed };
         }
         return d;
-      }),
+      })
     );
 
     try {
-      const { doc, getDoc, updateDoc } = await import("firebase/firestore");
-      const { db } = await import("./firebase");
-      const dealerRef = doc(db, "dealers", dealerId);
+      const { doc, getDoc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('./firebase');
+      const dealerRef = doc(db, 'dealers', dealerId);
       const dSnap = await getDoc(dealerRef);
       if (dSnap.exists()) {
         const dData = dSnap.data();
         const currentFeed = dData.activityFeed || [];
         const updatedFeed = currentFeed.map((post: any) =>
-          post.id === postId ? { ...post, status: "approved" } : post,
+          post.id === postId ? { ...post, status: 'approved' } : post
         );
         await updateDoc(dealerRef, {
           activityFeed: updatedFeed,
-          updatedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         });
       }
     } catch (err) {
-      console.warn("Silent activity feed approval persistence warning:", err);
+      console.warn('Silent activity feed approval persistence warning:', err);
     }
   };
 
-  const currentDealer =
-    dealers.find((d) => d.id === selectedDealerId) || dealers[0];
+  const currentDealer = dealers.find((d) => d.id === selectedDealerId) || dealers[0];
 
   const handleOfferSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!offerInput.trim()) return;
-
+    
     const bidAmount = parseInt(offerInput) || 0;
-    const listingDealer = dealers.find(
-      (d) => d.id === selectedListing?.dealerId,
-    );
+    const listingDealer = dealers.find((d) => d.id === selectedListing?.dealerId);
 
     // Save persistent Bargain Bid in real-time to Firestore database
-    import("./lib/dbService").then(({ dbSaveBargain }) => {
+    import('./lib/dbService').then(({ dbSaveBargain }) => {
       if (selectedListing) {
         dbSaveBargain({
           id: `offer-${Date.now()}`,
           listingId: selectedListing.id,
           vehicleTitle: selectedListing.title,
           bidAmount,
-          buyerName: currentUser?.displayName || "Guest Bargain Bidder",
-          buyerPhone: currentUser?.phoneNumber || "+92 314 3601212",
-          buyerEmail: currentUser?.email || "prospect.buyer@bazar360.online",
-          dealerId: selectedListing.dealerId || "private",
-          status: "Pending",
-          createdAt: new Date().toISOString(),
+          buyerName: currentUser?.displayName || 'Guest Bargain Bidder',
+          buyerPhone: currentUser?.phoneNumber || '+92 314 3601212',
+          buyerEmail: currentUser?.email || 'prospect.buyer@bazar360.online',
+          dealerId: selectedListing.dealerId || 'private',
+          status: 'Pending',
+          createdAt: new Date().toISOString()
         });
       }
     });
 
     setOfferSuccessMessage(
       `✓ Dynamic Offer of Rs. ${bidAmount.toLocaleString()} submitted successfully! ${
-        listingDealer?.name || "Seller"
-      } is processing your proposal.`,
+        listingDealer?.name || 'Seller'
+      } is processing your proposal.`
     );
-    setOfferInput("");
+    setOfferInput('');
     setTimeout(() => {
-      setOfferSuccessMessage("");
+      setOfferSuccessMessage('');
     }, 5000);
   };
 
@@ -861,163 +734,137 @@ export default function App() {
   const visibleListings = listings.filter((l) => {
     if (l.approved !== false) return true; // Show all approved listings
     // Non-approved listings only visible to Admins, Showroom Owners, or the listing author
-    const isModerator =
-      currentUser?.role === "Admin" || currentUser?.role === "Showroom Owner";
+    const isModerator = currentUser?.role === 'Admin' || currentUser?.role === 'Showroom Owner';
     const isOwner = currentUser && l.assignedSalesRepId === currentUser.uid;
     return isModerator || isOwner;
   });
 
   // Flagship Priority Injection: Sort auto-choice-peshawar entries to the absolute top of everything
   const prioritizedListings = React.useMemo(() => {
-    const flagshipListings = visibleListings.filter(
-      (l) => l.dealerId === "auto-choice-peshawar",
-    );
-    const ordinaryListings = visibleListings.filter(
-      (l) => l.dealerId !== "auto-choice-peshawar",
-    );
+    const flagshipListings = visibleListings.filter(l => l.dealerId === 'auto-choice-peshawar');
+    const ordinaryListings = visibleListings.filter(l => l.dealerId !== 'auto-choice-peshawar');
     return [...flagshipListings, ...ordinaryListings];
   }, [visibleListings]);
 
-  if (currentCategory === "gateway") {
+  if (currentCategory === 'gateway') {
     const handleVote = (sectorId: string, e: React.MouseEvent) => {
       e.stopPropagation();
       if (userVoted[sectorId]) {
-        setVotes((prev) => ({ ...prev, [sectorId]: prev[sectorId] - 1 }));
-        setUserVoted((prev) => ({ ...prev, [sectorId]: false }));
+        setVotes(prev => ({ ...prev, [sectorId]: prev[sectorId] - 1 }));
+        setUserVoted(prev => ({ ...prev, [sectorId]: false }));
       } else {
-        setVotes((prev) => ({ ...prev, [sectorId]: prev[sectorId] + 1 }));
-        setUserVoted((prev) => ({ ...prev, [sectorId]: true }));
+        setVotes(prev => ({ ...prev, [sectorId]: prev[sectorId] + 1 }));
+        setUserVoted(prev => ({ ...prev, [sectorId]: true }));
       }
     };
 
     const handleToggleNotify = (sectorId: string, e: React.MouseEvent) => {
       e.stopPropagation();
-      setNotifications((prev) => ({ ...prev, [sectorId]: !prev[sectorId] }));
+      setNotifications(prev => ({ ...prev, [sectorId]: !prev[sectorId] }));
     };
 
     const upcomingSectors = [
       {
-        id: "architecture",
+        id: 'architecture',
         title: "Next-Gen Spaces",
-        tagline:
-          "Sourcing residential penthouses, sustainable designer villas, and smart buildings.",
+        tagline: "Sourcing residential penthouses, sustainable designer villas, and smart buildings.",
         desc: "A digitized architectural directory tracking state-of-the-art developments, luxury master plans, and tokenized occupancy pipelines across metropolis zones.",
         icon: "🏢",
         badge: "In Active Seeding",
         glowColor: "cyan",
       },
       {
-        id: "wellness",
+        id: 'wellness',
         title: "Premium Wellness",
-        tagline:
-          "Advanced tele-consultation pairings, certified diagnostics and pharmacy options.",
+        tagline: "Advanced tele-consultation pairings, certified diagnostics and pharmacy options.",
         desc: "Connecting local medical registries, genuine pharmaceutical fulfillment workflows, and smart electronic diagnostics records with compliance indicators.",
         icon: "🏥",
         badge: "In Ideation Node",
         glowColor: "purple",
       },
       {
-        id: "smartLiving",
+        id: 'smartLiving',
         title: "Smart Living",
-        tagline:
-          "Artificial intelligence-backed high precision automated smart home upgrades.",
+        tagline: "Artificial intelligence-backed high precision automated smart home upgrades.",
         desc: "Certified appliance catalogs, customized low-voltage layout optimization services, and solar array performance indexing panels.",
         icon: "⚡",
         badge: "Research Channel",
         glowColor: "emerald",
       },
       {
-        id: "logistics",
+        id: 'logistics',
         title: "Logistics Hub",
-        tagline:
-          "Next-generation secure commercial routes, fleets and priority delivery lines.",
+        tagline: "Next-generation secure commercial routes, fleets and priority delivery lines.",
         desc: "Enterprise freight synchronization matrices, heavy-machinery transfers tracking, and automated container dispatch routing channels.",
         icon: "📦",
         badge: "In Incubation",
         glowColor: "orange",
-      },
+      }
     ];
 
     return (
-      <div className="bg-[#030712] text-white min-h-screen text-sm font-sans flex flex-col justify-between p-4 md:p-12 relative overflow-hidden select-none">
+      <div className="bg-[#030712] text-white h-screen max-h-screen text-sm font-sans flex flex-col justify-between p-4 md:p-6 lg:p-8 relative overflow-hidden select-none">
         {/* Ambient Cosmic Background Lighting */}
         <div className="absolute top-[-25%] left-[-15%] w-[60%] h-[60%] bg-sky-500/10 rounded-full blur-[160px] pointer-events-none animate-pulse"></div>
         <div className="absolute bottom-[-15%] right-[-15%] w-[60%] h-[60%] bg-orange-500/10 rounded-full blur-[160px] pointer-events-none animate-pulse"></div>
         <div className="absolute inset-0 bg-[radial-gradient(#ffffff02_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
 
         {/* 1. STREAMLINED PREMIUM GATEWAY NAVBAR */}
-        <header className="w-full flex items-center justify-between py-4 border-b border-white/5 relative z-20 mb-8 max-w-7xl mx-auto">
+        <header className="w-full flex items-center justify-between py-2 border-b border-white/5 relative z-20 mb-3 max-w-7xl mx-auto shrink-0">
           {/* Core Branding */}
           <div className="flex items-center space-x-2.5 cursor-pointer select-none">
             <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-slate-900 to-blue-950 border border-blue-500/30 shadow-lg shadow-black">
-              <svg
-                className="w-6 h-6 text-orange-500 animate-[spin_30s_linear_infinite]"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-                ></path>
+              <svg className="w-6 h-6 text-orange-500 animate-[spin_30s_linear_infinite]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path>
               </svg>
-              <span className="absolute text-[9px] font-black text-sky-400">
-                360
-              </span>
+              <span className="absolute text-[9px] font-black text-sky-400">360</span>
             </div>
             <div className="flex flex-col text-left">
-              <span className="text-lg font-black text-white tracking-widest leading-none">
-                BAZAR<span className="text-orange-500 font-extrabold">360</span>
-              </span>
-              <span className="text-[9px] font-black text-sky-400 tracking-[0.22em] uppercase pt-0.5">
-                Ecosystem
-              </span>
+              <span className="text-lg font-black text-white tracking-widest leading-none">BAZAR<span className="text-orange-500 font-extrabold">360</span></span>
+              <span className="text-[9px] font-black text-sky-400 tracking-[0.22em] uppercase pt-0.5">Ecosystem</span>
             </div>
           </div>
 
           {/* Primary Active Sector Button ONLY (Spaces & Health replaced/cleaned from navbar) */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => handleSetCategory("auto")}
-              className="group flex items-center gap-2 px-4 py-2.5 bg-orange-500/10 hover:bg-orange-500 text-orange-500 hover:text-slate-950 border border-orange-500/30 hover:border-orange-500 rounded-xl text-xs font-mono font-black tracking-widest uppercase transition-all duration-300 cursor-pointer shadow-lg shadow-orange-950/20 active:scale-[0.98]"
+              onClick={() => handleSetCategory('auto')}
+              className="group flex items-center gap-2 px-4 py-2 bg-orange-500/10 hover:bg-orange-500 text-orange-500 hover:text-slate-950 border border-orange-500/30 hover:border-orange-500 rounded-xl text-xs font-mono font-black tracking-widest uppercase transition-all duration-300 cursor-pointer shadow-lg shadow-orange-950/20 active:scale-[0.98]"
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500 group-hover:bg-slate-950 transition-colors"></span>
               </span>
               <span>Auto Choice [Live]</span>
-              <span className="transition-transform duration-200 group-hover:translate-x-1">
-                →
-              </span>
+              <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
             </button>
           </div>
         </header>
 
         {/* Hero Console */}
-        <div className="flex flex-col items-center justify-center text-center mt-2 mb-10 space-y-4 relative z-10 max-w-2xl mx-auto">
-          <span className="text-[10px] uppercase font-mono font-black tracking-[0.3em] text-[#38BDF8] bg-sky-500/10 px-4 py-1.5 rounded-full border border-sky-500/20 shadow-md">
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="flex flex-col items-center justify-center text-center mt-1 mb-3 space-y-2 relative z-10 max-w-2xl mx-auto shrink-0"
+        >
+          <span className="text-[9px] uppercase font-mono font-black tracking-[0.25em] text-[#38BDF8] bg-sky-500/10 px-3 py-1 rounded-full border border-sky-500/20 shadow-md">
             Pakistan's Premium Multi-Tenant Trade Network
           </span>
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white uppercase">
-            Unified Digital{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#38BDF8] to-orange-500 leading-normal">
-              Ecosystem Entry
-            </span>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold tracking-tight text-white uppercase">
+            Unified Digital <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#38BDF8] to-orange-500 leading-normal">Ecosystem Entry</span>
           </h1>
-          <p className="text-xs text-gray-400 leading-relaxed font-sans max-w-xl">
-            Switch sectors instantly to explore specialized inventories,
-            localized financial scales, and high-resolution verified trade
-            assets under one cryptographic catalog gateway.
+          <p className="text-[11px] md:text-xs text-gray-400 leading-relaxed font-sans max-w-xl">
+            Switch sectors instantly to explore specialized inventories, localized financial scales, and high-resolution verified trade assets under one cryptographic catalog gateway.
           </p>
-        </div>
+        </motion.div>
 
         {/* Redesigned 2-Column Responsive Layout Grid */}
-        <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch relative z-10 px-4 mb-20 animate-fade-in">
+        <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 items-stretch relative z-10 px-4 mb-2 flex-1 min-h-0 animate-fade-in">
+          
           {/* Column 1: FLAGSHIP SECTOR - Auto Choice (Live Partition) */}
-          <div className="space-y-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between px-1">
+          <div className="space-y-2 flex flex-col min-h-0 h-full">
+            <div className="flex items-center justify-between px-1 shrink-0">
               <span className="text-[10px] font-mono tracking-widest text-[#38BDF8] uppercase font-black">
                 ● FLAGSHIP DIVISION ACTIVE
               </span>
@@ -1026,17 +873,17 @@ export default function App() {
               </span>
             </div>
 
-            <div
-              onClick={() => handleSetCategory("auto")}
-              className="flex-1 bg-gradient-to-b from-slate-900/95 to-slate-950/95 border border-[#38BDF8]/20 rounded-[32px] p-6 md:p-8 flex flex-col justify-between transition-all duration-300 hover:border-[#38BDF8]/60 hover:shadow-2xl hover:shadow-[#38BDF8]/15 hover:-translate-y-1 active:scale-[0.99] cursor-pointer group select-none relative overflow-hidden min-h-[480px]"
+            <div 
+              onClick={() => handleSetCategory('auto')}
+              className="flex-1 bg-gradient-to-b from-slate-900/95 to-slate-950/95 border border-[#38BDF8]/20 rounded-2xl p-4 md:p-6 flex flex-col justify-between transition-all duration-300 hover:border-[#38BDF8]/60 hover:shadow-2xl hover:shadow-[#38BDF8]/15 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer group select-none relative overflow-hidden min-h-0"
             >
               {/* Premium Background Grid overlay inside the live card */}
               <div className="absolute inset-0 bg-[radial-gradient(#38BDF8_0.6px,transparent_0.6px)] [background-size:12px_12px] opacity-10"></div>
               <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none"></div>
 
-              <div className="space-y-6 relative z-10">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-mono text-orange-500 font-black tracking-widest uppercase bg-orange-500/10 px-3 py-1.5 rounded-lg border border-orange-500/20">
+              <div className="space-y-4 relative z-10 flex-1 flex flex-col justify-between">
+                <div className="flex justify-between items-center shrink-0">
+                  <span className="text-[10px] font-mono text-orange-500 font-black tracking-widest uppercase bg-orange-500/10 px-3 py-1 rounded-lg border border-orange-500/20">
                     SECTOR 01 • ACTIVE PORTAL
                   </span>
                   <div className="flex items-center gap-1.5 font-mono text-[9px] text-[#38BDF8]">
@@ -1045,60 +892,38 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <img
-                    src="/auto_choice_logo_1781509565476.jpg"
-                    className="w-16 h-16 rounded-2xl object-cover border border-[#22d55e]/20 shadow-2xl transition-transform duration-300 group-hover:scale-105"
+                <div className="flex items-center gap-4 shrink-0">
+                  <img 
+                    src="/auto_choice_logo_1781509565476.jpg" 
+                    className="w-12 h-12 rounded-xl object-cover border border-[#22d55e]/20 shadow-2xl transition-transform duration-300 group-hover:scale-105" 
                     alt="Auto Choice Flagship"
                   />
-                  <div>
-                    <h2 className="text-2xl font-black font-sans text-white uppercase tracking-tight">
-                      Auto Choice
-                    </h2>
-                    <p className="text-[#38BDF8] font-mono text-[10px] font-black tracking-widest uppercase mt-0.5">
-                      Automotive division
-                    </p>
+                  <div className="text-left">
+                    <h2 className="text-xl font-black font-sans text-white uppercase tracking-tight">Auto Choice</h2>
+                    <p className="text-[#38BDF8] font-mono text-[10px] font-black tracking-widest uppercase mt-0.5">Automotive division</p>
                   </div>
                 </div>
 
-                <p className="text-gray-300/90 text-xs leading-relaxed font-sans">
-                  Experience Pakistan's elite digitized automotive platform.
-                  Browse certified SUVs, premium electric sedans, and
-                  high-performance imports with live valuation matrices, secure
-                  direct trade options, and instant physical spot-inspection
-                  alignments.
+                <p className="text-gray-300/90 text-xs leading-relaxed font-sans text-left flex-1 min-h-0 overflow-y-auto no-scrollbar py-1">
+                  Experience Pakistan's elite digitized automotive platform. Browse certified SUVs, premium electric sedans, and high-performance imports with live valuation matrices, secure direct trade options, and instant physical spot-inspection alignments.
                 </p>
 
                 {/* Vehicle vector silhouette */}
-                <div className="py-2 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
-                  <svg
-                    className="w-full h-16 text-sky-400/25 group-hover:text-[#38BDF8]/45 transition-colors"
-                    viewBox="0 0 120 40"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.2"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M10 28 C 10 24, 25 24, 30 18 L 45 10 C 50 8, 70 8, 75 14 L 90 20 C 105 20, 110 24, 110 28 Z"
-                    />
+                <div className="py-1 opacity-60 group-hover:opacity-100 transition-opacity duration-300 shrink-0 hidden sm:block">
+                  <svg className="w-full h-10 text-sky-400/25 group-hover:text-[#38BDF8]/45 transition-colors" viewBox="0 0 120 40" fill="none" stroke="currentColor" strokeWidth="1.2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 28 C 10 24, 25 24, 30 18 L 45 10 C 50 8, 70 8, 75 14 L 90 20 C 105 20, 110 24, 110 28 Z" />
                     <circle cx="30" cy="28" r="5" fill="#030712" />
                     <circle cx="85" cy="28" r="5" fill="#030712" />
-                    <path
-                      d="M5 28 L 115 28"
-                      strokeWidth="0.8"
-                      strokeDasharray="3,3"
-                    />
+                    <path d="M5 28 L 115 28" strokeWidth="0.8" strokeDasharray="3,3" />
                   </svg>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between border-t border-white/5 pt-6 relative z-10 w-full">
+              <div className="flex items-center justify-between border-t border-white/5 pt-3 mt-2 relative z-10 w-full shrink-0">
                 <span className="text-[10px] font-mono font-bold text-gray-400 uppercase group-hover:text-[#38BDF8] transition-colors">
                   Tap to enter matrix
                 </span>
-                <div className="bg-orange-500 text-slate-950 rounded-xl px-5 py-3 text-xs font-mono font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-orange-950/20 group-hover:bg-orange-400 transition-all active:scale-[0.98]">
+                <div className="bg-orange-500 text-slate-950 rounded-xl px-4 py-2 text-xs font-mono font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-orange-950/20 group-hover:bg-orange-400 transition-all active:scale-[0.98]">
                   <span>Access Showroom</span>
                   <span className="text-base">→</span>
                 </div>
@@ -1107,84 +932,74 @@ export default function App() {
           </div>
 
           {/* Column 2: RESPONSIVE COMING SOON CONTENT BOX */}
-          <div
-            className="space-y-4 flex flex-col justify-between"
-            id="coming-soon-content-box"
-          >
-            <div className="flex items-center justify-between px-1">
+          <div className="space-y-2 flex flex-col min-h-0 h-full" id="coming-soon-content-box">
+            <div className="flex items-center justify-between px-1 shrink-0">
               <span className="text-[10px] font-mono tracking-widest text-[#38BDF8] uppercase font-black flex items-center gap-1.5">
-                <Sparkles size={12} className="text-cyan-400 animate-pulse" />{" "}
-                FUTURE SATELLITE PIPELINES
+                <Sparkles size={12} className="text-cyan-400 animate-pulse" /> FUTURE SATELLITE PIPELINES
               </span>
               <span className="text-[8px] bg-sky-500/15 text-sky-400 font-mono px-2 py-0.5 border border-sky-500/20 rounded font-black tracking-widest uppercase animate-pulse">
                 Expansion Active
               </span>
             </div>
 
-            <div className="flex-1 bg-gradient-to-b from-[#09152a] to-slate-950/95 border border-[#38BDF8]/20 rounded-[32px] p-6 md:p-8 flex flex-col justify-between transition-all duration-300 hover:border-cyan-500/50 hover:shadow-2xl hover:shadow-cyan-950/15 min-h-[480px] relative overflow-hidden group select-none">
+            <div 
+              className="flex-1 bg-gradient-to-b from-[#09152a] to-slate-950/95 border border-[#38BDF8]/20 rounded-2xl p-4 md:p-6 flex flex-col justify-between transition-all duration-300 hover:border-cyan-500/50 hover:shadow-2xl hover:shadow-cyan-950/15 min-h-0 relative overflow-hidden group select-none"
+            >
               {/* Backdrops */}
               <div className="absolute inset-0 bg-[radial-gradient(#06b6d4_0.6px,transparent_0.6px)] [background-size:12px_12px] opacity-10"></div>
               <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none"></div>
 
-              <div className="space-y-6 relative z-10 text-left">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-mono text-[#38BDF8] font-black tracking-widest uppercase bg-sky-500/10 px-3 py-1.5 rounded-lg border border-[#38BDF8]/20">
+              <div className="space-y-3 relative z-10 text-left flex-1 flex flex-col justify-between min-h-0">
+                <div className="flex justify-between items-center shrink-0">
+                  <span className="text-[10px] font-mono text-[#38BDF8] font-black tracking-widest uppercase bg-sky-500/10 px-3 py-1 rounded-lg border border-[#38BDF8]/20">
                     Bazar360 Premium Expansion
                   </span>
-
+                  
                   {/* Notify Me Toggle button */}
                   <button
-                    onClick={() => setTeaserNotified(!teaserNotified)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTeaserNotified(!teaserNotified);
+                    }}
                     className={`p-2 rounded-xl border transition-all duration-300 cursor-pointer select-none flex items-center justify-center ${
-                      teaserNotified
-                        ? "bg-amber-500/20 text-amber-500 border-amber-500/50 animate-pulse"
-                        : "bg-white/5 text-gray-500 hover:text-white border-white/10"
+                      teaserNotified 
+                        ? 'bg-amber-500/20 text-amber-500 border-amber-500/50 animate-pulse' 
+                        : 'bg-white/5 text-gray-500 hover:text-white border-white/10'
                     }`}
-                    title={
-                      teaserNotified
-                        ? "Alert Registration Active"
-                        : "Notify Me on Launch"
-                    }
+                    title={teaserNotified ? "Alert Registration Active" : "Notify Me on Launch"}
                   >
-                    <Bell
-                      size={14}
-                      className={
-                        teaserNotified
-                          ? "text-amber-500 shrink-0"
-                          : "text-gray-400 shrink-0"
-                      }
-                    />
+                    <Bell size={14} className={teaserNotified ? "text-amber-500 shrink-0" : "text-gray-400 shrink-0"} />
                     <span className="text-[9px] font-mono font-black uppercase tracking-wider ml-1.5 hidden sm:inline-block">
                       {teaserNotified ? "Notified" : "Notify Me"}
                     </span>
                   </button>
                 </div>
 
-                <div className="space-y-3.5">
+                <div className="space-y-2 shrink-0">
                   <div className="flex items-center gap-2">
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
-                    <h2 className="text-xl md:text-2xl font-black font-sans text-white uppercase tracking-tight">
+                    <h2 className="text-lg font-black font-sans text-white uppercase tracking-tight">
                       {activeTaglineVariant.title}
                     </h2>
                   </div>
-                  <p className="text-gray-300 text-xs md:text-sm leading-relaxed font-sans">
+                  <p className="text-gray-300 text-xs leading-relaxed font-sans">
                     {activeTaglineVariant.sub}
                   </p>
                 </div>
 
                 {/* SUGGESTION ENGINE BOX */}
-                <div className="pt-4 space-y-3">
+                <div className="pt-2 space-y-2 shrink-0">
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <input
+                    <input 
                       type="text"
                       id="community-suggestion-input"
                       value={suggestionText}
                       onChange={(e) => setSuggestionText(e.target.value)}
-                      placeholder="Enter your suggestion (e.g., smart appraisal tracking)..."
-                      className="flex-1 bg-slate-900/90 border border-[#38BDF8]/30 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#38BDF8] transition-colors"
+                      placeholder="Enter suggestion (e.g., smart appraisal)..."
+                      className="flex-1 bg-slate-900/90 border border-[#38BDF8]/30 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#38BDF8] transition-colors"
                     />
                     <button
                       id="submit-suggestion-btn"
@@ -1192,47 +1007,33 @@ export default function App() {
                         e.stopPropagation();
                         handleOnSubmitSuggestion();
                       }}
-                      disabled={
-                        isSubmittingSuggestion || !suggestionText.trim()
-                      }
-                      className="px-5 py-3 bg-[#38BDF8] hover:bg-[#0ea5e9] disabled:bg-gray-700 disabled:text-gray-400 text-slate-950 font-sans font-black text-xs rounded-xl uppercase tracking-widest transition-all duration-200 cursor-pointer select-none active:scale-[0.98] shrink-0"
+                      disabled={isSubmittingSuggestion || !suggestionText.trim()}
+                      className="px-4 py-2 bg-[#38BDF8] hover:bg-[#0ea5e9] disabled:bg-gray-700 disabled:text-gray-400 text-slate-950 font-sans font-black text-xs rounded-xl uppercase tracking-widest transition-all duration-200 cursor-pointer select-none active:scale-[0.98] shrink-0"
                     >
-                      {isSubmittingSuggestion
-                        ? "Submitting..."
-                        : "Submit Suggestion"}
+                      {isSubmittingSuggestion ? "Submitting..." : "Submit"}
                     </button>
                   </div>
-
-                  <div className="flex flex-wrap gap-1.5 items-center">
-                    <span className="text-[8.5px] text-gray-500 font-mono font-bold uppercase">
-                      Propose features:
-                    </span>
+                  
+                  <div className="flex flex-wrap gap-1 items-center">
+                    <span className="text-[8px] text-gray-500 font-mono font-bold uppercase">Propose:</span>
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSuggestionText("Smart appraisal tracking");
-                      }}
-                      className="px-2.5 py-0.5 rounded bg-white/5 hover:bg-white/10 text-[8.5px] font-mono text-[#38BDF8] border border-cyan-500/20 cursor-pointer transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setSuggestionText("Smart appraisal tracking"); }}
+                      className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-[8px] font-mono text-[#38BDF8] border border-cyan-500/20 cursor-pointer transition-colors"
                     >
-                      + Smart Appraisal Tracking
+                      + Appraisal Track
                     </button>
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSuggestionText("Automated escrow security");
-                      }}
-                      className="px-2.5 py-0.5 rounded bg-white/5 hover:bg-white/10 text-[8.5px] font-mono text-[#38BDF8] border border-cyan-500/20 cursor-pointer transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setSuggestionText("Automated escrow security"); }}
+                      className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-[8px] font-mono text-[#38BDF8] border border-cyan-500/20 cursor-pointer transition-colors"
                     >
-                      + Automated Escrow
+                      + Escrow Security
                     </button>
                   </div>
 
                   {suggestionMessage && (
-                    <p
-                      className={`text-[11px] font-medium font-sans ${suggestionMessage.isError ? "text-red-400" : "text-emerald-400 animate-pulse"}`}
-                    >
+                    <p className={`text-[10px] font-medium font-sans ${suggestionMessage.isError ? 'text-red-400' : 'text-emerald-400 animate-pulse'}`}>
                       {suggestionMessage.text}
                     </p>
                   )}
@@ -1240,17 +1041,13 @@ export default function App() {
               </div>
 
               {/* Voting Footer */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/5 pt-6 mt-4 relative z-10 w-full text-left">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/5 pt-3 mt-2 relative z-10 w-full text-left shrink-0">
                 <div className="shrink-0">
-                  <p className="text-[10px] uppercase font-mono font-extrabold text-gray-500 tracking-wider">
-                    Community Interest Weight
+                  <p className="text-[9px] uppercase font-mono font-extrabold text-gray-500 tracking-wider">
+                    Community Weight
                   </p>
-                  <p className="text-sm font-mono font-black text-white mt-0.5">
-                    🗳️{" "}
-                    <span className="text-cyan-400 animate-pulse">
-                      {teaserVotes.toLocaleString()}
-                    </span>{" "}
-                    Verified Votes
+                  <p className="text-xs font-mono font-black text-white mt-0.5">
+                    🗳️ <span className="text-cyan-400 animate-pulse">{teaserVotes.toLocaleString()}</span> Votes
                   </p>
                 </div>
 
@@ -1258,70 +1055,55 @@ export default function App() {
                   onClick={(e) => {
                     e.stopPropagation();
                     if (userTeaserVoted) {
-                      setTeaserVotes((prev) => prev - 1);
+                      setTeaserVotes(prev => prev - 1);
                       setUserTeaserVoted(false);
                     } else {
-                      setTeaserVotes((prev) => prev + 1);
+                      setTeaserVotes(prev => prev + 1);
                       setUserTeaserVoted(true);
                     }
                   }}
-                  className={`w-full sm:w-auto px-5 py-3 rounded-xl text-xs font-mono font-black uppercase tracking-widest text-center transition-all duration-300 cursor-pointer select-none active:scale-[0.98] ${
+                  className={`w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-mono font-black uppercase tracking-widest text-center transition-all duration-300 cursor-pointer select-none active:scale-[0.98] ${
                     userTeaserVoted
-                      ? "bg-orange-500 text-slate-950 font-black shadow-lg shadow-orange-950/45"
-                      : "bg-transparent text-[#38BDF8] border border-[#38BDF8]/40 hover:border-[#38BDF8] hover:bg-[#38BDF8]/10 shadow-lg"
+                      ? 'bg-orange-500 text-slate-950 font-black shadow-lg shadow-orange-950/45'
+                      : 'bg-transparent text-[#38BDF8] border border-[#38BDF8]/40 hover:border-[#38BDF8] hover:bg-[#38BDF8]/10 shadow-lg'
                   }`}
                 >
-                  {userTeaserVoted
-                    ? "✓ Voted to Unlock"
-                    : "Vote to Unlock First"}
+                  {userTeaserVoted ? "✓ Voted" : "Vote to Unlock"}
                 </button>
               </div>
             </div>
           </div>
+
         </div>
 
         {/* Floating Custom Overlay Modal for Expansion Details */}
         {comingSoonSector && (
           <div className="fixed inset-0 bg-[#02050e]/90 backdrop-blur-md flex items-center justify-center z-50 p-4 transition-all animate-fade-in">
             <div className="bg-[#0c1322] border border-[#38BDF8]/30 max-w-lg w-full rounded-3xl p-6.5 space-y-4 shadow-2xl relative">
-              <button
-                onClick={() => setComingSoonSector(null)}
+              <button 
+                onClick={() => setComingSoonSector(null)} 
                 className="absolute top-4 right-4 bg-white/5 hover:bg-white/10 hover:text-white text-gray-400 p-2 rounded-xl transition-all cursor-pointer"
               >
                 <X size={16} />
               </button>
 
               <div className="flex items-center gap-3.5 pt-2">
-                <div className="text-3xl bg-[#38BDF8]/10 p-3 rounded-2xl border border-[#38BDF8]/20">
-                  {comingSoonSector.icon}
-                </div>
+                <div className="text-3xl bg-[#38BDF8]/10 p-3 rounded-2xl border border-[#38BDF8]/20">{comingSoonSector.icon}</div>
                 <div>
-                  <h3 className="text-lg font-black uppercase text-white tracking-tight">
-                    {comingSoonSector.title}
-                  </h3>
-                  <p className="text-[#38BDF8] font-mono text-[10px] font-black uppercase tracking-widest">
-                    Active Development Channel
-                  </p>
+                  <h3 className="text-lg font-black uppercase text-white tracking-tight">{comingSoonSector.title}</h3>
+                  <p className="text-[#38BDF8] font-mono text-[10px] font-black uppercase tracking-widest">Active Development Channel</p>
                 </div>
               </div>
 
               <div className="space-y-3 pt-2">
                 <div className="bg-[#050912] p-4 rounded-2xl border border-white/5">
-                  <span className="text-[8px] uppercase tracking-wider text-orange-400 font-mono block font-black mb-1">
-                    Target Mission Statement:
-                  </span>
-                  <p className="text-white font-sans font-bold text-xs">
-                    {comingSoonSector.tagline}
-                  </p>
+                  <span className="text-[8px] uppercase tracking-wider text-orange-400 font-mono block font-black mb-1">Target Mission Statement:</span>
+                  <p className="text-white font-sans font-bold text-xs">{comingSoonSector.tagline}</p>
                 </div>
 
                 <div className="bg-[#050912] p-4 rounded-2xl border border-white/5">
-                  <span className="text-[8px] uppercase tracking-wider text-[#38BDF8] font-mono block font-black mb-1">
-                    Functional Outline:
-                  </span>
-                  <p className="text-gray-300 text-xs font-sans leading-relaxed">
-                    {comingSoonSector.desc}
-                  </p>
+                  <span className="text-[8px] uppercase tracking-wider text-[#38BDF8] font-mono block font-black mb-1">Functional Outline:</span>
+                  <p className="text-gray-300 text-xs font-sans leading-relaxed">{comingSoonSector.desc}</p>
                 </div>
 
                 <div className="bg-[#12221b]/40 border border-[#22c55e]/20 p-3 rounded-xl text-[10px] text-green-400 font-mono">
@@ -1330,7 +1112,7 @@ export default function App() {
               </div>
 
               <div className="pt-2 text-center">
-                <button
+                <button 
                   onClick={() => setComingSoonSector(null)}
                   className="bg-gradient-to-r from-orange-500 to-orange-600 text-slate-950 font-mono font-black py-3 px-6 rounded-xl w-full text-xs uppercase hover:from-orange-600 hover:to-orange-700 active:scale-[0.98] duration-100 cursor-pointer shadow-lg"
                 >
@@ -1342,15 +1124,14 @@ export default function App() {
         )}
 
         {/* Footer */}
-        <div className="text-center text-gray-600 text-[10px] uppercase font-mono tracking-widest pb-[env(safe-area-inset-bottom)] md:pb-2 relative z-10">
-          BAZAR360 Pakistan Enterprise &copy; 2026. SECURED THROUGH ADVANCED
-          LOCAL BLUEPRINT.
+        <div className="text-center text-gray-500 text-[9px] md:text-[10px] uppercase font-mono tracking-widest pb-[env(safe-area-inset-bottom)] md:pb-1 mt-1 shrink-0 relative z-10">
+          Founder: Muhammad Amjid &bull; Helpline Connect: <a href="tel:03149198403" className="text-orange-400 hover:underline">03149198403</a> &bull; BAZAR360 Pakistan Enterprise &copy; 2026. SECURED THROUGH ADVANCED LOCAL BLUEPRINT.
         </div>
       </div>
     );
   }
 
-  if (currentCategory === "footwear") {
+  if (currentCategory === 'footwear') {
     return (
       <div className="bg-[#030712] text-white min-h-screen text-sm font-sans flex flex-col justify-between p-6 md:p-12 relative overflow-hidden">
         <div className="absolute top-[-25%] left-[-15%] w-[60%] h-[60%] bg-amber-500/5 rounded-full blur-[160px] pointer-events-none"></div>
@@ -1361,16 +1142,12 @@ export default function App() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">👟</span>
             <div>
-              <h1 className="text-lg font-black tracking-tight text-white uppercase">
-                BAZAR360 FOOTWEAR
-              </h1>
-              <p className="text-[10px] text-amber-500 font-mono tracking-widest uppercase">
-                Premium Footwear Vault
-              </p>
+              <h1 className="text-lg font-black tracking-tight text-white uppercase">BAZAR360 FOOTWEAR</h1>
+              <p className="text-[10px] text-amber-500 font-mono tracking-widest uppercase">Premium Footwear Vault</p>
             </div>
           </div>
           <button
-            onClick={() => handleSetCategory("gateway")}
+            onClick={() => handleSetCategory('gateway')}
             className="px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 text-slate-950 font-mono font-bold hover:shadow-lg hover:shadow-orange-500/20 active:scale-95 duration-100 rounded-xl text-xs uppercase cursor-pointer"
           >
             ← Return to Gateway
@@ -1386,49 +1163,27 @@ export default function App() {
             Premium Leather Craftsmanship & Athletic Vault
           </h2>
           <p className="text-xs text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            You are currently viewing the horizontal Footwear storefront.
-            BAZAR360 dynamically builds tailored indices for each trade tenant.
+            You are currently viewing the horizontal Footwear storefront. BAZAR360 dynamically builds tailored indices for each trade tenant.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 text-left">
             <div className="bg-slate-900/60 border border-white/5 p-5 rounded-2xl space-y-3 shadow-xl hover:border-amber-500/25 duration-150">
               <span className="text-2xl">👞</span>
-              <h3 className="font-bold text-white uppercase">
-                Prestige Peshawari
-              </h3>
-              <p className="text-xs text-gray-400 font-sans">
-                Hand-stitched premium Charsadda calf leather with dual-density
-                high-grip rubber soles.
-              </p>
-              <div className="text-amber-400 font-mono font-bold text-sm">
-                Rs. 8,500
-              </div>
+              <h3 className="font-bold text-white uppercase">Prestige Peshawari</h3>
+              <p className="text-xs text-gray-400 font-sans">Hand-stitched premium Charsadda calf leather with dual-density high-grip rubber soles.</p>
+              <div className="text-amber-400 font-mono font-bold text-sm">Rs. 8,500</div>
             </div>
             <div className="bg-slate-900/60 border border-white/5 p-5 rounded-2xl space-y-3 shadow-xl hover:border-amber-500/25 duration-150">
               <span className="text-2xl">👟</span>
-              <h3 className="font-bold text-white uppercase">
-                Apex Wave Runners
-              </h3>
-              <p className="text-xs text-gray-400 font-sans">
-                Breathable PrimeKnit mesh with high energy return reactive shock
-                absorber midsoles.
-              </p>
-              <div className="text-amber-400 font-mono font-bold text-sm">
-                Rs. 14,800
-              </div>
+              <h3 className="font-bold text-white uppercase">Apex Wave Runners</h3>
+              <p className="text-xs text-gray-400 font-sans">Breathable PrimeKnit mesh with high energy return reactive shock absorber midsoles.</p>
+              <div className="text-amber-400 font-mono font-bold text-sm">Rs. 14,800</div>
             </div>
             <div className="bg-slate-900/60 border border-white/5 p-5 rounded-2xl space-y-3 shadow-xl hover:border-amber-500/25 duration-150">
               <span className="text-2xl">🥾</span>
-              <h3 className="font-bold text-white uppercase">
-                K2 Tactical Boots
-              </h3>
-              <p className="text-xs text-gray-400 font-sans">
-                All-weather waterproof canvas with reinforced alloy toe caps for
-                hardcore trekking.
-              </p>
-              <div className="text-amber-400 font-mono font-bold text-sm">
-                Rs. 19,500
-              </div>
+              <h3 className="font-bold text-white uppercase">K2 Tactical Boots</h3>
+              <p className="text-xs text-gray-400 font-sans">All-weather waterproof canvas with reinforced alloy toe caps for hardcore trekking.</p>
+              <div className="text-amber-400 font-mono font-bold text-sm">Rs. 19,500</div>
             </div>
           </div>
         </div>
@@ -1441,7 +1196,7 @@ export default function App() {
     );
   }
 
-  if (currentCategory === "food") {
+  if (currentCategory === 'food') {
     return (
       <div className="bg-[#030712] text-white min-h-screen text-sm font-sans flex flex-col justify-between p-6 md:p-12 relative overflow-hidden">
         <div className="absolute top-[-25%] left-[-15%] w-[60%] h-[60%] bg-emerald-500/5 rounded-full blur-[160px] pointer-events-none"></div>
@@ -1452,16 +1207,12 @@ export default function App() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">🥦</span>
             <div>
-              <h1 className="text-lg font-black tracking-tight text-white uppercase">
-                BAZAR360 FOOD
-              </h1>
-              <p className="text-[10px] text-emerald-400 font-mono tracking-widest uppercase">
-                Organic Fresh Food Mesh
-              </p>
+              <h1 className="text-lg font-black tracking-tight text-white uppercase">BAZAR360 FOOD</h1>
+              <p className="text-[10px] text-emerald-400 font-mono tracking-widest uppercase">Organic Fresh Food Mesh</p>
             </div>
           </div>
           <button
-            onClick={() => handleSetCategory("gateway")}
+            onClick={() => handleSetCategory('gateway')}
             className="px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 text-slate-950 font-mono font-bold hover:shadow-lg hover:shadow-orange-500/20 active:scale-95 duration-100 rounded-xl text-xs uppercase cursor-pointer"
           >
             ← Return to Gateway
@@ -1477,49 +1228,27 @@ export default function App() {
             Direct Farm Access & Wholesale Consumables Grid
           </h2>
           <p className="text-xs text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            You are currently viewing the horizontal Food storefront. BAZAR360
-            dynamically builds tailored indices for each trade tenant.
+            You are currently viewing the horizontal Food storefront. BAZAR360 dynamically builds tailored indices for each trade tenant.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 text-left">
             <div className="bg-slate-900/60 border border-white/5 p-5 rounded-2xl space-y-3 shadow-xl hover:border-emerald-500/25 duration-150">
               <span className="text-2xl text-yellow-400">🍯</span>
-              <h3 className="font-bold text-white uppercase">
-                Organic Hunza Honey
-              </h3>
-              <p className="text-xs text-gray-400 font-sans">
-                100% natural, unfiltered wild honey gathered directly from
-                highland Hunza blossoms.
-              </p>
-              <div className="text-emerald-400 font-mono font-bold text-sm">
-                Rs. 3,200
-              </div>
+              <h3 className="font-bold text-white uppercase">Organic Hunza Honey</h3>
+              <p className="text-xs text-gray-400 font-sans">100% natural, unfiltered wild honey gathered directly from highland Hunza blossoms.</p>
+              <div className="text-emerald-400 font-mono font-bold text-sm">Rs. 3,200</div>
             </div>
             <div className="bg-slate-900/60 border border-white/5 p-5 rounded-2xl space-y-3 shadow-xl hover:border-emerald-500/25 duration-150">
               <span className="text-2xl text-amber-500">🌾</span>
-              <h3 className="font-bold text-white uppercase">
-                Premium Super Basmati
-              </h3>
-              <p className="text-xs text-gray-400 font-sans">
-                5kg of aged super-kernel premium basmati rice, famed for
-                non-sticky extra-long grains.
-              </p>
-              <div className="text-emerald-400 font-mono font-bold text-sm">
-                Rs. 1,950
-              </div>
+              <h3 className="font-bold text-white uppercase">Premium Super Basmati</h3>
+              <p className="text-xs text-gray-400 font-sans">5kg of aged super-kernel premium basmati rice, famed for non-sticky extra-long grains.</p>
+              <div className="text-emerald-400 font-mono font-bold text-sm">Rs. 1,950</div>
             </div>
             <div className="bg-slate-900/60 border border-white/5 p-5 rounded-2xl space-y-3 shadow-xl hover:border-emerald-500/25 duration-150">
               <span className="text-2xl text-orange-400">🍊</span>
-              <h3 className="font-bold text-white uppercase">
-                Sargodha Citrus Crates
-              </h3>
-              <p className="text-xs text-gray-400 font-sans">
-                Juicy hand-picked Sargodha Kinnu oranges delivered fresh in
-                protected aeration crates.
-              </p>
-              <div className="text-emerald-400 font-mono font-bold text-sm">
-                Rs. 850
-              </div>
+              <h3 className="font-bold text-white uppercase">Sargodha Citrus Crates</h3>
+              <p className="text-xs text-gray-400 font-sans">Juicy hand-picked Sargodha Kinnu oranges delivered fresh in protected aeration crates.</p>
+              <div className="text-emerald-400 font-mono font-bold text-sm">Rs. 850</div>
             </div>
           </div>
         </div>
@@ -1533,18 +1262,17 @@ export default function App() {
   }
 
   return (
-    <div className="bg-[#0b121f] text-white min-h-screen text-sm font-sans flex flex-col pb-24 md:pb-8">
+    <div className="bg-[var(--brand-bg)] text-white min-h-screen text-sm font-sans flex flex-col pb-24 md:pb-8 overflow-x-hidden">
+      
       {/* 🚀 FAST LIVE ENGINE TICKER MARQUEE */}
-      {currentCategory === "auto" && (
+      {currentCategory === 'auto' && (
         <div className="fixed top-16 left-0 w-full h-8 bg-[#040812] border-b border-orange-500/10 z-40 flex items-center overflow-hidden select-none">
           <div className="absolute left-0 top-0 h-full bg-[#121c32] px-3.5 flex items-center gap-1.5 border-r border-[#38BDF8]/20 z-15 shadow-[10px_0_15px_rgba(0,0,0,0.8)]">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
             </span>
-            <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest font-mono">
-              LIVE PRICES
-            </span>
+            <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest font-mono">LIVE PRICES</span>
           </div>
           <div className="w-full pl-28 overflow-hidden relative">
             <div className="animate-fast-ticker flex items-center whitespace-nowrap gap-12 font-mono text-[9px] text-[#38BDF8]/90 font-bold tracking-tight uppercase">
@@ -1554,12 +1282,10 @@ export default function App() {
               <span>🔥 HONDA CIVIC RS TURBO: Rs. 9,800,000 (LAC 98)</span>
               <span>💥 CHANGAN OSHAN X7: Rs. 8,200,000 (LAC 82)</span>
               <span>⭐ MG HS ESSENCE SUV: Rs. 8,100,000 (LAC 81)</span>
-              <span>
-                🔥 TOYOTA COROLLA ALTIS GRANDE: Rs. 7,800,000 (LAC 78)
-              </span>
+              <span>🔥 TOYOTA COROLLA ALTIS GRANDE: Rs. 7,800,000 (LAC 78)</span>
               <span>⚡ DEEPAL S07 EV PREMIUM: Rs. 10,500,000 (LAC 105)</span>
               <span>⭐ KIA SPORTAGE AWD: Rs. 8,900,000 (LAC 89)</span>
-
+              
               {/* Mirror values to ensure seamless loop */}
               <span>🔥 SUZUKI ALTO VXR: Rs. 2,330,000 (LAC 23.3)</span>
               <span>⚡ BYD SEAL PREMIUM EV: Rs. 14,500,000 (LAC 145)</span>
@@ -1567,9 +1293,7 @@ export default function App() {
               <span>🔥 HONDA CIVIC RS TURBO: Rs. 9,800,000 (LAC 98)</span>
               <span>💥 CHANGAN OSHAN X7: Rs. 8,200,000 (LAC 82)</span>
               <span>⭐ MG HS ESSENCE SUV: Rs. 8,100,000 (LAC 81)</span>
-              <span>
-                🔥 TOYOTA COROLLA ALTIS GRANDE: Rs. 7,800,000 (LAC 78)
-              </span>
+              <span>🔥 TOYOTA COROLLA ALTIS GRANDE: Rs. 7,800,000 (LAC 78)</span>
               <span>⚡ DEEPAL S07 EV PREMIUM: Rs. 10,500,000 (LAC 105)</span>
               <span>⭐ KIA SPORTAGE AWD: Rs. 8,900,000 (LAC 89)</span>
             </div>
@@ -1581,23 +1305,21 @@ export default function App() {
       <TopAppBar
         currentTab={currentTab}
         setTab={setTab}
-        onPostAdClick={() => setTab("sell")}
+        onPostAdClick={() => setTab('sell')}
         currentUser={currentUser}
         onLogout={handleLogout}
-        onBackToGateway={() => handleSetCategory("gateway")}
+        onBackToGateway={() => handleSetCategory('gateway')}
         currentTheme={theme}
         onThemeChange={setTheme}
-        isWithTicker={currentCategory === "auto"}
+        isWithTicker={currentCategory === 'auto'}
         currentCategory={currentCategory}
         onCategoryChange={handleSetCategory}
-        onMobileMenuToggle={() => setIsMobileDrawerOpen((prev) => !prev)}
+        onMobileMenuToggle={() => setIsMobileDrawerOpen(prev => !prev)}
       />
 
       {/* Super-Admin Multi-Role Gateway (Exclusive email interception) */}
-      {currentUser?.email === "amjid.bisconni@gmail.com" && (
-        <div
-          className={`bg-[#050b16] border-b-2 border-orange-500/80 px-5 py-3 sticky ${currentCategory === "auto" ? "top-24" : "top-14"} z-40 shadow-xl shadow-black/40 transition-all`}
-        >
+      {currentUser?.email === 'amjid.bisconni@gmail.com' && (
+        <div className={`bg-[#050b16] border-b-2 border-orange-500/80 px-5 py-3 sticky ${currentCategory === 'auto' ? 'top-24' : 'top-14'} z-40 shadow-xl shadow-black/40 transition-all`}>
           <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <span className="relative flex h-3 w-3">
@@ -1605,46 +1327,38 @@ export default function App() {
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
               </span>
               <div>
-                <span className="text-[10px] text-[#38BDF8] font-bold uppercase tracking-wider font-mono block">
-                  Multi-Role Gateway Intercept
-                </span>
-                <span className="text-xs text-white/90">
-                  Switch active session for owner{" "}
-                  <span className="font-black text-orange-400">
-                    amjid.bisconni@gmail.com
-                  </span>
-                  :
-                </span>
+                <span className="text-[10px] text-[#38BDF8] font-bold uppercase tracking-wider font-mono block">Multi-Role Gateway Intercept</span>
+                <span className="text-xs text-white/90">Switch active session for owner <span className="font-black text-orange-400">amjid.bisconni@gmail.com</span>:</span>
               </div>
             </div>
-
+            
             <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={() => handleRoleSwap("Admin")}
+                onClick={() => handleRoleSwap('Admin')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider font-mono border transition-all cursor-pointer select-none ${
-                  currentUser.role === "Admin"
-                    ? "bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20"
-                    : "bg-[#121a2a] text-gray-400 border-white/5 hover:border-orange-500/35 hover:text-white"
+                  currentUser.role === 'Admin'
+                    ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20'
+                    : 'bg-[#121a2a] text-gray-400 border-white/5 hover:border-orange-500/35 hover:text-white'
                 }`}
               >
                 🛠 Super Admin
               </button>
               <button
-                onClick={() => handleRoleSwap("Showroom Owner")}
+                onClick={() => handleRoleSwap('Showroom Owner')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider font-mono border transition-all cursor-pointer select-none ${
-                  currentUser.role === "Showroom Owner"
-                    ? "bg-[#38BDF8] text-black border-[#38BDF8] shadow-md shadow-[#38BDF8]/20"
-                    : "bg-[#121a2a] text-gray-400 border-white/5 hover:border-[#38BDF8]/35 hover:text-white"
+                  currentUser.role === 'Showroom Owner'
+                    ? 'bg-[#38BDF8] text-black border-[#38BDF8] shadow-md shadow-[#38BDF8]/20'
+                    : 'bg-[#121a2a] text-gray-400 border-white/5 hover:border-[#38BDF8]/35 hover:text-white'
                 }`}
               >
                 🏬 Dealer (Auto Choice)
               </button>
               <button
-                onClick={() => handleRoleSwap("Private Seller")}
+                onClick={() => handleRoleSwap('Private Seller')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider font-mono border transition-all cursor-pointer select-none ${
-                  currentUser.role === "Private Seller"
-                    ? "bg-emerald-500 text-black border-emerald-500 shadow-md shadow-emerald-500/20"
-                    : "bg-[#121a2a] text-gray-400 border-white/5 hover:border-emerald-500/35 hover:text-white"
+                  currentUser.role === 'Private Seller'
+                    ? 'bg-emerald-500 text-black border-emerald-500 shadow-md shadow-emerald-500/20'
+                    : 'bg-[#121a2a] text-gray-400 border-white/5 hover:border-emerald-500/35 hover:text-white'
                 }`}
               >
                 📣 Ad Poster
@@ -1655,89 +1369,9 @@ export default function App() {
       )}
 
       {/* Main Container Core Shell */}
-      <main
-        className={`flex-grow max-w-[1440px] mx-auto w-full px-5 md:px-16 transition-all ${currentCategory === "auto" ? "pt-28" : "pt-20"}`}
-      >
-        {/* PREMIUM REPOSITIONED & ACCELERATED BRAND SCROLL MARQUEE */}
-        <div
-          className="mb-6 bg-[#0c1322] border border-white/5 py-3 rounded-2xl overflow-hidden relative shadow-inner select-none"
-          id="repositioned-brand-marquee"
-        >
-          <div className="absolute top-0 left-0 w-16 h-full bg-gradient-to-r from-[#0b121f] to-transparent z-10 pointer-events-none"></div>
-          <div className="absolute top-0 right-0 w-16 h-full bg-gradient-to-l from-[#0b121f] to-transparent z-10 pointer-events-none"></div>
-
-          <div className="flex overflow-hidden relative w-full h-8 items-center">
-            <div className="animate-marquee flex gap-12 text-slate-500 font-mono text-[11px] font-black items-center min-w-full uppercase">
-              {[
-                "Suzuki",
-                "Toyota",
-                "Honda",
-                "BYD",
-                "Changan",
-                "Zeekr",
-                "Deepal",
-              ].map((brand, i) => (
-                <button
-                  key={`top-b1-${i}`}
-                  onClick={() => {
-                    setTab("inventory");
-                    setSearchQuery(brand);
-                  }}
-                  className="flex items-center gap-2 hover:text-white text-slate-400 font-mono text-[10px] uppercase font-black tracking-wider transition-all hover:scale-105 active:scale-95 duration-150 cursor-pointer border border-transparent hover:border-white/5 hover:bg-white/[0.02] px-3 py-1.5 rounded-xl group shrink-0"
-                >
-                  <span className="text-orange-500 font-black">✦</span>
-                  <span className="group-hover:text-orange-400">{brand}</span>
-                </button>
-              ))}
-              {/* Duplicate sequences for infinite effect */}
-              {[
-                "Suzuki",
-                "Toyota",
-                "Honda",
-                "BYD",
-                "Changan",
-                "Zeekr",
-                "Deepal",
-              ].map((brand, i) => (
-                <button
-                  key={`top-b2-${i}`}
-                  onClick={() => {
-                    setTab("inventory");
-                    setSearchQuery(brand);
-                  }}
-                  className="flex items-center gap-2 hover:text-white text-slate-400 font-mono text-[10px] uppercase font-black tracking-wider transition-all hover:scale-105 active:scale-95 duration-150 cursor-pointer border border-transparent hover:border-white/5 hover:bg-white/[0.02] px-3 py-1.5 rounded-xl group shrink-0"
-                >
-                  <span className="text-orange-500 font-black">✦</span>
-                  <span className="group-hover:text-orange-400">{brand}</span>
-                </button>
-              ))}
-              {/* Triplicated sequence */}
-              {[
-                "Suzuki",
-                "Toyota",
-                "Honda",
-                "BYD",
-                "Changan",
-                "Zeekr",
-                "Deepal",
-              ].map((brand, i) => (
-                <button
-                  key={`top-b3-${i}`}
-                  onClick={() => {
-                    setTab("inventory");
-                    setSearchQuery(brand);
-                  }}
-                  className="flex items-center gap-2 hover:text-white text-slate-400 font-mono text-[10px] uppercase font-black tracking-wider transition-all hover:scale-105 active:scale-95 duration-150 cursor-pointer border border-transparent hover:border-white/5 hover:bg-white/[0.02] px-3 py-1.5 rounded-xl group shrink-0"
-                >
-                  <span className="text-orange-500 font-black">✦</span>
-                  <span className="group-hover:text-orange-400">{brand}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {activeIndustry !== "Automotive" && (
+      <main className={`flex-grow max-w-[1440px] mx-auto w-full px-5 md:px-16 transition-all ${currentCategory === 'auto' ? 'pt-28' : 'pt-20'}`}>
+        
+        {activeIndustry !== 'Automotive' && (
           <div className="mb-6 bg-slate-950/90 backdrop-blur-md border border-[#38BDF8]/30 p-5 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 animate-scale-fade shadow-xl">
             <div className="space-y-1">
               <span className="text-[9px] font-mono font-black text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20 uppercase tracking-widest">
@@ -1747,14 +1381,11 @@ export default function App() {
                 🛍️ BAZAR360 {activeIndustry} Showcase Channel (Demo Sandbox)
               </h3>
               <p className="text-xs text-slate-400 leading-relaxed max-w-2xl">
-                You are currently viewing the horizontal {activeIndustry}{" "}
-                expansion sector. BAZAR360 dynamically adapts its interface
-                parameters, catalog filters, and pricing indices for this
-                domain. The core system remains verified on 'Auto Choice'.
+                You are currently viewing the horizontal {activeIndustry} expansion sector. BAZAR360 dynamically adapts its interface parameters, catalog filters, and pricing indices for this domain. The core system remains verified on 'Auto Choice'.
               </p>
             </div>
             <button
-              onClick={() => setActiveIndustry("Automotive")}
+              onClick={() => setActiveIndustry('Automotive')}
               className="bg-orange-500 hover:bg-orange-600 active:scale-95 duration-150 text-slate-950 font-mono font-black text-[10px] uppercase py-2.5 px-4.5 rounded-xl block shrink-0 tracking-widest cursor-pointer"
             >
               Reset to Auto Choice
@@ -1768,30 +1399,71 @@ export default function App() {
               <Hourglass className="animate-spin text-[#38BDF8]" size={36} />
               <div className="absolute inset-0 border-2 border-dashed border-[#38BDF8] rounded-full animate-ping scale-150 opacity-15"></div>
             </div>
-            <p className="text-xs text-[#38BDF8] font-mono tracking-widest uppercase font-bold">
-              Synchronizing Cloud Core
-            </p>
-            <p className="text-[10px] text-white/40 font-sans">
-              Connecting to persistent firestore instance & seeding databases...
-            </p>
+            <p className="text-xs text-[#38BDF8] font-mono tracking-widest uppercase font-bold">Synchronizing Cloud Core</p>
+            <p className="text-[10px] text-white/40 font-sans">Connecting to persistent firestore instance & seeding databases...</p>
           </div>
         ) : (
           <>
-            {/* Show Moderation Dashboard to Admins or Showroom Owners on home page */}
-            {currentTab === "home" &&
-              (currentUser?.role === "Admin" ||
-                currentUser?.role === "Showroom Owner") && (
-                <div className="mb-8">
-                  <AdminModerationDeck
-                    listings={listings}
-                    dealers={dealers}
-                    onApproveListing={handleApproveListing}
-                    onRejectListing={handleRejectListing}
-                  />
-                </div>
-              )}
+            {/* Elegant Sticky Pinning Banner for Flagship Auto Choice Peshawar */}
+            {(currentTab === 'home' || currentTab === 'inventory' || currentTab === 'search' || currentTab === 'dealers') && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ scale: 1.002 }}
+                onClick={() => onSelectDealer('auto-choice-peshawar')}
+                className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-6 mt-4 cursor-pointer relative z-40 group"
+              >
+                <div className="bg-gradient-to-r from-[#121214] via-[#1c1b18] to-[#121214] border border-[#c5a880]/20 rounded-2xl p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-4 relative overflow-hidden shadow-[0_15px_30px_rgba(0,0,0,0.5)] group-hover:border-[#c5a880]/40 transition-all duration-300">
+                  <div className="absolute top-0 right-0 w-48 h-48 bg-[#c5a880]/5 rounded-full blur-2xl pointer-events-none group-hover:bg-[#c5a880]/8 transition-all duration-300"></div>
+                  
+                  {/* Left Column info */}
+                  <div className="flex items-center gap-4 text-center md:text-left flex-col md:flex-row">
+                    <div className="w-12 h-12 rounded-full border border-[#c5a880]/30 flex items-center justify-center bg-[#1a1a1c] shrink-0 text-[#c5a880] font-sans font-black tracking-tighter shadow-md">
+                      AC
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
+                        <span className="bg-[#c5a880]/10 border border-[#c5a880]/30 text-[#c5a880] px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider">★ PREMIUM FLAGSHIP PARTNER</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#c5a880] animate-pulse"></span>
+                        <span className="text-[10px] text-gray-400 font-mono uppercase tracking-widest">LIVE INVENTORY SPOTLIGHT</span>
+                      </div>
+                      <h4 className="text-lg md:text-xl font-bold tracking-tight text-white mt-1 group-hover:text-[#c5a880] transition-colors">
+                        Auto Choice Peshawar Showroom
+                      </h4>
+                      <p className="text-xs text-gray-450 font-sans mt-0.5">Explore Khyber Pakhtunkhwa's elite luxury fleet. Direct transparent verification guarantees.</p>
+                    </div>
+                  </div>
 
-            {currentTab === "home" && (
+                  {/* Right Column Action */}
+                  <div className="flex items-center gap-4.5 shrink-0 w-full md:w-auto justify-center">
+                    <div className="text-right hidden lg:block">
+                      <span className="text-[10px] text-[#c5a880] font-mono font-black uppercase block tracking-wider">DIRECT ACCESS PROTOCOL</span>
+                      <span className="text-[10px] text-gray-500 block">Immediate multi-role VIP routing</span>
+                    </div>
+                    <button 
+                      type="button"
+                      className="bg-[#c5a880] hover:bg-[#d0b896] text-black font-sans font-extrabold tracking-widest text-[10.5px] uppercase py-3 px-6 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer max-md:w-full"
+                    >
+                      Enter Showroom
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Show Moderation Dashboard to Admins or Showroom Owners on home page */}
+            {currentTab === 'home' && (currentUser?.role === 'Admin' || currentUser?.role === 'Showroom Owner') && (
+              <div className="mb-8">
+                <AdminModerationDeck
+                  listings={listings}
+                  dealers={dealers}
+                  onApproveListing={handleApproveListing}
+                  onRejectListing={handleRejectListing}
+                />
+              </div>
+            )}
+
+            {currentTab === 'home' && (
               <HomeView
                 dealers={dealers}
                 listings={prioritizedListings}
@@ -1807,7 +1479,7 @@ export default function App() {
               />
             )}
 
-            {(currentTab === "inventory" || currentTab === "search") && (
+            {(currentTab === 'inventory' || currentTab === 'search') && (
               <SearchExplorerView
                 listings={prioritizedListings}
                 dealers={dealers}
@@ -1823,30 +1495,31 @@ export default function App() {
               />
             )}
 
-            {currentTab === "media" && (
+            {currentTab === 'media' && (
               <MediaFeedView
                 dealers={dealers}
                 currentUser={currentUser}
-                onForceLogin={() => setTab("portal")}
+                onForceLogin={() => setTab('portal')}
               />
             )}
 
-            {currentTab === "insights" && <MarketInsightsView />}
+            {currentTab === 'insights' && (
+              <MarketInsightsView />
+            )}
 
-            {currentTab === "concierge" && <ConciergeView dealers={dealers} />}
+            {currentTab === 'concierge' && (
+              <ConciergeView
+                dealers={dealers}
+              />
+            )}
 
-            {currentTab === "dealers" && (
+            {currentTab === 'dealers' && (
               <div className="space-y-6">
                 <div className="border-b border-[#1e293b] pb-3">
-                  <h2 className="font-sans font-bold text-xl md:text-2xl text-white">
-                    Verified Automotive Dealerships
-                  </h2>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Select an elite showroom partner to inspect dedicated
-                    inventories and talk with experts
-                  </p>
+                  <h2 className="font-sans font-bold text-xl md:text-2xl text-white">Verified Automotive Dealerships</h2>
+                  <p className="text-xs text-gray-400 mt-1">Select an elite showroom partner to inspect dedicated inventories and talk with experts</p>
                 </div>
-
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {dealers.map((dealer) => (
                     <div
@@ -1873,8 +1546,7 @@ export default function App() {
                             {dealer.name}
                           </h3>
                           <p className="text-gray-400 text-xs mt-1 flex items-center gap-1 font-sans">
-                            <MapPin size={12} className="text-[#00a3ff]" />{" "}
-                            {dealer.location}
+                            <MapPin size={12} className="text-[#00a3ff]" /> {dealer.location}
                           </p>
                         </div>
 
@@ -1884,18 +1556,10 @@ export default function App() {
 
                         <div className="flex justify-between items-center border-t border-[#1e293b]/50 pt-3 text-[10px]/relaxed">
                           <div className="flex items-center gap-1 font-sans text-gray-500 uppercase tracking-widest font-bold">
-                            <Star
-                              size={12}
-                              className="fill-[#ff6b00] text-[#ff6b00]"
-                            />{" "}
-                            {dealer.rating} User Score
+                            <Star size={12} className="fill-[#ff6b00] text-[#ff6b00]" /> {dealer.rating} User Score
                           </div>
                           <span className="font-sans text-gray-500 uppercase tracking-widest font-bold">
-                            {
-                              listings.filter((l) => l.dealerId === dealer.id)
-                                .length
-                            }{" "}
-                            Active Listings
+                            {listings.filter((l) => l.dealerId === dealer.id).length} Active Listings
                           </span>
                         </div>
                       </div>
@@ -1905,7 +1569,7 @@ export default function App() {
               </div>
             )}
 
-            {currentTab === "dealer-storefront" && (
+            {currentTab === 'dealer-storefront' && currentDealer && (
               <DealerStorefrontView
                 dealer={currentDealer}
                 listings={prioritizedListings}
@@ -1919,7 +1583,7 @@ export default function App() {
               />
             )}
 
-            {currentTab === "sell" && (
+            {currentTab === 'sell' && (
               <SellWithAIView
                 onAddListing={handleAddListing}
                 setTab={setTab}
@@ -1927,57 +1591,65 @@ export default function App() {
               />
             )}
 
-            {currentTab === "portal" && (
-              <div className="max-w-4xl mx-auto space-y-8 pb-16">
-                <div className="border-b border-[#1e293b] pb-3">
-                  <h2 className="font-sans font-bold text-xl md:text-2xl text-[#38bdf8] uppercase tracking-tight">
-                    BAZAR360 Portal & Forms
-                  </h2>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Register user accounts, submit dealership catalogs, or
-                    toggle RBAC privilege contexts for end-to-end testing.
-                  </p>
-                </div>
-                <RegistrationPortal
+            {currentTab === 'portal' && (
+              <div className="max-w-7xl mx-auto space-y-12 pb-16 px-4 md:px-8 text-left">
+                {/* 1. Master Luxury Portal Diagnostic & Operations Suite */}
+                <LuxuryPortal
                   currentUser={currentUser}
                   setCurrentUser={setCurrentUser}
-                  onDealerRegistered={(newD) => {
-                    setDealers((prev) => [...prev, newD]);
-                    setReviewsMap((prev) => ({ ...prev, [newD.id]: [] }));
-                  }}
+                  dealers={dealers}
+                  listings={listings}
+                  setDealers={setDealers}
+                  setListings={setListings}
                 />
+
+                {/* 2. Original Secondary Registration Portal and Submissions forms */}
+                <div className="border border-white/5 rounded-3xl p-6 md:p-8 bg-[#0a0a0c] text-left">
+                  <div className="border-b border-white/5 pb-3 mb-6">
+                    <h2 className="font-sans font-extrabold text-lg md:text-xl text-zinc-400 uppercase tracking-wider">Multi-Role Registration & Onboarding Suite</h2>
+                    <p className="text-[10px] text-zinc-500 mt-1">Simulate secure customer registration, detailed car posting schema outputs, and regional dealership signups.</p>
+                  </div>
+                  <RegistrationPortal
+                    currentUser={currentUser}
+                    setCurrentUser={setCurrentUser}
+                    onDealerRegistered={(newD) => {
+                      setDealers((prev) => [...prev, newD]);
+                      setReviewsMap((prev) => ({ ...prev, [newD.id]: [] }));
+                    }}
+                  />
+                </div>
               </div>
             )}
           </>
         )}
+        <Footer />
       </main>
 
       {/* Bottom Nav Bar (Mobile Only) */}
-      <BottomNavBar
-        currentTab={currentTab}
-        setTab={setTab}
-        currentCategory={currentCategory}
-        onCategoryChange={handleSetCategory}
+      <BottomNavBar 
+        currentTab={currentTab} 
+        setTab={setTab} 
+        currentCategory={currentCategory} 
+        onCategoryChange={handleSetCategory} 
       />
 
       {/* DYNAMIC LISTING DETAILS POPUP MODAL */}
       {selectedListing && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 md:p-6 overflow-y-auto animate-fade-in">
           <div className="bg-[#070b13] border border-white/10 rounded-2xl max-w-5xl w-full text-xs font-sans shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col animate-scale-fade">
+            
             {/* Header banner */}
             <div className="bg-[#0c1425] p-4 border-b border-white/5 flex justify-between items-center shrink-0">
               <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 font-mono font-bold text-[9px] uppercase tracking-wider border border-sky-500/20 flex items-center gap-1">
                   <ShieldCheck size={10} /> Certified Spec Sheet
                 </span>
-                <span className="text-[10px] text-gray-400 font-mono">
-                  ID: {selectedListing.id}
-                </span>
+                <span className="text-[10px] text-gray-400 font-mono">ID: {selectedListing.id}</span>
               </div>
               <button
                 onClick={() => {
                   setSelectedListing(null);
-                  setOfferSuccessMessage("");
+                  setOfferSuccessMessage('');
                 }}
                 className="text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 p-1.5 rounded-lg transition-colors cursor-pointer"
               >
@@ -1988,10 +1660,13 @@ export default function App() {
             {/* Scrolling Core Content with Asymmetrical Columns */}
             <div className="flex-grow overflow-y-auto no-scrollbar pb-6">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-6 items-start">
+                
                 {/* LEFT COLUMN: Visual Media Showcase (7/12) */}
                 <div className="lg:col-span-7 space-y-6">
+                  
                   {/* Brand Watermark editorial backdrop around the vehicle profile */}
                   <div className="relative bg-gradient-to-b from-[#0c1425] to-[#040810] rounded-2xl border border-white/5 p-4 overflow-hidden h-80 md:h-[390px] flex items-center justify-center shadow-inner">
+                    
                     {/* Massive Model Heading Overlay */}
                     <div className="absolute top-4 left-6 select-none pointer-events-none text-left z-0">
                       <h1 className="text-4xl md:text-5xl font-sans font-black tracking-tighter text-white/[0.03] uppercase leading-none select-none">
@@ -2001,75 +1676,20 @@ export default function App() {
 
                     {/* Faded Editorial Manufacturer Vector Watermark Backdrop */}
                     <div className="absolute inset-0 flex items-center justify-center select-none pointer-events-none opacity-[0.03] z-0">
-                      <svg
-                        className="w-64 h-64 md:w-80 md:h-80 animate-[spin_120s_linear_infinite]"
-                        viewBox="0 0 100 100"
-                        fill="none"
-                        stroke="currentColor"
-                      >
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="45"
-                          strokeWidth="1"
-                          strokeDasharray="3 3"
-                          className="text-sky-400"
-                        />
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="37"
-                          strokeWidth="0.5"
-                          className="text-white"
-                        />
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="25"
-                          strokeWidth="1"
-                          strokeDasharray="5 5"
-                          className="text-sky-400"
-                        />
-                        <path
-                          d="M 50 10 L 50 90 M 10 50 L 90 50"
-                          strokeWidth="0.5"
-                          className="text-white/40"
-                        />
-                        <text
-                          x="50"
-                          y="44"
-                          textAnchor="middle"
-                          fontSize="4.5"
-                          fontWeight="900"
-                          fill="currentColor"
-                          letterSpacing="1.5"
-                          className="text-sky-400 font-mono"
-                        >
-                          AUTO
-                        </text>
-                        <text
-                          x="50"
-                          y="61"
-                          textAnchor="middle"
-                          fontSize="4.5"
-                          fontWeight="900"
-                          fill="currentColor"
-                          letterSpacing="1.5"
-                          className="text-sky-400 font-mono"
-                        >
-                          CHOICE
-                        </text>
+                      <svg className="w-64 h-64 md:w-80 md:h-80 animate-[spin_120s_linear_infinite]" viewBox="0 0 100 100" fill="none" stroke="currentColor">
+                        <circle cx="50" cy="50" r="45" strokeWidth="1" strokeDasharray="3 3" className="text-sky-400" />
+                        <circle cx="50" cy="50" r="37" strokeWidth="0.5" className="text-white" />
+                        <circle cx="50" cy="50" r="25" strokeWidth="1" strokeDasharray="5 5" className="text-sky-400" />
+                        <path d="M 50 10 L 50 90 M 10 50 L 90 50" strokeWidth="0.5" className="text-white/40" />
+                        <text x="50" y="44" textAnchor="middle" fontSize="4.5" fontWeight="900" fill="currentColor" letterSpacing="1.5" className="text-sky-400 font-mono">AUTO</text>
+                        <text x="50" y="61" textAnchor="middle" fontSize="4.5" fontWeight="900" fill="currentColor" letterSpacing="1.5" className="text-sky-400 font-mono">CHOICE</text>
                       </svg>
                     </div>
 
                     {/* Left-Aligned Vertical Feature Pill Stack on the stage margin */}
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-20">
-                      <span className="text-[7px] text-gray-400 font-mono uppercase tracking-widest text-center select-none block pb-1 border-b border-white/5">
-                        Aspects
-                      </span>
-                      {(
-                        ["Design", "Safety", "Luxury", "Performance"] as const
-                      ).map((tab) => (
+                      <span className="text-[7px] text-gray-400 font-mono uppercase tracking-widest text-center select-none block pb-1 border-b border-white/5">Aspects</span>
+                      {(['Design', 'Safety', 'Luxury', 'Performance'] as const).map((tab) => (
                         <button
                           type="button"
                           key={tab}
@@ -2077,8 +1697,8 @@ export default function App() {
                           onMouseEnter={() => setActiveDetailTab(tab)}
                           className={`w-20 py-1.5 px-2 rounded-lg text-left text-[8px] font-mono uppercase tracking-wide transition-all duration-150 cursor-pointer border flex items-center gap-1 shrink-0 ${
                             activeDetailTab === tab
-                              ? "bg-[#38bdf8] text-slate-950 font-black border-[#38bdf8] shadow-md shadow-[#38bdf8]/20"
-                              : "bg-black/60 text-gray-400 border-white/5 hover:text-white hover:border-white/20"
+                              ? 'bg-[#38bdf8] text-slate-950 font-black border-[#38bdf8] shadow-md shadow-[#38bdf8]/20'
+                              : 'bg-black/60 text-gray-400 border-white/5 hover:text-white hover:border-white/20'
                           }`}
                         >
                           <span className="w-1 h-1 rounded-full bg-current"></span>
@@ -2089,21 +1709,13 @@ export default function App() {
 
                     {/* Contextual dynamic highlights notes panel */}
                     <div className="absolute right-3 top-3 max-w-[150px] p-2 rounded-xl bg-black/75 border border-cyan-500/20 text-left z-20 pointer-events-none animate-fade-in">
-                      <p className="text-[7px] text-sky-400 font-mono font-bold tracking-widest uppercase">
-                        Aspect Focus
-                      </p>
-                      <p className="text-[9px] text-white font-sans font-black uppercase mt-0.5">
-                        {activeDetailTab}
-                      </p>
+                      <p className="text-[7px] text-sky-400 font-mono font-bold tracking-widest uppercase">Aspect Focus</p>
+                      <p className="text-[9px] text-white font-sans font-black uppercase mt-0.5">{activeDetailTab}</p>
                       <p className="text-[8px] text-gray-400 mt-0.5 font-sans leading-tight">
-                        {activeDetailTab === "Design" &&
-                          "Active aerodynamics optimized to reduce drag coeff."}
-                        {activeDetailTab === "Safety" &&
-                          "Autonomous Level 2+ lidar radar safety protocols."}
-                        {activeDetailTab === "Luxury" &&
-                          "Premium Burmester audio paired with acoustic quiet-glass."}
-                        {activeDetailTab === "Performance" &&
-                          "Optimized gear twin-clutch ratios with active differential."}
+                        {activeDetailTab === 'Design' && "Active aerodynamics optimized to reduce drag coeff."}
+                        {activeDetailTab === 'Safety' && "Autonomous Level 2+ lidar radar safety protocols."}
+                        {activeDetailTab === 'Luxury' && "Premium Burmester audio paired with acoustic quiet-glass."}
+                        {activeDetailTab === 'Performance' && "Optimized gear twin-clutch ratios with active differential."}
                       </p>
                     </div>
 
@@ -2129,15 +1741,11 @@ export default function App() {
                         >
                           <button
                             type="button"
-                            onClick={() =>
-                              setActiveHotspotId(
-                                activeHotspotId === h.id ? null : h.id,
-                              )
-                            }
+                            onClick={() => setActiveHotspotId(activeHotspotId === h.id ? null : h.id)}
                             className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-mono font-black border uppercase shadow-lg transition-all duration-200 cursor-pointer ${
-                              activeHotspotId === h.id
-                                ? "bg-orange-500 text-white border-orange-400 rotate-45 scale-110 shadow-orange-500/30"
-                                : "bg-black/80 text-[#38bdf8] hover:text-white border-cyan-500/40 hover:border-cyan-400 scale-100 hover:scale-105"
+                              activeHotspotId === h.id 
+                                ? 'bg-orange-500 text-white border-orange-400 rotate-45 scale-110 shadow-orange-500/30' 
+                                : 'bg-black/80 text-[#38bdf8] hover:text-white border-cyan-500/40 hover:border-cyan-400 scale-100 hover:scale-105'
                             }`}
                             title={h.name}
                           >
@@ -2147,9 +1755,7 @@ export default function App() {
                           {/* Callout box overlay */}
                           {activeHotspotId === h.id && (
                             <div className="absolute bottom-7 left-1/2 -translate-x-1/2 w-48 p-2.5 rounded-xl bg-slate-950/95 border border-orange-500 text-left text-[9px] z-30 font-sans shadow-xl leading-relaxed animate-fade-in text-white shrink-0">
-                              <p className="font-mono font-black text-orange-400 uppercase tracking-wider text-[8px] border-b border-white/5 pb-1 mb-1">
-                                {h.name}
-                              </p>
+                              <p className="font-mono font-black text-orange-400 uppercase tracking-wider text-[8px] border-b border-white/5 pb-1 mb-1">{h.name}</p>
                               <p className="text-gray-300">{h.text}</p>
                             </div>
                           )}
@@ -2162,9 +1768,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => {
-                          const d = dealers.find(
-                            (dl) => dl.id === selectedListing.dealerId,
-                          );
+                          const d = dealers.find((dl) => dl.id === selectedListing.dealerId);
                           if (d) {
                             setSelectedDealerId(d.id);
                             setSelectedListing(null);
@@ -2172,39 +1776,26 @@ export default function App() {
                         }}
                         className="bg-orange-500 hover:bg-orange-600 text-white font-sans font-black uppercase text-[9px] tracking-wider py-2 px-3.5 rounded-xl shadow-[0_4px_12px_rgba(249,115,22,0.35)] flex items-center gap-1.5 transition-all duration-200 transform hover:scale-105 active:scale-95 cursor-pointer hover:shadow-[0_6px_18px_rgba(249,115,22,0.5)] border border-orange-400"
                       >
-                        <span className="material-symbols-outlined text-[12px]">
-                          store
-                        </span>
+                        <span className="material-symbols-outlined text-[12px]">store</span>
                         Connect with Showroom
-                        <span className="text-white/60 font-mono font-normal">
-                          →
-                        </span>
+                        <span className="text-white/60 font-mono font-normal">→</span>
                       </button>
                     </div>
+
                   </div>
 
                   {/* Base filmstrips slider */}
                   <div className="space-y-2">
-                    <span className="text-[8px] text-gray-500 uppercase font-mono font-bold tracking-widest block text-left">
-                      Scrolling Showcase Filmstrips
-                    </span>
+                    <span className="text-[8px] text-gray-500 uppercase font-mono font-bold tracking-widest block text-left">Scrolling Showcase Filmstrips</span>
                     <div className="flex gap-2 overflow-x-auto pb-1.5 no-scrollbar">
                       {[
                         selectedListing.imageUrl,
                         "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=300",
                         "https://images.unsplash.com/photo-1520050206274-a1ae446cb3cc?auto=format&fit=crop&q=80&w=300",
-                        "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=300",
+                        "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=300"
                       ].map((url, idx) => (
-                        <div
-                          key={idx}
-                          className="w-20 md:w-28 h-14 md:h-20 bg-slate-950 rounded-lg overflow-hidden border border-white/10 shrink-0 hover:border-cyan-400 cursor-pointer duration-150"
-                        >
-                          <img
-                            src={url}
-                            className="w-full h-full object-cover opacity-60 hover:opacity-100 transition-opacity"
-                            alt="filmstrip"
-                            referrerPolicy="no-referrer"
-                          />
+                        <div key={idx} className="w-20 md:w-28 h-14 md:h-20 bg-slate-950 rounded-lg overflow-hidden border border-white/10 shrink-0 hover:border-cyan-400 cursor-pointer duration-150">
+                          <img src={url} className="w-full h-full object-cover opacity-60 hover:opacity-100 transition-opacity" alt="filmstrip" referrerPolicy="no-referrer" />
                         </div>
                       ))}
                     </div>
@@ -2218,70 +1809,52 @@ export default function App() {
                         <span className="text-[14px] md:text-base font-sans font-black text-[#38bdf8] block tracking-tight">
                           11.8 - 10.1
                         </span>
-                        <span className="text-[8px] text-gray-400 font-mono block leading-none">
-                          km/l
-                        </span>
+                        <span className="text-[8px] text-gray-400 font-mono block leading-none">km/l</span>
                       </div>
-                      <span className="text-[7.5px] text-gray-500 font-sans tracking-wide block mt-1">
-                        Fuel consumption, combined
-                      </span>
+                      <span className="text-[7.5px] text-gray-500 font-sans tracking-wide block mt-1">Fuel consumption, combined</span>
                     </div>
-
+                    
                     {/* CARD 2: Powertrain Configuration */}
                     <div className="relative overflow-hidden backdrop-blur-md bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 p-3 rounded-xl flex flex-col justify-between text-left transition-colors">
                       <div className="space-y-0.5">
                         <span className="text-[14px] md:text-base font-sans font-black text-white block tracking-tight uppercase truncate">
                           {selectedListing.fuelType || "Gasoline"}
                         </span>
-                        <span className="text-[8px] text-sky-400 font-mono block leading-none">
-                          High Efficiency
-                        </span>
+                        <span className="text-[8px] text-sky-400 font-mono block leading-none">High Efficiency</span>
                       </div>
-                      <span className="text-[7.5px] text-gray-500 font-sans tracking-wide block mt-1">
-                        Engine and Fuel Type
-                      </span>
+                      <span className="text-[7.5px] text-gray-500 font-sans tracking-wide block mt-1">Engine and Fuel Type</span>
                     </div>
 
                     {/* CARD 3: Absolute Purchase Price */}
                     <div className="relative overflow-hidden backdrop-blur-md bg-white/[0.02] hover:bg-orange-500/5 border border-white/5 p-3 rounded-xl flex flex-col justify-between text-left transition-colors">
                       <div className="space-y-0.5">
                         <span className="text-[14px] md:text-base font-mono font-black text-orange-400 block tracking-tight truncate">
-                          {renderPrice(selectedListing.price).replace(
-                            " PKR",
-                            "",
-                          )}
+                          {renderPrice(selectedListing.price).replace(' PKR', '')}
                         </span>
-                        <span className="text-[8px] text-orange-500 font-mono block leading-none">
-                          PKR Value
-                        </span>
+                        <span className="text-[8px] text-orange-500 font-mono block leading-none">PKR Value</span>
                       </div>
-                      <span className="text-[7.5px] text-gray-500 font-sans tracking-wide block mt-1">
-                        Certified Purchase Price
-                      </span>
+                      <span className="text-[7.5px] text-gray-500 font-sans tracking-wide block mt-1">Certified Purchase Price</span>
                     </div>
                   </div>
 
                   {/* Executive Presentation description */}
                   <div className="bg-[#0c1425] border border-white/5 p-4.5 rounded-xl space-y-2 text-left">
-                    <h4 className="text-[#38bdf8] font-black text-xs uppercase tracking-wider border-b border-white/5 pb-1.5">
-                      Executive Presentation Description
-                    </h4>
-                    <p className="text-gray-300 text-xs leading-relaxed font-sans pr-4">
-                      {selectedListing.description}
-                    </p>
+                    <h4 className="text-[#38bdf8] font-black text-xs uppercase tracking-wider border-b border-white/5 pb-1.5">Executive Presentation Description</h4>
+                    <p className="text-gray-300 text-xs leading-relaxed font-sans pr-4">{selectedListing.description}</p>
                   </div>
+
                 </div>
 
                 {/* RIGHT COLUMN: Sticky Pricing & Feature Tabs (5/12) */}
                 <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-0 text-left">
+                  
                   {/* Title Panel */}
                   <div className="space-y-2 border-b border-white/5 pb-4">
                     <h2 className="text-xl md:text-2xl font-black text-white leading-tight uppercase">
                       {selectedListing.title}
                     </h2>
                     <p className="text-[#38bdf8] text-xs font-mono font-bold flex items-center gap-1">
-                      <MapPin size={11} /> Peshawar Motorway Corridor Hub
-                      (Active Delivery)
+                      <MapPin size={11} /> Peshawar Motorway Corridor Hub (Active Delivery)
                     </p>
                   </div>
 
@@ -2289,18 +1862,12 @@ export default function App() {
                   <div className="bg-[#0c1425] border-2 border-white/5 p-4 rounded-2xl relative overflow-hidden shadow-lg space-y-3.5">
                     <div className="absolute top-0 right-0 w-16 h-16 bg-orange-500/10 rounded-full blur-xl pointer-events-none"></div>
                     <div className="flex justify-between items-center border-b border-white/5 pb-1.5">
-                      <span className="text-[8.5px] text-[#38bdf8] font-mono uppercase font-black tracking-widest">
-                        Pricing Matrix Index
-                      </span>
-                      <span className="text-[8px] bg-orange-500/10 text-orange-400 font-mono px-2 py-0.5 rounded border border-orange-500/25 uppercase font-bold">
-                        Standard Value
-                      </span>
+                      <span className="text-[8.5px] text-[#38bdf8] font-mono uppercase font-black tracking-widest">Pricing Matrix Index</span>
+                      <span className="text-[8px] bg-orange-500/10 text-orange-400 font-mono px-2 py-0.5 rounded border border-orange-500/25 uppercase font-bold">Standard Value</span>
                     </div>
-
+                    
                     <div className="space-y-1">
-                      <span className="text-[9px] uppercase tracking-wider text-gray-400 font-bold block">
-                        Current Market Demand
-                      </span>
+                      <span className="text-[9px] uppercase tracking-wider text-gray-400 font-bold block">Current Market Demand</span>
                       <h3 className="text-2xl md:text-3xl font-black text-orange-400 tracking-tight">
                         {renderPrice(selectedListing.price)}
                       </h3>
@@ -2309,17 +1876,8 @@ export default function App() {
                     {/* Competitive Leasing calculations placeholder */}
                     <div className="bg-[#050912] p-2.5 rounded-xl border border-white/5 flex justify-between items-center text-left">
                       <div>
-                        <span className="text-[7.5px] text-gray-500 font-mono uppercase block font-bold leading-none">
-                          Est. Leasing PKR
-                        </span>
-                        <span className="text-[10px] font-mono font-bold text-white leading-none">
-                          Rs.{" "}
-                          {(selectedListing.price * 0.021).toLocaleString(
-                            undefined,
-                            { maximumFractionDigits: 0 },
-                          )}{" "}
-                          / Month
-                        </span>
+                        <span className="text-[7.5px] text-gray-500 font-mono uppercase block font-bold leading-none">Est. Leasing PKR</span>
+                        <span className="text-[10px] font-mono font-bold text-white leading-none">Rs. {(selectedListing.price * 0.021).toLocaleString(undefined, {maximumFractionDigits: 0})} / Month</span>
                       </div>
                       <span className="text-[7.5px] text-[#38bdf8] bg-sky-500/10 rounded border border-cyan-500/30 px-1.5 py-0.5 font-mono uppercase font-black shrink-0">
                         3 Year @ 15% Down
@@ -2330,29 +1888,24 @@ export default function App() {
                   {/* Left Aligned Metric Feature Tabs */}
                   <div className="bg-[#0c1425] border border-white/5 p-4 rounded-xl space-y-4">
                     <div className="flex justify-between items-center border-b border-white/5 pb-1.5">
-                      <span className="text-[8.5px] text-[#38bdf8] font-mono font-black uppercase tracking-wider">
-                        Metrics Groups Exploration
-                      </span>
-                      <span className="text-[8px] text-gray-500 font-mono">
-                        Select telemetry group
-                      </span>
+                      <span className="text-[8.5px] text-[#38bdf8] font-mono font-black uppercase tracking-wider">Metrics Groups Exploration</span>
+                      <span className="text-[8px] text-gray-500 font-mono">Select telemetry group</span>
                     </div>
 
                     {/* Dual segment: Left Buttons list, Right output details */}
                     <div className="grid grid-cols-12 gap-3.5">
+                      
                       {/* Left pillar list of buttons */}
                       <div className="col-span-4 flex flex-col gap-1.5 border-r border-white/5 pr-2.5">
-                        {(
-                          ["Design", "Safety", "Luxury", "Performance"] as const
-                        ).map((tab) => (
+                        {(['Design', 'Safety', 'Luxury', 'Performance'] as const).map((tab) => (
                           <button
                             type="button"
                             key={tab}
                             onClick={() => setActiveDetailTab(tab)}
                             className={`w-full py-1.5 px-2 rounded-lg text-left text-[9px] font-mono uppercase transition-all duration-150 cursor-pointer ${
                               activeDetailTab === tab
-                                ? "bg-[#38bdf8] text-slate-950 font-black shadow shadow-[#38bdf8]/40"
-                                : "bg-white/5 text-gray-400 hover:text-white"
+                                ? 'bg-[#38bdf8] text-slate-950 font-black shadow shadow-[#38bdf8]/40'
+                                : 'bg-white/5 text-gray-400 hover:text-white'
                             }`}
                           >
                             ● {tab}
@@ -2362,69 +1915,39 @@ export default function App() {
 
                       {/* Right output detail block without jumpiness */}
                       <div className="col-span-8 space-y-2 text-left">
-                        {(
-                          (activeDetailTab === "Design"
-                            ? METRIC_TABS_DATA.Design
-                            : activeDetailTab === "Safety"
-                              ? METRIC_TABS_DATA.Safety
-                              : activeDetailTab === "Luxury"
-                                ? METRIC_TABS_DATA.Luxury
-                                : METRIC_TABS_DATA.Performance) || []
-                        ).map((metric, midx) => (
-                          <div
-                            key={midx}
-                            className="border-b border-white/5 pb-1 last:border-0 leading-tight"
-                          >
-                            <p className="text-[7.5px] text-gray-500 font-mono uppercase">
-                              {metric.label}
-                            </p>
-                            <p className="text-[9.5px] font-sans font-bold text-white truncate">
-                              {metric.value}
-                            </p>
+                        {((activeDetailTab === 'Design' ? METRIC_TABS_DATA.Design :
+                           activeDetailTab === 'Safety' ? METRIC_TABS_DATA.Safety :
+                           activeDetailTab === 'Luxury' ? METRIC_TABS_DATA.Luxury :
+                           METRIC_TABS_DATA.Performance) || []).map((metric, midx) => (
+                          <div key={midx} className="border-b border-white/5 pb-1 last:border-0 leading-tight">
+                            <p className="text-[7.5px] text-gray-500 font-mono uppercase">{metric.label}</p>
+                            <p className="text-[9.5px] font-sans font-bold text-white truncate">{metric.value}</p>
                           </div>
                         ))}
                       </div>
+
                     </div>
                   </div>
 
                   {/* Technical Telemetry Metrics Grid (1px border cards) */}
                   <div className="space-y-2">
-                    <span className="text-[8px] text-gray-500 uppercase font-mono font-bold tracking-widest block">
-                      Technical Aspect Telemetry
-                    </span>
+                    <span className="text-[8px] text-gray-500 uppercase font-mono font-bold tracking-widest block">Technical Aspect Telemetry</span>
                     <div className="grid grid-cols-2 gap-2.5">
                       <div className="bg-[#0a1425] border border-white/10 p-3 rounded-xl hover:border-cyan-500/50 transition-colors">
-                        <span className="text-[7.5px] text-gray-500 font-mono uppercase block">
-                          Engine Displacement
-                        </span>
-                        <span className="text-[11px] font-mono font-bold text-white block mt-0.5">
-                          {selectedListing.specs.engineSize || "2,981 cc"}
-                        </span>
+                        <span className="text-[7.5px] text-gray-500 font-mono uppercase block">Engine Displacement</span>
+                        <span className="text-[11px] font-mono font-bold text-white block mt-0.5">{selectedListing.specs.engineSize || '2,981 cc'}</span>
                       </div>
                       <div className="bg-[#0a1425] border border-white/10 p-3 rounded-xl hover:border-cyan-500/50 transition-colors">
-                        <span className="text-[7.5px] text-gray-500 font-mono uppercase block">
-                          Peak Power HP Unit
-                        </span>
-                        <span className="text-[11px] font-mono font-bold text-white block mt-0.5">
-                          {selectedListing.specs.horspower || "450 Horsepower"}
-                        </span>
+                        <span className="text-[7.5px] text-gray-500 font-mono uppercase block">Peak Power HP Unit</span>
+                        <span className="text-[11px] font-mono font-bold text-white block mt-0.5">{selectedListing.specs.horspower || '450 Horsepower'}</span>
                       </div>
                       <div className="bg-[#0a1425] border border-white/10 p-3 rounded-xl hover:border-cyan-500/50 transition-colors">
-                        <span className="text-[7.5px] text-gray-500 font-mono uppercase block">
-                          Outer Paint Body
-                        </span>
-                        <span className="text-[11px] font-mono font-bold text-white block mt-0.5">
-                          {selectedListing.specs.color || "Aurora Black Met."}
-                        </span>
+                        <span className="text-[7.5px] text-gray-500 font-mono uppercase block">Outer Paint Body</span>
+                        <span className="text-[11px] font-mono font-bold text-white block mt-0.5">{selectedListing.specs.color || 'Aurora Black Met.'}</span>
                       </div>
                       <div className="bg-[#0a1425] border border-white/10 p-3 rounded-xl hover:border-cyan-500/50 transition-colors">
-                        <span className="text-[7.5px] text-gray-500 font-mono uppercase block">
-                          Specs standard
-                        </span>
-                        <span className="text-[11px] font-mono font-bold text-white block mt-0.5">
-                          {selectedListing.specs.regionalSpecs ||
-                            "KPK Provincial Spec"}
-                        </span>
+                        <span className="text-[7.5px] text-gray-500 font-mono uppercase block">Specs standard</span>
+                        <span className="text-[11px] font-mono font-bold text-white block mt-0.5">{selectedListing.specs.regionalSpecs || 'KPK Provincial Spec'}</span>
                       </div>
                     </div>
                   </div>
@@ -2432,21 +1955,13 @@ export default function App() {
                   {/* Deep linking share block */}
                   <div className="bg-[#0c1425] border border-white/5 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-3 font-mono">
                     <div className="text-left space-y-0.5">
-                      <span className="text-[9.5px] uppercase font-black tracking-widest text-[#38bdf8] block">
-                        Adaptive Sharing
-                      </span>
-                      <span className="text-[8px] text-gray-400 font-sans block">
-                        Share certified specifications directly
-                      </span>
+                      <span className="text-[9.5px] uppercase font-black tracking-widest text-[#38bdf8] block">Adaptive Sharing</span>
+                      <span className="text-[8px] text-gray-400 font-sans block">Share certified specifications directly</span>
                     </div>
                     <button
                       onClick={async () => {
-                        const d = dealers.find(
-                          (dl) => dl.id === selectedListing.dealerId,
-                        );
-                        const locationText =
-                          d?.location ||
-                          "Alamas Car Village, Ring Road, Peshawar";
+                        const d = dealers.find((dl) => dl.id === selectedListing.dealerId);
+                        const locationText = d?.location || "Alamas Car Village, Ring Road, Peshawar";
                         const shareUrl = `https://bazar360.online/dealers/${selectedListing.dealerId}/listings/${selectedListing.id}`;
                         const shareTitle = selectedListing.title;
                         const sharePrice = `Rs. ${selectedListing.price.toLocaleString()}`;
@@ -2457,34 +1972,26 @@ export default function App() {
                             await navigator.share({
                               title: shareTitle,
                               text: textPayload,
-                              url: shareUrl,
+                              url: shareUrl
                             });
                           } catch (err) {
                             // ignore
                           }
                         } else {
                           const encodedText = encodeURIComponent(textPayload);
-                          window.open(
-                            `https://api.whatsapp.com/send?text=${encodedText}`,
-                            "_blank",
-                          );
+                          window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
                         }
                       }}
                       className="bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold py-2.5 px-4 rounded-xl text-[9px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 duration-100 cursor-pointer shadow"
                     >
-                      <span className="material-symbols-outlined text-[14px]">
-                        share
-                      </span>{" "}
-                      Share Spec Sheet
+                      <span className="material-symbols-outlined text-[14px]">share</span> Share Spec Sheet
                     </button>
                   </div>
 
                   {/* Bid/Offer tool integrates */}
                   <div className="bg-[#0c1425] border border-white/5 p-4 rounded-xl space-y-3 font-sans">
-                    <span className="text-[9.5px] uppercase font-mono font-black text-[#38bdf8] block tracking-wider">
-                      Dynamic Offer Pipeline
-                    </span>
-
+                    <span className="text-[9.5px] uppercase font-mono font-black text-[#38bdf8] block tracking-wider">Dynamic Offer Pipeline</span>
+                    
                     {offerSuccessMessage ? (
                       <div className="p-3 bg-green-950/40 text-green-400 font-bold text-xs rounded border border-green-900 leading-relaxed font-sans shadow-inner">
                         {offerSuccessMessage}
@@ -2492,10 +1999,7 @@ export default function App() {
                     ) : (
                       <form onSubmit={handleOfferSubmit} className="flex gap-2">
                         <div className="bg-[#051020] border border-white/10 p-2 rounded-lg flex items-center flex-grow">
-                          <DollarSign
-                            size={14}
-                            className="text-[#38bdf8] mr-1 shrink-0"
-                          />
+                          <DollarSign size={14} className="text-[#38bdf8] mr-1 shrink-0" />
                           <input
                             type="number"
                             placeholder="Place custom offer in PKR..."
@@ -2512,12 +2016,11 @@ export default function App() {
                         </button>
                       </form>
                     )}
-                    <span className="text-[8.5px] text-gray-500 block leading-tight">
-                      Offers transmitted are non-binding but unlock priority
-                      validation within associated micro-showrooms.
-                    </span>
+                    <span className="text-[8.5px] text-gray-500 block leading-tight">Offers transmitted are non-binding but unlock priority validation within associated micro-showrooms.</span>
                   </div>
+
                 </div>
+
               </div>
             </div>
 
@@ -2525,9 +2028,7 @@ export default function App() {
             <div className="p-4 border-t border-white/5 bg-[#0c1425] flex gap-3 shrink-0">
               <button
                 onClick={() => {
-                  const d = dealers.find(
-                    (dl) => dl.id === selectedListing.dealerId,
-                  );
+                  const d = dealers.find((dl) => dl.id === selectedListing.dealerId);
                   if (d) {
                     onSelectDealer(d.id);
                     setSelectedListing(null);
@@ -2535,22 +2036,17 @@ export default function App() {
                 }}
                 className="flex-1 bg-transparent border border-sky-400 text-sky-400 hover:bg-sky-400/10 font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-1.5 active:scale-97 transition-all duration-75 cursor-pointer"
               >
-                <span className="material-symbols-outlined shrink-0 text-base">
-                  store
-                </span>{" "}
-                Contact Showroom Profile
+                <span className="material-symbols-outlined shrink-0 text-base">store</span> Contact Showroom Profile
               </button>
-
+              
               <a
                 href={`mailto:amjid.bisconni@gmail.com?subject=Inquiry on ${selectedListing.title}&body=Hello, I am interested in checking vehicle specifications on the ${selectedListing.title} listed under id ${selectedListing.id}.`}
                 className="flex-1 bg-orange-500 hover:bg-orange-600 border border-orange-400 text-white font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-1.5 text-center active:scale-97 transition-all duration-75 shadow cursor-pointer"
               >
-                <span className="material-symbols-outlined shrink-0 text-base">
-                  mail
-                </span>{" "}
-                Submit Instant Query Card
+                <span className="material-symbols-outlined shrink-0 text-base">mail</span> Submit Instant Query Card
               </a>
             </div>
+
           </div>
         </div>
       )}
@@ -2570,7 +2066,7 @@ export default function App() {
                     alt={car.title}
                     className="w-8 h-8 rounded-full border border-[#0c1221] object-cover"
                   />
-                  <button
+                  <button 
                     onClick={() => handleToggleCompare(car)}
                     className="absolute -top-1 -right-1 bg-red-500 p-0.5 rounded-full text-[6px] hover:bg-red-600 border border-[#0c1221] w-3.5 h-3.5 flex items-center justify-center"
                   >
@@ -2579,9 +2075,7 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-gray-400 font-sans hidden sm:block">
-              Queue set for side-by-side comparison
-            </p>
+            <p className="text-[10px] text-gray-400 font-sans hidden sm:block">Queue set for side-by-side comparison</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -2604,14 +2098,11 @@ export default function App() {
       {showComparisonModal && compareList.length > 0 && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4 md:p-6 overflow-y-auto animate-fade-in">
           <div className="bg-[#0b121f] border border-[#1e293b] rounded-3xl max-w-3xl w-full text-xs font-sans shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col animate-scale-fade">
+            
             <div className="bg-[#121a2a] p-4 border-b border-[#1e293b] flex justify-between items-center shrink-0">
               <div>
-                <h3 className="font-sans font-black text-white text-sm uppercase tracking-tight">
-                  BAZAR360 Dynamic Comparison Deck
-                </h3>
-                <p className="text-[9px] text-gray-400 font-mono tracking-wider mt-0.5">
-                  Dual car matchup analyzer with active spec matching.
-                </p>
+                <h3 className="font-sans font-black text-white text-sm uppercase tracking-tight">BAZAR360 Dynamic Comparison Deck</h3>
+                <p className="text-[9px] text-gray-400 font-mono tracking-wider mt-0.5">Dual car matchup analyzer with active spec matching.</p>
               </div>
               <button
                 onClick={() => setShowComparisonModal(false)}
@@ -2622,28 +2113,20 @@ export default function App() {
             </div>
 
             <div className="flex-grow overflow-y-auto p-5 space-y-6">
+              
               {/* Product Comparison Header Grid */}
               <div className="grid grid-cols-2 gap-4">
                 {compareList.map((car) => (
-                  <div
-                    key={car.id}
-                    className="bg-[#121a2a] p-3 rounded-2xl border border-white/5 space-y-3 relative"
-                  >
-                    <img
-                      src={car.imageUrl}
-                      alt={car.title}
+                  <div key={car.id} className="bg-[#121a2a] p-3 rounded-2xl border border-white/5 space-y-3 relative">
+                    <img 
+                      src={car.imageUrl} 
+                      alt={car.title} 
                       className="w-full h-32 md:h-44 object-cover rounded-xl"
                     />
                     <div className="space-y-0.5">
-                      <span className="text-[8px] font-mono tracking-widest text-[#38BDF8] font-bold uppercase">
-                        {car.make}
-                      </span>
-                      <h4 className="font-extrabold text-[#F97316] text-xs uppercase truncate leading-none">
-                        {car.title}
-                      </h4>
-                      <p className="font-mono text-white text-[13px] font-black mt-1">
-                        {renderPrice(car.price)}
-                      </p>
+                      <span className="text-[8px] font-mono tracking-widest text-[#38BDF8] font-bold uppercase">{car.make}</span>
+                      <h4 className="font-extrabold text-[#F97316] text-xs uppercase truncate leading-none">{car.title}</h4>
+                      <p className="font-mono text-white text-[13px] font-black mt-1">{renderPrice(car.price)}</p>
                     </div>
                   </div>
                 ))}
@@ -2655,38 +2138,19 @@ export default function App() {
                   { label: "Production Year", key: "year" },
                   { label: "Brand Make", key: "make" },
                   { label: "Model Variant", key: "model" },
-                  {
-                    label: "Mileage (km)",
-                    key: "mileage",
-                    format: (v: number) => `${v.toLocaleString()} km`,
-                  },
+                  { label: "Mileage (km)", key: "mileage", format: (v: number) => `${v.toLocaleString()} km` },
                   { label: "Fuel Category", key: "fuelType" },
-                  { label: "Transmission Line", key: "transmission" },
+                  { label: "Transmission Line", key: "transmission" }
                 ].map((spec) => {
                   return (
-                    <div
-                      key={spec.label}
-                      className="grid grid-cols-3 border-b border-white/5 last:border-0 p-3 leading-relaxed"
-                    >
-                      <span className="text-gray-400 font-mono text-[9px] uppercase font-bold flex items-center">
-                        {spec.label}
-                      </span>
+                    <div key={spec.label} className="grid grid-cols-3 border-b border-white/5 last:border-0 p-3 leading-relaxed">
+                      <span className="text-gray-400 font-mono text-[9px] uppercase font-bold flex items-center">{spec.label}</span>
                       {compareList.map((car) => {
                         const rawVal = (car as any)[spec.key];
                         // Zero-Dummy-Data Guard: Avoid empty blanks
-                        const valString =
-                          rawVal !== undefined &&
-                          rawVal !== null &&
-                          rawVal !== ""
-                            ? spec.format
-                              ? spec.format(rawVal)
-                              : String(rawVal)
-                            : "Not Listed";
+                        const valString = rawVal !== undefined && rawVal !== null && rawVal !== "" ? (spec.format ? spec.format(rawVal) : String(rawVal)) : "Not Listed";
                         return (
-                          <span
-                            key={car.id}
-                            className="text-white font-sans text-xs flex items-center pr-2"
-                          >
+                          <span key={car.id} className="text-white font-sans text-xs flex items-center pr-2">
                             {valString}
                           </span>
                         );
@@ -2698,28 +2162,17 @@ export default function App() {
 
               {/* Unique Ecosystem Service Badges comparison */}
               <div className="space-y-2">
-                <p className="text-[10px] font-mono font-bold uppercase text-gray-500 tracking-wider">
-                  Showroom Certifications Matchup
-                </p>
+                <p className="text-[10px] font-mono font-bold uppercase text-gray-500 tracking-wider">Showroom Certifications Matchup</p>
                 <div className="grid grid-cols-2 gap-4">
                   {compareList.map((car) => (
-                    <div
-                      key={car.id}
-                      className="p-3 bg-[#111928] rounded-xl border border-white/5 flex flex-col justify-between"
-                    >
+                    <div key={car.id} className="p-3 bg-[#111928] rounded-xl border border-white/5 flex flex-col justify-between">
                       <div className="space-y-1">
-                        <span className="font-bold text-[10px] text-white block uppercase font-mono">
-                          Verifier Status
-                        </span>
+                        <span className="font-bold text-[10px] text-white block uppercase font-mono">Verifier Status</span>
                         <div className="flex items-center gap-1 text-xs text-white/70">
                           {car.verified ? (
-                            <span className="text-emerald-400 font-bold font-mono">
-                              ✓ VETTED
-                            </span>
+                            <span className="text-emerald-400 font-bold font-mono">✓ VETTED</span>
                           ) : (
-                            <span className="text-orange-400 font-mono">
-                              PENDING DESK
-                            </span>
+                            <span className="text-orange-400 font-mono">PENDING DESK</span>
                           )}
                         </div>
                       </div>
@@ -2732,13 +2185,13 @@ export default function App() {
               <div className="pt-4 border-t border-white/5 space-y-3">
                 <button
                   onClick={async () => {
-                    const text = `Take a look at this digital car comparison matchup on BAZAR360:\n\n${compareList.map((c) => `🏎️ ${c.title} (Rs. ${c.price.toLocaleString()})`).join("\n")}\n\nAnalyze specs side-by-side!`;
+                    const text = `Take a look at this digital car comparison matchup on BAZAR360:\n\n${compareList.map(c => `🏎️ ${c.title} (Rs. ${c.price.toLocaleString()})`).join('\n')}\n\nAnalyze specs side-by-side!`;
                     if (navigator.share) {
                       try {
                         await navigator.share({
-                          title: "BAZAR360 Dynamic Matchup",
+                          title: 'BAZAR360 Dynamic Matchup',
                           text: text,
-                          url: window.location.href,
+                          url: window.location.href
                         });
                       } catch (e) {
                         // ignore
@@ -2747,8 +2200,7 @@ export default function App() {
                       await navigator.clipboard.writeText(text);
                       const t = document.getElementById("compare_share_status");
                       if (t) {
-                        t.innerText =
-                          "✓ Copy-loaded! Ready to paste into WhatsApp / Viber.";
+                        t.innerText = "✓ Copy-loaded! Ready to paste into WhatsApp / Viber.";
                         setTimeout(() => {
                           t.innerText = "";
                         }, 5000);
@@ -2759,168 +2211,132 @@ export default function App() {
                 >
                   📣 Adaptive Share Matchup (Native / WhatsApp fallback)
                 </button>
-                <p
-                  id="compare_share_status"
-                  className="text-center font-mono text-[10px] text-[#38BDF8] font-bold"
-                ></p>
+                <p id="compare_share_status" className="text-center font-mono text-[10px] text-[#38BDF8] font-bold"></p>
               </div>
+
             </div>
           </div>
         </div>
       )}
 
-      {/* Mobile Side Drawer Backdrop (Viewport < 768px focus overlay) */}
-      {isMobileDrawerOpen && (
-        <div
-          className="fixed inset-0 bg-[#030712]/75 backdrop-blur-[4px] z-50 md:hidden transition-all duration-300"
-          onClick={() => setIsMobileDrawerOpen(false)}
-          id="mobile-drawer-backdrop"
-        />
-      )}
+        {/* Mobile Side Drawer Backdrop (Viewport < 768px focus overlay) */}
+        {isMobileDrawerOpen && (
+          <div 
+            className="fixed inset-0 bg-[#030712]/75 backdrop-blur-[4px] z-50 md:hidden transition-all duration-300"
+            onClick={() => setIsMobileDrawerOpen(false)}
+            id="mobile-drawer-backdrop"
+          />
+        )}
 
-      {/* Mobile Side Drawer Sliding Panel */}
-      <div
-        id="mobile-drawer"
-        className="fixed top-0 bottom-0 w-[280px] bg-[#070c18] z-50 border-r border-white/5 transition-all duration-300 flex flex-col justify-between shadow-2xl p-6 md:hidden text-left"
-        style={{ left: isMobileDrawerOpen ? "0" : "-280px" }}
-      >
-        {/* Drawer top branding container */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b border-white/5">
-            <div className="flex items-center space-x-2">
-              <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-slate-950 border border-orange-500/30">
-                <svg
-                  className="w-5 h-5 text-orange-500"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-                  ></path>
-                </svg>
-              </div>
-              <div className="flex flex-col text-left">
-                <span className="text-sm font-black text-white tracking-widest leading-none">
-                  BAZAR
-                  <span className="text-orange-500 font-extrabold">360</span>
-                </span>
-                <span className="text-[7px] font-bold text-[#38BDF8] tracking-[0.22em] uppercase leading-none mt-0.5">
-                  Ecosystem
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={() => setIsMobileDrawerOpen(false)}
-              className="text-gray-400 hover:text-white p-2 bg-white/5 rounded-lg text-xs"
-              id="mobile-drawer-close-btn"
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Nav Links */}
-          <nav className="flex flex-col gap-4 font-mono text-xs uppercase tracking-wider text-left">
-            <button
-              onClick={() => {
-                setTab("home");
-                setIsMobileDrawerOpen(false);
-              }}
-              className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === "home" ? "text-orange-500" : "text-gray-400 hover:text-white"}`}
-            >
-              🏠 Home Feed
-            </button>
-            <button
-              onClick={() => {
-                setTab("inventory");
-                setIsMobileDrawerOpen(false);
-              }}
-              className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === "inventory" || currentTab === "search" ? "text-orange-500" : "text-gray-400 hover:text-white"}`}
-            >
-              📋 Active Inventory
-            </button>
-            <button
-              onClick={() => {
-                setTab("media");
-                setIsMobileDrawerOpen(false);
-              }}
-              className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === "media" ? "text-orange-500" : "text-gray-400 hover:text-white"}`}
-            >
-              🎥 Showroom Media
-            </button>
-            <button
-              onClick={() => {
-                setTab("insights");
-                setIsMobileDrawerOpen(false);
-              }}
-              className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === "insights" ? "text-orange-500" : "text-gray-400 hover:text-white"}`}
-            >
-              📈 Market Insights
-            </button>
-            <button
-              onClick={() => {
-                setTab("concierge");
-                setIsMobileDrawerOpen(false);
-              }}
-              className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === "concierge" ? "text-orange-500" : "text-gray-400 hover:text-white"}`}
-            >
-              📞 Direct Concierge
-            </button>
-            <button
-              onClick={() => {
-                handleSetCategory("gateway");
-                setIsMobileDrawerOpen(false);
-              }}
-              className="font-black py-3 text-left text-orange-500 hover:text-orange-400 border-t border-white/5 pt-4 flex items-center gap-1.5 uppercase tracking-widest mt-2"
-            >
-              Return to Gateway
-            </button>
-          </nav>
-        </div>
-
-        {/* Drawer bottom utilities */}
-        <div className="space-y-4 pt-6 border-t border-white/5 text-left">
-          {!currentUser ? (
-            <button
-              onClick={() => {
-                setTab("portal");
-                setIsMobileDrawerOpen(false);
-              }}
-              className="w-full text-center text-xs font-mono font-black uppercase text-[#38BDF8] border border-[#38BDF8]/30 bg-[#38BDF8]/5 py-3 rounded-xl cursor-pointer"
-            >
-              Sign In / Register
-            </button>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 bg-[#121c32]/65 p-3 rounded-xl border border-white/5">
-                <div className="w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center font-black text-xs uppercase shrink-0">
-                  {currentUser.displayName.substring(0, 1).toUpperCase()}
+        {/* Mobile Side Drawer Sliding Panel */}
+        <div 
+          id="mobile-drawer"
+          className="fixed top-0 bottom-0 w-[280px] bg-[#070c18] z-50 border-r border-white/5 transition-all duration-300 flex flex-col justify-between shadow-2xl p-6 md:hidden text-left overflow-x-hidden overflow-y-auto"
+          style={{ left: isMobileDrawerOpen ? '0' : '-280px' }}
+        >
+          {/* Drawer top branding container */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-white/5">
+              <div className="flex items-center space-x-2">
+                <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-slate-950 border border-orange-500/30">
+                  <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path>
+                  </svg>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-white font-bold text-xs truncate leading-none">
-                    {currentUser.displayName}
-                  </p>
-                  <span className="text-[8px] text-orange-400 font-mono uppercase tracking-widest block mt-1">
-                    {currentUser.role}
-                  </span>
+                <div className="flex flex-col text-left">
+                  <span className="text-sm font-black text-white tracking-widest leading-none">BAZAR<span className="text-orange-500 font-extrabold">360</span></span>
+                  <span className="text-[7px] font-bold text-[#38BDF8] tracking-[0.22em] uppercase leading-none mt-0.5">Ecosystem</span>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setIsMobileDrawerOpen(false);
-                }}
-                className="w-full text-center text-xs font-mono font-black uppercase text-red-500 hover:bg-red-500/10 py-3 rounded-xl border border-red-500/20 cursor-pointer"
+              <button 
+                onClick={() => setIsMobileDrawerOpen(false)}
+                className="text-gray-400 hover:text-white p-2 bg-white/5 rounded-lg text-xs"
+                id="mobile-drawer-close-btn"
               >
-                Sign Out
+                ✕
               </button>
             </div>
-          )}
+
+            {/* Nav Links */}
+            <nav className="flex flex-col gap-4 font-mono text-xs uppercase tracking-wider text-left">
+              <button
+                onClick={() => { setTab('home'); setIsMobileDrawerOpen(false); }}
+                className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === 'home' ? 'text-orange-500' : 'text-gray-400 hover:text-white'}`}
+              >
+                🏠 Home Feed
+              </button>
+              <button
+                onClick={() => { setTab('inventory'); setIsMobileDrawerOpen(false); }}
+                className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === 'inventory' || currentTab === 'search' ? 'text-orange-500' : 'text-gray-400 hover:text-white'}`}
+              >
+                📋 Active Inventory
+              </button>
+              <button
+                onClick={() => { setTab('dealers'); setIsMobileDrawerOpen(false); }}
+                className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === 'dealers' ? 'text-orange-500' : 'text-gray-400 hover:text-white'}`}
+              >
+                🏢 Showrooms
+              </button>
+              <button
+                onClick={() => { setTab('media'); setIsMobileDrawerOpen(false); }}
+                className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === 'media' ? 'text-orange-500' : 'text-gray-400 hover:text-white'}`}
+              >
+                🎥 Showroom Media
+              </button>
+              <button
+                onClick={() => { setTab('insights'); setIsMobileDrawerOpen(false); }}
+                className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === 'insights' ? 'text-orange-500' : 'text-gray-400 hover:text-white'}`}
+              >
+                📈 Market Insights
+              </button>
+              <button
+                onClick={() => { setTab('concierge'); setIsMobileDrawerOpen(false); }}
+                className={`font-black py-2.5 text-left transition-colors cursor-pointer block w-full ${currentTab === 'concierge' ? 'text-orange-500' : 'text-gray-400 hover:text-white'}`}
+              >
+                📞 Direct Concierge
+              </button>
+              <button
+                onClick={() => { handleSetCategory('gateway'); setIsMobileDrawerOpen(false); }}
+                className="font-black py-3 text-left text-orange-500 hover:text-orange-400 border-t border-white/5 pt-4 flex items-center gap-1.5 uppercase tracking-widest mt-2"
+              >
+                Return to Gateway
+              </button>
+            </nav>
+          </div>
+
+          {/* Drawer bottom utilities */}
+          <div className="space-y-4 pt-6 border-t border-white/5 text-left">
+            {!currentUser ? (
+              <button
+                onClick={() => { setTab('portal'); setIsMobileDrawerOpen(false); }}
+                className="w-full text-center text-xs font-mono font-black uppercase text-[#38BDF8] border border-[#38BDF8]/30 bg-[#38BDF8]/5 py-3 rounded-xl cursor-pointer"
+              >
+                Sign In / Register
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 bg-[#121c32]/65 p-3 rounded-xl border border-white/5">
+                  <div className="w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center font-black text-xs uppercase shrink-0">
+                    {(currentUser.displayName || currentUser.email || 'User').substring(0, 1).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-white font-bold text-xs truncate leading-none">
+                      {currentUser.displayName || currentUser.email || 'User'}
+                    </p>
+                    <span className="text-[8px] text-orange-400 font-mono uppercase tracking-widest block mt-1">{currentUser.role}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { handleLogout(); setIsMobileDrawerOpen(false); }}
+                  className="w-full text-center text-xs font-mono font-black uppercase text-red-500 hover:bg-red-500/10 py-3 rounded-xl border border-red-500/20 cursor-pointer"
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+
       </div>
-    </div>
-  );
-}
+    );
+  }

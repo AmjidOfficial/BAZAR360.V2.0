@@ -3,59 +3,116 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Work Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "Work Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-bg-primary: var(--color-bg-primary);
+  --color-bg-secondary: var(--color-bg-secondary);
+  --color-text-main: var(--color-text-main);
+  --color-text-muted: var(--color-text-muted);
+  --color-border-main: var(--color-border-main);
+  --color-accent-main: var(--color-accent-main);
+  --color-accent-hover: var(--color-accent-hover);
+
+  --color-brand-teal-deep: #1F6F5F;
+  --color-brand-teal-active: #2FA084;
+  --color-brand-teal-light: #6FCF97;
+  --color-bg-neutral: #EEEEEE;
 }
 
 body {
-  background-color: var(--brand-bg);
-  color: var(--brand-text);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-main);
   font-family: var(--font-sans);
-  transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-accent-hover);
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base variables (Gateway Space Dark by default) */
 :root {
-  --brand-bg: #0B1121;
-  --brand-text: #ffffff;
-  --brand-text-muted: #94a3b8;
-  --brand-card: #121c32;
-  --brand-border: rgba(255, 255, 255, 0.05);
-  --brand-accent: #f97316;
-  --brand-accent-hover: #ea580c;
-  --brand-accent-rgb: 249, 115, 22;
+  --color-bg-primary: #030712;
+  --color-bg-secondary: #0b0f19;
+  --color-text-main: #f3f4f6;
+  --color-text-muted: #9ca3af;
+  --color-border-main: rgba(56, 189, 248, 0.12);
+  --color-accent-main: #38BDF8;
+  --color-accent-hover: #0ea5e9;
+  
+  --brand-bg: var(--color-bg-primary);
+  --brand-text: var(--color-text-main);
+  --brand-text-muted: var(--color-text-muted);
+  --brand-card: var(--color-bg-secondary);
+  --brand-border: var(--color-border-main);
+  --brand-accent: var(--color-accent-main);
+  --brand-accent-hover: var(--color-accent-hover);
+  --brand-accent-rgb: 56, 189, 248;
 }
 
+/* Explicit Light Mode Override class */
+.light {
+  --color-bg-primary: #fafafa;
+  --color-bg-secondary: #ffffff;
+  --color-text-main: #0c0a09;
+  --color-text-muted: #57534e;
+  --color-border-main: #e7e5e4;
+  --color-accent-main: #0284c7;
+  --color-accent-hover: #0369a1;
+}
+
+/* Explicit Dark Mode Override class (Upgraded to Gateway Space Dark) */
+.dark {
+  --color-bg-primary: #030712;
+  --color-bg-secondary: #0b0f19;
+  --color-text-main: #f3f4f6;
+  --color-text-muted: #9ca3af;
+  --color-border-main: rgba(56, 189, 248, 0.12);
+  --color-accent-main: #38BDF8;
+  --color-accent-hover: #0ea5e9;
+}
+
+/* Legacy theme classes for backward-compatibility */
 .theme-luxury-light {
-  --brand-bg: #f8fafc;
-  --brand-text: #0f172a;
-  --brand-text-muted: #475569;
-  --brand-card: #ffffff;
-  --brand-border: #e2e8f0;
-  --brand-accent: #f97316;
-  --brand-accent-hover: #ea580c;
-  --brand-accent-rgb: 249, 115, 22;
+  --color-bg-primary: #fafafa;
+  --color-bg-secondary: #ffffff;
+  --color-text-main: #0c0a09;
+  --color-text-muted: #57534e;
+  --color-border-main: #e7e5e4;
+  --color-accent-main: #0284c7;
+  --color-accent-hover: #0369a1;
+}
+
+.theme-cosmic-dark {
+  --color-bg-primary: #030712;
+  --color-bg-secondary: #0b0f19;
+  --color-text-main: #f3f4f6;
+  --color-text-muted: #9ca3af;
+  --color-border-main: rgba(56, 189, 248, 0.12);
+  --color-accent-main: #38BDF8;
+  --color-accent-hover: #0ea5e9;
 }
 
 .theme-mint-emerald {
-  --brand-bg: #03140F;
-  --brand-text: #e2f0ec;
-  --brand-text-muted: #5e8a7f;
-  --brand-card: #08211a;
-  --brand-border: rgba(16, 185, 129, 0.15);
-  --brand-accent: #10b981;
-  --brand-accent-hover: #059669;
-  --brand-accent-rgb: 16, 185, 129;
+  --color-bg-primary: #03140F;
+  --color-bg-secondary: #08211a;
+  --color-text-main: #e2f0ec;
+  --color-text-muted: #5e8a7f;
+  --color-border-main: rgba(16, 185, 129, 0.15);
+  --color-accent-main: #10b981;
+  --color-accent-hover: #059669;
 }
 
 .theme-obsidian-gold {
-  --brand-bg: #050505;
-  --brand-text: #f4f4f5;
-  --brand-text-muted: #8e8e93;
-  --brand-card: #0f0f12;
-  --brand-border: rgba(217, 119, 6, 0.20);
-  --brand-accent: #eab308;
-  --brand-accent-hover: #ca8a04;
-  --brand-accent-rgb: 234, 179, 8;
+  --color-bg-primary: #050505;
+  --color-bg-secondary: #0f0f12;
+  --color-text-main: #f4f4f5;
+  --color-text-muted: #8e8e93;
+  --color-border-main: rgba(217, 119, 6, 0.20);
+  --color-accent-main: #eab308;
+  --color-accent-hover: #ca8a04;
 }
 
 /* Custom scrollbar for premium lists */
@@ -87,7 +144,7 @@ input[type="range"]::-webkit-slider-thumb {
   height: 16px;
   width: 16px;
   border-radius: 9999px;
-  background: #F97316;
+  background: var(--color-accent-main);
   cursor: pointer;
   transition: transform 100ms ease;
 }
@@ -98,7 +155,7 @@ input[type="range"]::-moz-range-thumb {
   height: 16px;
   width: 16px;
   border-radius: 9999px;
-  background: #F97316;
+  background: var(--color-accent-main);
   cursor: pointer;
   transition: transform 100ms ease;
 }
@@ -154,4 +211,6 @@ input[type="range"]::-moz-range-thumb:hover {
 .animate-fade-in {
   animation: fadeIn 0.2s ease-out forwards;
 }
+
+
 

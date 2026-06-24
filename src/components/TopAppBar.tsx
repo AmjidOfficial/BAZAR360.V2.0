@@ -1,4 +1,4 @@
-import { Bell, PlusCircle, User, ShieldAlert, LogOut, DollarSign, Wallet, Menu } from 'lucide-react';
+import { Bell, PlusCircle, User, ShieldAlert, LogOut, DollarSign, Wallet, Menu, Sun, Moon, Monitor } from 'lucide-react';
 import { UserProfile } from '../lib/dbService';
 import { useCurrencyMode } from '../lib/currency';
 
@@ -34,7 +34,7 @@ export default function TopAppBar({
   const { currencyMode, changeCurrencyMode } = useCurrencyMode();
 
   return (
-    <header className={`flex justify-between items-center w-full px-4 md:px-12 h-16 fixed top-0 z-50 bg-[#070c18] border-b border-white/5 shadow-2xl transition-all`}>
+    <header className={`flex justify-between items-center w-full px-4 md:px-12 h-16 fixed top-0 z-50 bg-[#070c18] border-b border-white/5 shadow-2xl transition-all text-white`}>
       <div className="flex items-center gap-4">
         {/* Dedicated Back to Gateway page button */}
         <button
@@ -112,7 +112,7 @@ export default function TopAppBar({
           className={`font-black transition-all duration-150 cursor-pointer uppercase ${
             currentTab === 'insights'
               ? 'text-orange-500 border-b-2 border-orange-500 pb-1'
-              : 'text-[#a3b3cc] hover:text-white'
+              : 'text-gray-400 hover:text-white'
           }`}
         >
           MARKET INSIGHTS
@@ -195,6 +195,29 @@ export default function TopAppBar({
           🏬 SHOWROOMS
         </button>
 
+        {/* Premium Cycle Theme Toggle: Light -> Dark -> System */}
+        <button
+          onClick={() => {
+            const nextMap: Record<string, string> = {
+              'light': 'dark',
+              'dark': 'system',
+              'system': 'light'
+            };
+            onThemeChange(nextMap[currentTheme] || 'light');
+          }}
+          className="flex items-center justify-center w-9 h-9 bg-bg-secondary hover:bg-bg-primary text-text-muted hover:text-text-main border border-border-main rounded-xl transition-all duration-200 cursor-pointer relative group active:scale-95"
+          title={`Active Theme: ${currentTheme.toUpperCase()} (Click to change)`}
+          style={{ minHeight: '34px' }}
+        >
+          {currentTheme === 'light' && <Sun size={15} className="text-amber-500" />}
+          {currentTheme === 'dark' && <Moon size={15} className="text-sky-400" />}
+          {currentTheme === 'system' && <Monitor size={15} className="text-emerald-400" />}
+          
+          <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-stone-900 text-white text-[8px] font-mono tracking-widest uppercase px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none border border-white/10">
+            {currentTheme}
+          </span>
+        </button>
+
         {/* Sign In / Register Button for Guest Customers */}
         {!currentUser ? (
           <button
@@ -211,9 +234,11 @@ export default function TopAppBar({
               title="Manage profile & showroom roles"
             >
               <div className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center font-extrabold text-[9px] uppercase font-mono">
-                {currentUser.displayName.substring(0, 1).toUpperCase()}
+                {(currentUser.displayName || currentUser.email || 'User').substring(0, 1).toUpperCase()}
               </div>
-              <span className="text-gray-300 font-bold max-w-[80px] truncate">{currentUser.displayName.split(' ')[0]}</span>
+              <span className="text-gray-300 font-bold max-w-[80px] truncate">
+                {(currentUser.displayName || currentUser.email || 'User').split(' ')[0]}
+              </span>
               <span className="bg-amber-500/10 text-amber-400 font-bold px-1.5 py-0.5 rounded text-[8px] border border-amber-500/20 uppercase tracking-wider scale-90">
                 {currentUser.role}
               </span>

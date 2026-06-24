@@ -84,6 +84,13 @@ service cloud.firestore {
         && data.suggestion_text is string && data.suggestion_text.size() <= 2000;
     }
 
+    function isValidDealer(data) {
+      return data.keys().hasAll(['id', 'name', 'location'])
+        && data.id is string
+        && data.name is string && data.name.size() <= 100
+        && data.location is string && data.location.size() <= 200;
+    }
+
     // ==========================================
     // 4. COLLECTION ACCESS RULES & MATCH BLOCKS
     // ==========================================
@@ -98,8 +105,18 @@ service cloud.firestore {
     // Showrooms Collection
     match /dealers/{dealerId} {
       allow read: if true;
-      allow create, update: if true;
-      allow delete: if true;
+      allow create: if isSignedIn() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Showroom Owner'
+      ) && isValidDealer(incoming());
+      
+      allow update: if isSignedIn() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' ||
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Showroom Owner' &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.salesPodId == dealerId)
+      ) && isValidDealer(incoming());
+      
+      allow delete: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
 
       // Nested Showroom Reviews Match
       match /reviews/{reviewId} {
@@ -119,6 +136,20 @@ service cloud.firestore {
       match /offers/{offerId} {
         allow read: if true;
         allow create, update: if isValidOffer(incoming()) && isValidId(offerId);
+        allow delete: if true;
+      }
+
+      // Embedded Comments Match Path
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if true;
+        allow update, delete: if true;
+      }
+
+      // Embedded Likes Match Path
+      match /likes/{userId} {
+        allow read: if true;
+        allow create, update: if true;
         allow delete: if true;
       }
     }

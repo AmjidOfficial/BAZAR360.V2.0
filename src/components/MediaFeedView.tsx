@@ -94,13 +94,13 @@ const PRELOADED_VIDEOS: VideoFeedItem[] = [
 
 export default function MediaFeedView({ dealers, currentUser, onForceLogin }: MediaFeedViewProps) {
   const [videoFeed, setVideoFeed] = useState<VideoFeedItem[]>(() => {
-    const saved = localStorage.getItem('bazar360_videos');
-    if (saved) {
-      try {
+    try {
+      const saved = localStorage.getItem('bazar360_videos');
+      if (saved) {
         return JSON.parse(saved);
-      } catch (err) {
-        // fallback
       }
+    } catch (err) {
+      // fallback
     }
     return PRELOADED_VIDEOS;
   });
@@ -122,7 +122,7 @@ export default function MediaFeedView({ dealers, currentUser, onForceLogin }: Me
   const [isSubmitSuccessful, setIsSubmitSuccessful] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('bazar360_videos', JSON.stringify(videoFeed));
+    try { localStorage.setItem('bazar360_videos', JSON.stringify(videoFeed)); } catch(e) {}
   }, [videoFeed]);
 
   // Is current logged in user an admin?
@@ -623,7 +623,7 @@ export default function MediaFeedView({ dealers, currentUser, onForceLogin }: Me
             <div className="bg-[#070c12] p-3 rounded-xl border border-white/5 space-y-1">
               <p className="text-[9px] font-mono text-gray-500 uppercase font-black">Current session profile:</p>
               <p className="text-white font-mono font-bold text-[10px] uppercase">
-                {currentUser ? `${currentUser.displayName} (${currentUser.role})` : 'Guest Visitor Session (Offline)'}
+                {currentUser ? `${currentUser.displayName || currentUser.email || 'User'} (${currentUser.role})` : 'Guest Visitor Session (Offline)'}
               </p>
             </div>
 

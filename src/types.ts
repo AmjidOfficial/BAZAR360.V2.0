@@ -39,6 +39,15 @@ export interface CarListing {
   assemblyType?: 'Local' | 'Imported';
   dentPaintDescription?: string;
   tokenTaxStatus?: 'Paid' | 'Outstanding';
+  
+  isSold?: boolean;
+}
+
+export interface ShowroomThemeSettings {
+  primaryColor?: string;
+  secondaryColor?: string;
+  fontFamily?: string;
+  bgStyle?: 'dark' | 'light' | 'emerald' | 'gold';
 }
 
 export interface Dealer {
@@ -56,6 +65,7 @@ export interface Dealer {
   phone: string;
   whatsapp: string;
   flagshipVerified?: boolean;
+  verified?: boolean;
   lines?: {
     lineA: string;
     lineB: string;
@@ -71,6 +81,15 @@ export interface Dealer {
   };
   activityFeed: ActivityPost[];
   theme_choice?: 'Cosmic' | 'Bone' | 'Emerald' | 'Gold';
+  themeSettings?: ShowroomThemeSettings;
+  theme_config?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    fontFamily?: string;
+    bgStyle?: 'dark' | 'light' | 'emerald' | 'gold';
+    borderStyle?: string;
+    headerStyle?: string;
+  };
 }
 
 export interface ActivityPost {

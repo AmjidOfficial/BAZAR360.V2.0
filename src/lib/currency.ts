@@ -36,7 +36,11 @@ export function formatDualPrice(pkr: number, includeUsd = true): string {
 // Global active currency hook for options
 export function useCurrencyMode() {
   const [currencyMode, setCurrencyMode] = useState<'PKR' | 'USD' | 'DUAL'>(() => {
-    return (localStorage.getItem('bazar360-currency-preference') as 'PKR' | 'USD' | 'DUAL') || 'DUAL';
+    try {
+      return (localStorage.getItem('bazar360-currency-preference') as 'PKR' | 'USD' | 'DUAL') || 'DUAL';
+    } catch(e) {
+      return 'DUAL';
+    }
   });
 
   useEffect(() => {
@@ -50,7 +54,7 @@ export function useCurrencyMode() {
   }, []);
 
   const changeCurrencyMode = (mode: 'PKR' | 'USD' | 'DUAL') => {
-    localStorage.setItem('bazar360-currency-preference', mode);
+    try { localStorage.setItem('bazar360-currency-preference', mode); } catch(e) {}
     setCurrencyMode(mode);
     window.dispatchEvent(new CustomEvent('bazar360-currency-change', { detail: mode }));
   };

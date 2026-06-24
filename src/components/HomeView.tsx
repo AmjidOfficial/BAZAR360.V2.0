@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { 
   Search, 
   MapPin, 
@@ -24,13 +25,16 @@ import {
   X,
   Lock,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Grid,
+  List
 } from 'lucide-react';
 import { Dealer, CarListing } from '../types';
 import { useCurrencyMode } from '../lib/currency';
 import { PAKISTAN_CITIES_MATRIX, ALL_PAKISTAN_CITIES } from '../lib/cities';
 import { UserProfile, dbSaveLead } from '../lib/dbService';
 import AutoChoiceEngine from './AutoChoiceEngine';
+import { VehicleCard } from './VehicleCard';
 
 export const VEHICLE_DICTIONARY: Record<string, Array<{ make: string; model: string; price: number; description: string }>> = {
   SUV: [
@@ -123,6 +127,7 @@ export default function HomeView({
   const [sortBy, setSortBy] = useState('Newest');
   const [filterYearMin, setFilterYearMin] = useState<number>(2000);
   const [filterYearMax, setFilterYearMax] = useState<number>(2026);
+  const [cardLayout, setCardLayout] = useState<'grid' | 'list'>('grid');
 
   // Real-time synchronization of currency switches to the budget typing input box
   React.useEffect(() => {
@@ -1017,12 +1022,38 @@ export default function HomeView({
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              {/* Layout Switcher */}
+              <div className="flex bg-bg-primary border border-border-main p-1 rounded-xl">
+                <button
+                  onClick={() => setCardLayout('grid')}
+                  className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
+                    cardLayout === 'grid'
+                      ? 'bg-accent-main text-stone-950'
+                      : 'text-text-muted hover:text-text-main'
+                  }`}
+                  title="Grid Layout"
+                >
+                  <Grid size={13} />
+                </button>
+                <button
+                  onClick={() => setCardLayout('list')}
+                  className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
+                    cardLayout === 'list'
+                      ? 'bg-accent-main text-stone-950'
+                      : 'text-text-muted hover:text-text-main'
+                  }`}
+                  title="List Layout"
+                >
+                  <List size={13} />
+                </button>
+              </div>
+
               <span className="text-[9px] text-gray-500 font-mono hidden sm:inline">SORT BY:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="bg-[#121a2a] border border-[#1e293b] text-white font-mono text-[9px] uppercase font-bold py-1.5 px-2.5 rounded-lg focus:outline-none focus:border-[#38BDF8] cursor-pointer"
+                className="bg-bg-secondary border border-border-main text-text-main font-mono text-[9px] uppercase font-bold py-1.5 px-2.5 rounded-lg focus:outline-none focus:border-accent-main cursor-pointer"
               >
                 <option value="Newest">🔥 Newly Uploaded</option>
                 <option value="PriceLow">🪙 Price: Low to High</option>
@@ -1047,108 +1078,33 @@ export default function HomeView({
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <motion.div 
+              variants={{
+                hidden: { opacity: 0 },
+                show: {
+                  opacity: 1,
+                  transition: { staggerChildren: 0.08 }
+                }
+              }}
+              initial="hidden"
+              animate="show"
+              className={cardLayout === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 gap-6" : "flex flex-col gap-6"}
+            >
               {sortedListings.map((car) => {
-                // Find associated dealer logo/avatar
                 const carDealer = dealers.find(d => d.id === car.dealerId);
-                const isAutoChoice = car.dealerId === 'auto-choice-peshawar';
-                
                 return (
-                  <div
+                  <VehicleCard
                     key={car.id}
-                    onClick={() => onSelectListing(car)}
-                    className="bg-[#121a2a] border border-[#1e293b] hover:border-[#38BDF8]/60 rounded-2xl overflow-hidden group hover:-translate-y-1 transition-all duration-200 cursor-pointer shadow-xl flex flex-col justify-between"
-                  >
-                    {/* Media viewport container with Clean ratio aspect */}
-                    <div className="relative aspect-[16/10] bg-[#080d19] overflow-hidden">
-                      <img
-                        alt={car.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        src={car.imageUrl}
-                        referrerPolicy="no-referrer"
-                      />
-                      
-                      {/* Interactive certification badge overlay */}
-                      {isAutoChoice ? (
-                        <div className="absolute top-2.5 left-2.5 bg-orange-500/95 backdrop-blur-sm px-2.5 py-1 rounded-lg text-slate-950 text-[8px] font-mono font-black uppercase flex items-center gap-1 shadow-lg border border-orange-400/30">
-                          <Sparkles size={9} className="animate-pulse" /> Flagship Verified Bargain
-                        </div>
-                      ) : car.verified ? (
-                        <div className="absolute top-2.5 left-2.5 bg-[#080d19]/90 backdrop-blur-sm border border-white/10 px-2 py-0.5 rounded-lg text-white text-[8px] font-mono font-extrabold uppercase flex items-center gap-1 shadow-lg">
-                          <ShieldCheck size={10} className="text-[#38BDF8]" /> Verified
-                        </div>
-                      ) : null}
-
-                      {/* Display model year overlay */}
-                      <div className="absolute bottom-2.5 right-2 text-white bg-[#080d19]/90 border border-[#1e293b] text-[8px] font-mono font-extrabold px-2 py-0.5 rounded uppercase tracking-wider">
-                        {car.year} Model
-                      </div>
-
-                      {onToggleCompare && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleCompare(car);
-                          }}
-                          className={`absolute top-2.5 right-2 px-2.5 py-1.5 rounded-lg border text-[8px] font-mono font-black uppercase backdrop-blur-sm transition-all cursor-pointer ${
-                            compareList.some(item => item.id === car.id)
-                              ? 'bg-orange-500 text-slate-950 border-orange-400'
-                              : 'bg-[#080d19]/85 text-gray-400 border-white/10 hover:text-white'
-                          }`}
-                          style={{ minHeight: '32px' }}
-                        >
-                          {compareList.some(item => item.id === car.id) ? '✓ Compare Active' : '+ Comparison'}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Meta descriptions and details wrapper */}
-                    <div className="p-4 space-y-3.5 flex-grow flex flex-col justify-between">
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-1.5">
-                          <span className="text-[9px] text-[#38BDF8] font-mono uppercase font-black truncate max-w-[120px]">
-                            {car.make} • {car.model}
-                          </span>
-                          {carDealer && (
-                            <span className="text-[8px] text-gray-500 font-sans truncate bg-[#080d19] border border-white/5 px-2 py-0.5 rounded">
-                              {carDealer.name}
-                            </span>
-                          )}
-                        </div>
-
-                        <h3 className="text-white text-xs font-bold uppercase tracking-tight truncate group-hover:text-[#38BDF8] transition-colors leading-tight">
-                          {car.title}
-                        </h3>
-
-                        {/* Interactive highlights summary */}
-                        <div className="flex items-center gap-1.5 text-[9px] text-white/50 font-mono uppercase flex-wrap">
-                          <span className="bg-[#080d19] px-2 py-0.5 rounded flex items-center gap-1">
-                            <Gauge size={10} className="text-[#38BDF8]" /> {car.mileage.toLocaleString()} KM
-                          </span>
-                          <span className="bg-[#080d19] px-2 py-0.5 rounded">{car.fuelType}</span>
-                          <span className="bg-[#080d19] px-2 py-0.5 rounded">{car.transmission}</span>
-                        </div>
-                      </div>
-
-                      {/* Line partition */}
-                      <div className="pt-2 border-t border-white/5 flex items-end justify-between">
-                        <div className="flex flex-col">
-                          <span className="text-[8px] font-mono uppercase tracking-widest text-gray-500">Valuation</span>
-                          <span className="text-sm font-black text-orange-400">
-                            {renderPrice(car.price)}
-                          </span>
-                        </div>
-
-                        <div className="bg-[#080d19] border border-white/5 group-hover:bg-[#38BDF8]/20 group-hover:text-[#38BDF8] group-hover:border-[#38BDF8]/40 p-2.5 rounded-lg transition-all">
-                          <Eye size={12} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                    car={car}
+                    dealer={carDealer}
+                    variant={cardLayout}
+                    onSelect={onSelectListing}
+                    onToggleCompare={onToggleCompare}
+                    isComparing={compareList.some(item => item.id === car.id)}
+                  />
                 );
               })}
-            </div>
+            </motion.div>
           )}
 
         </div>

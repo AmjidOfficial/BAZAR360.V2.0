@@ -47,10 +47,12 @@ const USERS_COLLECTION = 'users';
 
 // Seed Database helper
 export async function seedDatabaseIfEmpty() {
-  if (typeof window !== 'undefined' && localStorage.getItem('bazar360_db_seeded') === 'true') {
-    console.log('BAZAR360 database already seeded on this client. Skipping check.');
-    return;
-  }
+  try {
+    if (typeof window !== 'undefined' && localStorage.getItem('bazar360_db_seeded') === 'true') {
+      console.log('BAZAR360 database already seeded on this client. Skipping check.');
+      return;
+    }
+  } catch(e) {}
 
   try {
     // Check sentinel document first to avoid 20+ parallel read queries
@@ -59,7 +61,7 @@ export async function seedDatabaseIfEmpty() {
     if (sentinelSnap.exists() && sentinelSnap.data()?.completed === true) {
       console.log('Firestore backend reports database is already fully seeded. Saving Client index.');
       if (typeof window !== 'undefined') {
-        localStorage.setItem('bazar360_db_seeded', 'true');
+        try { localStorage.setItem('bazar360_db_seeded', 'true'); } catch(e) {}
       }
       return;
     }
@@ -134,7 +136,7 @@ export async function seedDatabaseIfEmpty() {
     await setDoc(sentinelRef, { completed: true, timestamp: new Date().toISOString() });
 
     if (typeof window !== 'undefined') {
-      localStorage.setItem('bazar360_db_seeded', 'true');
+      try { localStorage.setItem('bazar360_db_seeded', 'true'); } catch(e) {}
     }
     console.log('BAZAR360 Seeding completed/verified.');
   } catch (err) {
@@ -498,6 +500,111 @@ export async function dbSaveSuggestion(suggestion: Suggestion): Promise<void> {
     console.log('Suggestion saved to Firestore:', suggestion.id);
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `suggestions/${suggestion.id}`);
+  }
+}
+
+// ==========================================
+// 11. Social Interactions: Likes & Comments
+// ==========================================
+export interface ListingComment {
+  id: string;
+  listingId: string;
+  userName: string;
+  userId?: string;
+  text: string;
+  createdAt: string;
+}
+
+export async function dbAddComment(listingId: string, comment: ListingComment): Promise<void> {
+  try {
+    const ref = doc(db, `listings/${listingId}/comments`, comment.id);
+    await setDoc(ref, {
+      ...comment,
+      createdAt: comment.createdAt || new Date().toISOString()
+    });
+    console.log('Comment added to listing:', listingId);
+  } catch (err) {
+    console.warn('Silent comment save fallback:', err);
+    // If we're offline, save to local storage fallback
+    try {
+      const stored = localStorage.getItem(`bazar360_comments_${listingId}`);
+      const comments = stored ? JSON.parse(stored) : [];
+      comments.push(comment);
+      localStorage.setItem(`bazar360_comments_${listingId}`, JSON.stringify(comments));
+    } catch (e) {}
+  }
+}
+
+export async function dbFetchComments(listingId: string): Promise<ListingComment[]> {
+  try {
+    const snap = await getDocs(collection(db, `listings/${listingId}/comments`));
+    const list: ListingComment[] = [];
+    snap.forEach((doc) => {
+      const data = doc.data();
+      list.push({
+        id: doc.id,
+        listingId: listingId,
+        userName: data.userName || 'Anonymous',
+        userId: data.userId || '',
+        text: data.text || '',
+        createdAt: data.createdAt || new Date().toISOString()
+      });
+    });
+    
+    // Sort oldest first
+    return list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  } catch (err) {
+    console.warn('Offline comment fetch fallback:', err);
+    try {
+      const stored = localStorage.getItem(`bazar360_comments_${listingId}`);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {}
+    return [];
+  }
+}
+
+export async function dbToggleLike(listingId: string, userId: string, isLiking: boolean): Promise<void> {
+  try {
+    const ref = doc(db, `listings/${listingId}/likes`, userId);
+    if (isLiking) {
+      await setDoc(ref, {
+        userId,
+        createdAt: new Date().toISOString()
+      });
+    } else {
+      await deleteDoc(ref);
+    }
+    console.log(`Like status for listing ${listingId} updated to:`, isLiking);
+  } catch (err) {
+    console.warn('Silent like save fallback:', err);
+    try {
+      const stored = localStorage.getItem(`bazar360_likes_${listingId}`);
+      let likes = stored ? JSON.parse(stored) : [];
+      if (isLiking) {
+        if (!likes.includes(userId)) likes.push(userId);
+      } else {
+        likes = likes.filter((id: string) => id !== userId);
+      }
+      localStorage.setItem(`bazar360_likes_${listingId}`, JSON.stringify(likes));
+    } catch (e) {}
+  }
+}
+
+export async function dbFetchLikes(listingId: string): Promise<string[]> {
+  try {
+    const snap = await getDocs(collection(db, `listings/${listingId}/likes`));
+    const list: string[] = [];
+    snap.forEach((doc) => {
+      list.push(doc.id); // Each doc ID is the userId who liked it
+    });
+    return list;
+  } catch (err) {
+    console.warn('Offline like fetch fallback:', err);
+    try {
+      const stored = localStorage.getItem(`bazar360_likes_${listingId}`);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {}
+    return [];
   }
 }
 

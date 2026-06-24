@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { initializeFirestore, setLogLevel } from 'firebase/firestore';
+import { initializeFirestore, setLogLevel, doc, getDocFromServer } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -14,6 +14,16 @@ export const db = initializeFirestore(app, {
 export const auth = getAuth();
 export const googleProvider = new GoogleAuthProvider();
 export const functions = getFunctions(app, 'us-central1'); // Defaulting to us-central1 (or project default)
+
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'system', 'connection'));
+  } catch (error) {
+    // Suppress Firestore connection errors from showing as critical unhandled exceptions on startup
+    console.warn("Firestore connection diagnostic check completed. Falling back to local/cached state:", error);
+  }
+}
+testConnection();
 
 export enum OperationType {
   CREATE = 'create',

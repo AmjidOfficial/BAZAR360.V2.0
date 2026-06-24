@@ -2066,7 +2066,7 @@ export default function DealerStorefrontView({
                     {car.specs?.horspower || "450 HP"}
                   </span>
                   <span className="text-[8px] text-white/40 uppercase mt-0.5">
-                    {car.specs?.engine || "3.0L Turbo"}
+                    {car.specs?.engineSize || "3.0L Turbo"}
                   </span>
                 </div>
               ))}

@@ -335,7 +335,7 @@ export default function DetailedVehiclePostingPage({ onPostCreated, lang = 'en',
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto bg-slate-950/95 border border-white/5 rounded-3xl p-5 md:p-8 relative shadow-2xl overflow-hidden text-left" id="modern-60s-posting-wizard">
+    <div className="w-full max-w-2xl mx-auto bg-slate-950/95 border border-white/5 rounded-2xl sm:rounded-3xl p-3 sm:p-8 relative shadow-2xl overflow-hidden text-left" id="modern-60s-posting-wizard">
       
       {/* Background glow overlay */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-32 bg-[#38BDF8]/10 blur-3xl rounded-full pointer-events-none" />

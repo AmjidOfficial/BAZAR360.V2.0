@@ -85,6 +85,9 @@ export default function RegistrationPortal({
   const [regPass, setRegPass] = useState<string>('');
   const [regRole, setRegRole] = useState<'Private Seller' | 'Buyer' | 'Dealer' | 'Admin'>('Private Seller');
   const [regCity, setRegCity] = useState<string>('Peshawar');
+  const [regCountry, setRegCountry] = useState<string>('Pakistan');
+  const [regLang, setRegLang] = useState<'en' | 'ur'>('en');
+  const [acceptedTerms, setAcceptedTerms] = useState<boolean>(false);
 
   // WhatsApp OTP Authentication flow states
   const [otpSent, setOtpSent] = useState<boolean>(false);
@@ -293,6 +296,10 @@ export default function RegistrationPortal({
         setAuthError('Please enter your Full Name.');
         return;
       }
+      if (!acceptedTerms) {
+        setAuthError('You must accept the Terms and Conditions and Privacy Policy of BAZAR360 to register.');
+        return;
+      }
 
       const signupProfile: UserProfile = {
         uid: `usr-${Date.now().toString().slice(-6)}`,
@@ -301,9 +308,22 @@ export default function RegistrationPortal({
         phoneNumber: regPhone.trim(),
         phoneVerified: true,
         city: regCity,
-        state: 'KP',
-        role: regRole,
+        state: regCity === 'Peshawar' ? 'KP' : regCity === 'Karachi' ? 'Sindh' : 'Punjab',
+        country: regCountry,
+        role: regRole === 'Dealer' ? 'Showroom Owner' : 'Individual User',
         status: 'Active',
+        acceptedTerms: true,
+        preferredLanguage: regLang,
+        preferredTheme: 'dark',
+        notificationSettings: {
+          emailAlerts: true,
+          smsAlerts: true,
+          whatsappAlerts: true
+        },
+        privacySettings: {
+          showPhonePublicly: true,
+          showEmailPublicly: false
+        },
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -433,7 +453,7 @@ export default function RegistrationPortal({
   };
 
   return (
-    <div className="bg-[#1E293B] border border-white/5 text-white rounded-3xl p-6 md:p-8 shadow-2xl max-w-7xl mx-auto font-sans" id="registration-portal-outer-box">
+    <div className="bg-[#1E293B] border border-white/5 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-6 md:p-8 shadow-2xl max-w-7xl mx-auto font-sans" id="registration-portal-outer-box">
       
       {/* Header and Brand Presentation */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-white/5 pb-6 mb-6 gap-4">
@@ -537,7 +557,7 @@ export default function RegistrationPortal({
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
-          className="max-w-md mx-auto bg-white dark:bg-[#0b0f19] border border-slate-200 dark:border-white/5 p-6 sm:p-8 rounded-3xl shadow-xl dark:shadow-2xl transition-all"
+          className="max-w-md mx-auto bg-white dark:bg-[#0b0f19] border border-slate-200 dark:border-white/5 p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl dark:shadow-2xl transition-all"
         >
           {/* Header Block */}
           <div className="text-center mb-6">
@@ -739,18 +759,66 @@ export default function RegistrationPortal({
                     </div>
                   </div>
 
+                   <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1.5 font-bold">Market City</label>
+                      <select
+                        value={regCity}
+                        onChange={e => setRegCity(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors cursor-pointer"
+                      >
+                        <option value="Peshawar">Peshawar (Almas)</option>
+                        <option value="Islamabad">Islamabad</option>
+                        <option value="Lahore">Lahore</option>
+                        <option value="Karachi">Karachi</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1.5 font-bold">Country</label>
+                      <select
+                        value={regCountry}
+                        onChange={e => setRegCountry(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors cursor-pointer"
+                      >
+                        <option value="Pakistan">Pakistan 🇵🇰</option>
+                        <option value="United Arab Emirates">UAE 🇦🇪</option>
+                        <option value="Saudi Arabia">KSA 🇸🇦</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1.5 font-bold">Market City</label>
-                    <select
-                      value={regCity}
-                      onChange={e => setRegCity(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors cursor-pointer"
-                    >
-                      <option value="Peshawar">Peshawar (Almas Car Valley)</option>
-                      <option value="Islamabad">Islamabad</option>
-                      <option value="Lahore">Lahore</option>
-                      <option value="Karachi">Karachi</option>
-                    </select>
+                    <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1.5 font-bold">Preferred Language</label>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      {(['en', 'ur'] as const).map(lang => (
+                        <button
+                          key={lang}
+                          type="button"
+                          onClick={() => setRegLang(lang)}
+                          className={`py-2 rounded-xl text-[10px] font-mono font-bold uppercase transition-all border flex items-center justify-center gap-1 cursor-pointer ${
+                            regLang === lang
+                              ? 'bg-sky-500/10 dark:bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-400 dark:border-sky-500/30'
+                              : 'bg-slate-50 hover:bg-slate-100 dark:bg-[#1e293b]/50 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/5'
+                          }`}
+                        >
+                          <span>{lang === 'en' ? 'English (EN)' : 'Urdu (اردو)'}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      id="accept-terms-checkbox"
+                      checked={acceptedTerms}
+                      onChange={e => setAcceptedTerms(e.target.checked)}
+                      className="mt-0.5 rounded border-slate-300 dark:border-white/10 text-sky-500 focus:ring-sky-500 cursor-pointer"
+                    />
+                    <label htmlFor="accept-terms-checkbox" className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug cursor-pointer select-none">
+                      I accept the <b>Terms of Service</b>, <b>Privacy Policy</b>, and consent to receiving mobile verifications via SMS / WhatsApp.
+                    </label>
                   </div>
 
                   <button
@@ -904,7 +972,7 @@ export default function RegistrationPortal({
           {/* ========================================================== */}
           {/* UNIFIED LUXURY "MY PROFILE" DASHBOARD SECTION */}
           {/* ========================================================== */}
-          <div className="bg-[#111827] border border-white/5 rounded-3xl p-6 md:p-8 text-left shadow-xl" id="bazar360-profile-dashboard-card">
+          <div className="bg-[#111827] border border-white/5 rounded-2xl sm:rounded-3xl p-3 sm:p-6 md:p-8 text-left shadow-xl" id="bazar360-profile-dashboard-card">
             <div className="flex flex-col lg:flex-row gap-8">
               
               {/* Left Column: Premium Profile Sidebar */}

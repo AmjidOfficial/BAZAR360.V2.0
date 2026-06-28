@@ -41,6 +41,11 @@ export interface CarListing {
   tokenTaxStatus?: 'Paid' | 'Outstanding';
   
   isSold?: boolean;
+
+  // Premium specs for hero banner matching elite reference images
+  topSpeed?: string;
+  acceleration?: string;
+  range?: string;
 }
 
 export interface ShowroomThemeSettings {

@@ -16,8 +16,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     try {
       const saved = localStorage.getItem('bazar360_theme');
       if (saved === 'dark' || saved === 'light') return saved;
+      
+      // Check system preference
+      if (typeof window !== 'undefined' && window.matchMedia) {
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        return systemPrefersDark ? 'dark' : 'light';
+      }
     } catch (e) {}
-    return 'dark'; // Default to dark as requested
+    return 'light'; // Default to light
   });
 
   useEffect(() => {

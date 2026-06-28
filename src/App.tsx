@@ -88,7 +88,7 @@ export default function AppWrapper() {
 
 function App() {
   const { renderPrice } = useCurrencyMode();
-  const { theme, resolvedTheme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
 
   // Bilingual support state with automatic browser detection
   const [lang, setLang] = useState<'en' | 'ur'>(() => {
@@ -114,6 +114,41 @@ function App() {
     try {
       localStorage.setItem('bazar360_lang', nextLang);
     } catch (e) {}
+  };
+
+  // PWA Install Prompt State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      const isDismissed = sessionStorage.getItem('bazar360_install_dismissed') === 'true';
+      if (!isDismissed) {
+        setShowInstallBanner(true);
+      }
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`PWA Installation outcome: ${outcome}`);
+    setDeferredPrompt(null);
+    setShowInstallBanner(false);
+  };
+
+  const handleDismissInstall = () => {
+    sessionStorage.setItem('bazar360_install_dismissed', 'true');
+    setShowInstallBanner(false);
   };
 
   const [currentTab, setTab] = useState<string>('home');
@@ -215,8 +250,6 @@ function App() {
     title: "COMING SOON: A LOT MORE",
     sub: "We are expanding from elite cars to everything you need. A complete mega marketplace is just around the corner."
   });
-  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState<boolean>(false);
-
   // Suggestion Engine States
   const [suggestionText, setSuggestionText] = useState<string>('');
   const [isSubmittingSuggestion, setIsSubmittingSuggestion] = useState<boolean>(false);
@@ -844,15 +877,38 @@ function App() {
         <header className="w-full flex items-center justify-between py-3 border-b border-white/5 relative z-20 mb-3 max-w-7xl mx-auto shrink-0">
           {/* Core Branding */}
           <div className="flex items-center space-x-3 cursor-pointer select-none">
-            <div className="relative flex items-center justify-center w-11 h-11 rounded-2xl bg-[#1E293B] border border-white/5 shadow-sm">
-              <svg className="w-6 h-6 text-orange-500 animate-[spin_40s_linear_infinite]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path>
-              </svg>
-              <span className="absolute text-[10px] font-black text-sky-400">360</span>
-            </div>
+            <svg className="w-11 h-11 select-none flex-shrink-0" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Top dark blue/white arching bracket/arrow */}
+              <path d="M 45 70 C 45 32, 135 32, 135 70" stroke="#38BDF8" strokeWidth="12" strokeLinecap="round" fill="none" className="stroke-[#00E5FF]" />
+              {/* 2 white rivets on the left of upper arc */}
+              <circle cx="62" cy="54" r="3.5" fill="#FFFFFF" />
+              {/* Bottom orange arrow arc */}
+              <path d="M 35 105 C 40 152, 128 152, 142 118" stroke="#F97316" strokeWidth="12" strokeLinecap="round" fill="none" />
+              {/* Arrow head for orange arc */}
+              <path d="M 132 112 L 148 112 L 144 126 Z" fill="#F97316" stroke="#F97316" strokeWidth="3" strokeLinejoin="round" />
+
+              {/* Number 360 in emblem */}
+              <text x="32" y="112" fill="#FFFFFF" className="font-sans font-black" fontSize="64" letterSpacing="-4">360</text>
+
+              {/* Orange filled circle with shopping cart icon */}
+              <circle cx="132" cy="90" r="24" fill="url(#orangeLogoGradApp)" />
+              {/* White shopping cart path */}
+              <path d="M 118 80 L 122 80 L 126 94 L 140 94 L 144 84 L 124 84" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+              <circle cx="127" cy="101" r="3" fill="#FFFFFF" />
+              <circle cx="139" cy="101" r="3" fill="#FFFFFF" />
+
+              <defs>
+                <linearGradient id="orangeLogoGradApp" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#F97316" />
+                  <stop offset="100%" stopColor="#EA580C" />
+                </linearGradient>
+              </defs>
+            </svg>
             <div className="flex flex-col text-left">
-              <span className="text-xl font-black text-white tracking-wider leading-none">BAZAR<span className="text-orange-500 font-extrabold">360</span></span>
-              <span className="text-[10px] font-mono font-black text-gray-500 tracking-[0.25em] uppercase pt-1">Ecosystem</span>
+              <span className="text-xl font-black text-white tracking-wider leading-none">BAZAR<span className="text-orange-500 font-extrabold">360</span><span className="text-xs font-black text-[#38BDF8] ml-0.5 lowercase">.online</span></span>
+              <span className="text-[7.5px] font-bold text-slate-400 tracking-[0.18em] uppercase pt-1 font-sans">
+                BUY <span className="text-orange-500 font-black">|</span> SELL <span className="text-orange-500 font-black">|</span> CONNECT
+              </span>
             </div>
           </div>
 
@@ -924,10 +980,13 @@ function App() {
                 </div>
 
                 <div className="flex items-center gap-4 shrink-0">
-                  <div className="w-14 h-14 rounded-2xl bg-sky-500/10 flex items-center justify-center border border-sky-500/20 shadow-sm">
-                    <svg className="w-8 h-8 text-[#38BDF8] group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.129-1.125V11.25M3 14.25h15m-15 0a1.125 1.125 0 0 1-1.125-1.125V8.25a1.125 1.125 0 0 1 1.125-1.125h12.75c.621 0 1.125.504 1.125 1.125v5.25" />
-                    </svg>
+                  <div className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center border border-sky-500/20 shadow-sm bg-slate-900/40">
+                    <img 
+                      src="/auto_choice_logo_1781509565476.jpg" 
+                      alt="Auto Choice Flagship Logo" 
+                      className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
+                      referrerPolicy="no-referrer"
+                    />
                   </div>
                   <div className="text-left">
                     <h2 className="text-xl font-black font-sans text-white uppercase tracking-tight">Auto Choice</h2>
@@ -1345,7 +1404,6 @@ function App() {
         isWithTicker={currentCategory === 'auto'}
         currentCategory={currentCategory}
         onCategoryChange={handleSetCategory}
-        onMobileMenuToggle={() => setIsMobileDrawerOpen(prev => !prev)}
         lang={lang}
         onLanguageToggle={toggleLanguage}
       />
@@ -1629,9 +1687,9 @@ function App() {
             )}
 
             {currentTab === 'portal' && (
-              <div className="max-w-7xl mx-auto space-y-12 pb-16 px-4 md:px-8 text-left">
+              <div className="max-w-7xl mx-auto space-y-6 md:space-y-12 pb-16 px-1.5 sm:px-4 md:px-8 text-left">
                 {/* Secondary Registration Portal and Submissions forms */}
-                <div className="border border-white/5 rounded-3xl p-6 md:p-8 bg-[#0a0a0c] text-left">
+                <div className="border border-white/5 rounded-2xl md:rounded-3xl p-3 sm:p-6 md:p-8 bg-[#0a0a0c] text-left">
                   <div className="border-b border-white/5 pb-3 mb-6">
                     <h2 className="font-sans font-extrabold text-lg md:text-xl text-zinc-400 uppercase tracking-wider">Multi-Role Registration & Onboarding Suite</h2>
                     <p className="text-[10px] text-zinc-500 mt-1">Simulate secure customer registration, detailed car posting schema outputs, and regional dealership signups.</p>
@@ -1649,7 +1707,7 @@ function App() {
             )}
 
             {currentTab === 'sell' && (
-              <div className="max-w-7xl mx-auto pb-16 px-4 md:px-8 text-left">
+              <div className="max-w-7xl mx-auto pb-16 px-1.5 sm:px-4 md:px-8 text-left">
                 <DetailedVehiclePostingPage
                   lang={lang}
                   currentUser={currentUser}
@@ -1672,6 +1730,9 @@ function App() {
         currentCategory={currentCategory} 
         onCategoryChange={handleSetCategory} 
         lang={lang}
+        onLanguageToggle={toggleLanguage}
+        theme={theme}
+        toggleTheme={toggleTheme}
       />
 
       {/* DYNAMIC LISTING DETAILS FULL SCREEN MODAL */}
@@ -2335,114 +2396,96 @@ function App() {
         </div>
       )}
 
-        {/* Mobile Side Drawer Backdrop (Viewport < 768px focus overlay) */}
-        {isMobileDrawerOpen && (
-          <div 
-            className="fixed inset-0 bg-[#030712]/75 backdrop-blur-[4px] z-50 md:hidden transition-all duration-300"
-            onClick={() => setIsMobileDrawerOpen(false)}
-            id="mobile-drawer-backdrop"
-          />
-        )}
-
-        {/* Mobile Side Drawer Sliding Panel */}
-        <div 
-          id="mobile-drawer"
-          className="fixed top-0 bottom-0 w-[280px] bg-[#070c18] z-50 border-r border-white/5 transition-all duration-300 flex flex-col justify-between shadow-2xl p-6 md:hidden text-left overflow-x-hidden overflow-y-auto"
-          style={{ left: isMobileDrawerOpen ? '0' : '-280px' }}
-        >
-          {/* Drawer top branding container */}
-          <div className="space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-white/5">
-              <div className="flex items-center space-x-2">
-                <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-slate-950 border border-orange-500/30">
-                  <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path>
+      {/* 📱 PWA SMART FLOATING INSTALLATION DESK */}
+      {showInstallBanner && (
+        <div className="fixed bottom-20 md:bottom-6 right-0 md:right-6 left-0 md:left-auto px-4 md:px-0 z-[100] max-w-sm w-full animate-fade-in">
+          <div className="bg-[#0F172A]/95 dark:bg-[#030712]/95 border border-slate-200 dark:border-white/10 backdrop-blur-md rounded-2xl p-5 shadow-2xl flex flex-col gap-4 text-slate-800 dark:text-white">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex gap-3">
+                {/* Brand Logo inside Install Card */}
+                <div className="w-11 h-11 shrink-0 rounded-xl overflow-hidden bg-slate-900 border border-sky-500/20 flex items-center justify-center">
+                  <svg className="w-9 h-9 select-none" viewBox="0 0 160 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path 
+                      d="M 40 50 H 60 C 75 25, 110 25, 125 50" 
+                      stroke="#FFFFFF" 
+                      strokeWidth="8" 
+                      strokeLinecap="round" 
+                      fill="none" 
+                    />
+                    <circle cx="46" cy="45" r="2.5" fill="#0F2E59" />
+                    <circle cx="54" cy="45" r="2.5" fill="#0F2E59" />
+                    <path 
+                      d="M 35 95 C 45 130, 95 130, 115 105" 
+                      stroke="#FF6B00" 
+                      strokeWidth="8" 
+                      strokeLinecap="round" 
+                      fill="none" 
+                    />
+                    <path d="M 110 106 L 122 102 L 118 114 Z" fill="#FF6B00" />
+                    <text 
+                      x="18" 
+                      y="96" 
+                      className="font-sans font-black fill-white" 
+                      fontSize="70" 
+                      letterSpacing="-4"
+                    >
+                      36
+                    </text>
+                    <circle cx="115" cy="75" r="24" fill="url(#orangeLogoGradInstall)" />
+                    <circle cx="115" cy="75" r="18" fill="#FFFFFF" />
+                    <path 
+                      d="M 103 66 L 107 66 L 110 78 L 123 78 L 126 69 L 109 69" 
+                      stroke="#FF6B00" 
+                      strokeWidth="2.5" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      fill="none" 
+                    />
+                    <circle cx="113" cy="84" r="2.5" fill="#FF6B00" />
+                    <circle cx="121" cy="84" r="2.5" fill="#FF6B00" />
+                    <defs>
+                      <linearGradient id="orangeLogoGradInstall" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#FF8A00" />
+                        <stop offset="100%" stopColor="#FF5200" />
+                      </linearGradient>
+                    </defs>
                   </svg>
                 </div>
-                <div className="flex flex-col text-left">
-                  <span className="text-sm font-black text-white tracking-widest leading-none">BAZAR<span className="text-orange-500 font-extrabold">360</span></span>
-                  <span className="text-[7px] font-bold text-[#38BDF8] tracking-[0.22em] uppercase leading-none mt-0.5">Ecosystem</span>
+                <div>
+                  <h4 className="text-sm font-black font-sans uppercase tracking-tight text-white">Install Bazar360</h4>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                    Access certified vehicles, instant dealer chats, and live price indices directly from your homescreen.
+                  </p>
                 </div>
               </div>
               <button 
-                onClick={() => setIsMobileDrawerOpen(false)}
-                className="text-gray-400 hover:text-white p-2 bg-white/5 rounded-lg text-xs"
-                id="mobile-drawer-close-btn"
+                onClick={handleDismissInstall}
+                className="text-slate-400 hover:text-white p-1 hover:bg-white/5 rounded-lg transition-colors"
+                aria-label="Close"
               >
-                ✕
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
-
-            {/* Nav Links */}
-            <nav className="flex flex-col gap-4 font-sans text-xs uppercase tracking-wider text-left">
-              {(() => {
-                const navItems = {
-                  en: [
-                    { id: 'home', label: '🏠 Home' },
-                    { id: 'inventory', label: '🚗 Inventory' },
-                    { id: 'dealers', label: '🏢 Showrooms' },
-                    { id: 'services', label: '⚙️ Services' },
-                    { id: 'contact', label: '📞 Contact' }
-                  ],
-                  ur: [
-                    { id: 'home', label: '🏠 ہوم' },
-                    { id: 'inventory', label: '🚗 انوینٹری' },
-                    { id: 'dealers', label: '🏢 شورومز' },
-                    { id: 'services', label: '⚙️ سروسز' },
-                    { id: 'contact', label: '📞 رابطہ' }
-                  ]
-                }[lang];
-
-                return navItems.map((item) => {
-                  const isActive = currentTab === item.id || (item.id === 'inventory' && (currentTab === 'inventory' || currentTab === 'search'));
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => { setTab(item.id); setIsMobileDrawerOpen(false); }}
-                      className={`font-extrabold py-2.5 text-left transition-colors cursor-pointer block w-full border-b border-white/5 pb-2 ${
-                        isActive ? 'text-[#38BDF8]' : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  );
-                });
-              })()}
-            </nav>
-          </div>
-
-          {/* Drawer bottom utilities */}
-          <div className="space-y-4 pt-6 border-t border-white/5 text-left">
-            {!currentUser ? (
+            
+            <div className="flex items-center gap-2.5">
               <button
-                onClick={() => { setTab('portal'); setIsMobileDrawerOpen(false); }}
-                className="w-full text-center text-xs font-mono font-black uppercase text-[#38BDF8] border border-[#38BDF8]/30 bg-[#38BDF8]/5 py-3 rounded-xl cursor-pointer"
+                onClick={handleDismissInstall}
+                className="flex-1 py-2.5 border border-white/10 hover:bg-white/5 rounded-xl text-xs font-bold text-slate-300 transition-all uppercase tracking-wider"
               >
-                Sign In / Register
+                Maybe Later
               </button>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 bg-[#121c32]/65 p-3 rounded-xl border border-white/5">
-                  <div className="w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center font-black text-xs uppercase shrink-0">
-                    {(currentUser.displayName || currentUser.email || 'User').substring(0, 1).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-white font-bold text-xs truncate leading-none">
-                      {currentUser.displayName || currentUser.email || 'User'}
-                    </p>
-                    <span className="text-[8px] text-orange-400 font-mono uppercase tracking-widest block mt-1">{currentUser.role}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => { handleLogout(); setIsMobileDrawerOpen(false); }}
-                  className="w-full text-center text-xs font-mono font-black uppercase text-red-500 hover:bg-red-500/10 py-3 rounded-xl border border-red-500/20 cursor-pointer"
-                >
-                  Sign Out
-                </button>
-              </div>
-            )}
+              <button
+                onClick={handleInstallClick}
+                className="flex-1 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:opacity-90 active:scale-[0.98] rounded-xl text-xs font-black text-white transition-all uppercase tracking-wider shadow"
+              >
+                Install App
+              </button>
+            </div>
           </div>
         </div>
+      )}
 
       </div>
     );

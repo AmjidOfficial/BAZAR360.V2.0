@@ -20,13 +20,14 @@ import {
   Calendar,
   Layers,
   ArrowRight,
-  Shield,
   HelpCircle,
   Mail,
   Smartphone,
   Info,
   PhoneCall,
-  Check
+  Check,
+  MessageCircle,
+  Share2
 } from 'lucide-react';
 import { Dealer, CarListing } from '../types';
 import { UserProfile } from '../lib/dbService';
@@ -113,7 +114,7 @@ const POPULAR_BRANDS = [
   { name: 'Jeep', logo: '🚙' }
 ];
 
-function renderBrandLogo(name: string) {
+function renderInlineFallback(name: string) {
   switch (name) {
     case 'Toyota':
       return (
@@ -257,8 +258,8 @@ function renderBrandLogo(name: string) {
     case 'Peugeot':
       return (
         <svg className="w-10 h-10 animate-fade-in" viewBox="0 0 24 24" fill="none">
-          <path d="M12 3a9 9 0 110 18 9 9 0 010-18z" stroke="#3B82F6" strokeWidth="1.5" />
-          <path d="M10 8l4 2-2 3 3 3" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="12" cy="12" r="9" stroke="#3B82F6" strokeWidth="1.5" />
+          <path d="M12 6a6 6 0 016 6h-6z" fill="#3B82F6" />
         </svg>
       );
     case 'Volvo':
@@ -306,6 +307,41 @@ function renderBrandLogo(name: string) {
     default:
       return <span className="text-2xl">🚗</span>;
   }
+}
+
+function BrandLogo({ name }: { name: string }) {
+  const [failed, setFailed] = useState(false);
+
+  const slug = name.toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-');
+
+  // Fast loading jsDelivr CDN for filippofonseca/car-logos
+  const imageUrl = `https://cdn.jsdelivr.net/gh/filippofonseca/car-logos@master/logos/svg/${slug}.svg`;
+
+  if (failed) {
+    return (
+      <div className="flex items-center justify-center h-10 w-10">
+        {renderInlineFallback(name)}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-12 h-12 flex items-center justify-center p-1 bg-white/5 rounded-xl border border-white/5">
+      <img
+        src={imageUrl}
+        alt={`${name} official logo`}
+        className="w-10 h-10 object-contain dark:brightness-110 transition-all duration-200"
+        referrerPolicy="no-referrer"
+        onError={() => setFailed(true)}
+      />
+    </div>
+  );
+}
+
+function renderBrandLogo(name: string) {
+  return <BrandLogo name={name} />;
 }
 
 export default function HomeView({
@@ -429,16 +465,7 @@ export default function HomeView({
   // Dynamic Tabs (Featured, Latest, Premium)
   const [inventoryTab, setInventoryTab] = useState<'featured' | 'latest' | 'premium'>('featured');
 
-  // Interactive Finance / EMI Calculator State
-  const [finPrice, setFinPrice] = useState<number>(3500000);
-  const [finDownPercent, setFinDownPercent] = useState<number>(20);
-  const [finInterest, setFinInterest] = useState<number>(14.5);
-  const [finTenure, setFinTenure] = useState<number>(5);
 
-  // Interactive Insurance Estimator State
-  const [insValue, setInsValue] = useState<number>(4500000);
-  const [insPlan, setInsPlan] = useState<'silver' | 'gold' | 'platinum'>('gold');
-  const [insSuccess, setInsSuccess] = useState(false);
 
   // 200-Point Inspection Booking State
   const [inspectName, setInspectName] = useState('');
@@ -479,30 +506,7 @@ export default function HomeView({
     }
   }, [listings, inventoryTab]);
 
-  // EMI Monthly Calculation
-  const calculatedEMI = useMemo(() => {
-    const loanAmount = finPrice * (1 - finDownPercent / 100);
-    const monthlyRate = (finInterest / 100) / 12;
-    const numberOfPayments = finTenure * 12;
-    
-    if (monthlyRate === 0) return loanAmount / numberOfPayments;
-    
-    const emi = loanAmount * monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments) / 
-                (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
-    return Math.round(emi);
-  }, [finPrice, finDownPercent, finInterest, finTenure]);
 
-  // Insurance calculation
-  const calculatedInsurance = useMemo(() => {
-    const rates = { silver: 0.012, gold: 0.018, platinum: 0.025 };
-    const rate = rates[insPlan];
-    const annual = insValue * rate;
-    const monthly = annual / 12;
-    return {
-      annual: Math.round(annual),
-      monthly: Math.round(monthly)
-    };
-  }, [insValue, insPlan]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -588,7 +592,7 @@ export default function HomeView({
     >
       {/* SECTION 1: AUTO SLIDER HERO BANNER */}
       <section 
-        className="relative rounded-[32px] overflow-hidden border border-border-main bg-bg-secondary shadow-2xl h-[380px] sm:h-[460px] md:h-[560px] flex flex-col justify-end cursor-pointer group/hero select-none"
+        className="relative rounded-2xl md:rounded-[32px] overflow-hidden border border-border-main bg-bg-secondary shadow-2xl h-[320px] sm:h-[420px] md:h-[560px] flex flex-col justify-end cursor-pointer group/hero select-none"
         onClick={() => {
           if (activeSlides[currentSlide]) {
             onSelectListing(activeSlides[currentSlide]);
@@ -596,7 +600,7 @@ export default function HomeView({
         }}
       >
         {/* Dynamic Image Slideshow with Fade */}
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 overflow-hidden">
           <AnimatePresence mode="wait">
             {activeSlides.map((slide, index) => {
               if (index !== currentSlide) return null;
@@ -612,20 +616,20 @@ export default function HomeView({
                   <img
                     src={slide.imageUrl || slide.images?.[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=1200'}
                     alt={slide.title}
-                    className="w-full h-full object-cover opacity-40 md:opacity-60 transition-transform duration-700 group-hover/hero:scale-[1.02]"
+                    className="w-full h-full object-cover opacity-90 md:opacity-85 transition-transform duration-700 group-hover/hero:scale-[1.02]"
                     referrerPolicy="no-referrer"
                   />
-                  {/* Premium Ambient Overlays */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-bg-primary via-bg-primary/50 to-transparent"></div>
-                  <div className="absolute inset-0 bg-gradient-to-r from-bg-primary/95 via-transparent to-bg-primary/20"></div>
+                  {/* Premium Ambient Overlays for perfect legibility in the empty space */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-transparent"></div>
                 </motion.div>
               );
             })}
           </AnimatePresence>
         </div>
 
-        {/* Slidable Content Text Controls overlay */}
-        <div className="relative z-10 p-6 md:p-12 space-y-4 max-w-4xl text-left">
+        {/* Slidable Content Text Controls overlay - Positioned beautifully in the empty top-left sky/background space, clear of the car body */}
+        <div className="absolute top-6 sm:top-8 md:top-12 left-5 sm:left-8 md:left-12 z-10 max-w-xl text-left flex flex-col space-y-2">
           {(() => {
             const slide = activeSlides[currentSlide];
             if (!slide) return null;
@@ -633,152 +637,70 @@ export default function HomeView({
             const showroomName = dealer ? dealer.name : 'Individual Seller';
             const showroomInitials = dealer ? (dealer.avatarLetter || dealer.name[0]) : 'P';
             return (
-              <div className="space-y-4">
-                {/* Dealer and Badges Badge */}
+              <div className="space-y-2">
+                {/* Simplified Showroom Name Badge */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                    <div className="w-5 h-5 rounded-full bg-accent-main text-bg-primary flex items-center justify-center font-black text-[10px] uppercase">
+                  <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1 sm:py-1.5 rounded-full border border-white/10 shadow-lg">
+                    <div className="w-5 h-5 rounded-full bg-accent-main text-bg-primary flex items-center justify-center font-black text-[9px] uppercase shadow-sm">
                       {showroomInitials}
                     </div>
-                    <span className="text-white text-[10px] font-mono font-black uppercase tracking-wider">
+                    <span className="text-white text-[10px] sm:text-xs font-sans font-black uppercase tracking-wider">
                       {showroomName}
                     </span>
                   </div>
-
-                  <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-mono font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-emerald-500/20 inline-flex items-center gap-1">
-                    🇵🇰 {slide.registrationCity || 'Unregistered'}
-                  </span>
-
-                  {slide.verified && (
-                    <span className="bg-sky-500/15 text-sky-400 text-[10px] font-mono font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-sky-500/20 inline-flex items-center gap-1">
-                      <ShieldCheck size={11} className="text-sky-400" />
-                      VERIFIED
-                    </span>
-                  )}
-
-                  {(slide.featured || slide.price >= 5000000) && (
-                    <span className="bg-accent-main/20 text-accent-main text-[10px] font-mono font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-accent-main/25 inline-flex items-center gap-1">
-                      <Sparkles size={11} className="text-accent-main" />
-                      PREMIUM
-                    </span>
-                  )}
                 </div>
 
-                {/* Title and details */}
-                <div className="space-y-2">
-                  <h1 className="text-xl sm:text-3xl md:text-5xl lg:text-6xl font-black tracking-tight uppercase leading-tight text-white drop-shadow-sm">
+                {/* Title (Car Name only, stylized with responsive spacing and strong drop shadow to match background aesthetic) */}
+                <div className="space-y-1">
+                  <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight uppercase leading-tight text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
                     {slide.title}
                   </h1>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-300 text-xs md:text-sm font-sans font-semibold">
-                    <span className="flex items-center gap-1">📅 {slide.year}</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1">⚡ {slide.fuelType || 'Petrol'}</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1">⚙️ {slide.transmission || 'Automatic'}</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1">🛣️ {slide.mileage?.toLocaleString() || '0'} KM</span>
-                  </div>
-                </div>
-
-                {/* Price Display */}
-                <div className="text-2xl md:text-4xl font-mono font-black text-accent-main drop-shadow-md">
-                  {formatPrice(slide.price)}
-                </div>
-
-                {/* Premium Call to Action Strip */}
-                <div className="flex flex-wrap items-center gap-2.5 pt-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectListing(slide);
-                    }}
-                    className="bg-accent-main hover:bg-accent-hover text-bg-primary font-black font-sans text-xs uppercase px-6 py-3.5 rounded-xl flex items-center gap-1.5 transition-all shadow-lg shadow-accent-main/15 cursor-pointer"
-                  >
-                    <span>View Details</span>
-                    <ChevronRight size={14} />
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const msg = `Hi, I am interested in your ${slide.title} (${slide.year}) listed on BAZAR360. Please share details.`;
-                      window.open(`https://wa.me/923159085086?text=${encodeURIComponent(msg)}`, '_blank');
-                    }}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-black font-sans text-xs uppercase px-5 py-3.5 rounded-xl flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
-                  >
-                    <span>WhatsApp</span>
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.open('tel:+923159085086', '_blank');
-                    }}
-                    className="bg-[#1e293b]/80 hover:bg-[#1e293b] text-white border border-white/5 font-black font-sans text-xs uppercase px-5 py-3.5 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <PhoneCall size={12} />
-                    <span>Call</span>
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const shareUrl = `${window.location.origin}/?listing=${slide.id}`;
-                      navigator.clipboard.writeText(shareUrl).then(() => {
-                        setToastMessage('Listing Link Copied to Clipboard!');
-                        setTimeout(() => setToastMessage(null), 2500);
-                      });
-                    }}
-                    className="bg-[#1e293b]/60 hover:bg-[#1e293b]/80 text-slate-300 border border-white/5 font-black font-sans text-xs uppercase px-4 py-3.5 rounded-xl flex items-center justify-center transition-all cursor-pointer"
-                  >
-                    <span>Share</span>
-                  </button>
                 </div>
               </div>
             );
           })()}
+        </div>
 
-          {/* Dots Indicator */}
-          <div className="flex gap-2 pt-4">
-            {activeSlides.map((_, i) => (
-              <button
-                key={i}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setCurrentSlide(i);
-                }}
-                className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${i === currentSlide ? 'w-8 bg-accent-main' : 'w-2.5 bg-white/20 hover:bg-white/40'}`}
-              />
-            ))}
-          </div>
+        {/* Dots Indicator - Positioned at bottom-left */}
+        <div className="absolute bottom-4 left-5 sm:left-8 md:left-12 z-10 flex gap-2">
+          {activeSlides.map((_, i) => (
+            <button
+              key={i}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentSlide(i);
+              }}
+              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${i === currentSlide ? 'w-6 bg-accent-main' : 'w-1.5 bg-white/30 hover:bg-white/50'}`}
+            />
+          ))}
         </div>
       </section>
 
       {/* SECTION 2: SMART ADVANCED SEARCH PANEL */}
-      <section className="relative z-20 max-w-6xl mx-auto w-full -mt-8 sm:-mt-16 md:-mt-24 px-4">
-        <div className="bg-bg-secondary border border-border-main rounded-3xl p-5 md:p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)] relative overflow-hidden">
+      <section className="relative z-20 max-w-5xl mx-auto w-full -mt-8 sm:-mt-14 md:-mt-20 px-4">
+        <div className="bg-bg-secondary/95 backdrop-blur-md border border-border-main/60 rounded-2xl p-3 sm:p-4 md:p-4 shadow-[0_15px_40px_-10px_rgba(0,0,0,0.45)] relative overflow-hidden">
           {/* Decorative Corner Glow */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-accent-main/5 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-accent-main/5 rounded-full blur-3xl pointer-events-none"></div>
           
-          <form onSubmit={handleSearchSubmit} className="space-y-4 relative z-10 text-text-main">
+          <form onSubmit={handleSearchSubmit} className="space-y-2.5 relative z-10 text-text-main">
             {/* Header and Type Toggles */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h3 className="text-sm md:text-base font-black uppercase tracking-wide text-text-main flex items-center gap-2">
-                  <span className="h-4 w-1 bg-accent-main rounded-full"></span>
+                <h3 className="text-[10px] md:text-xs font-black uppercase tracking-wider text-text-main flex items-center gap-1">
+                  <span className="h-3 w-1 bg-accent-main rounded-full"></span>
                   {t.searchHeader}
                 </h3>
               </div>
 
-              <div className="flex items-center gap-1 bg-bg-primary p-1 rounded-xl border border-border-main shrink-0 self-start lg:self-auto">
+              <div className="flex items-center gap-0.5 bg-bg-primary p-0.5 rounded-lg border border-border-main/50 shrink-0 self-start sm:self-auto">
                 {(['all', 'used', 'new'] as const).map((type) => (
                   <button
                     key={type}
                     type="button"
                     onClick={() => setSearchType(type)}
-                    className={`px-3 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-mono font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                    className={`px-2 py-0.5 rounded-md text-[9px] md:text-[10px] font-mono font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                       searchType === type
-                        ? 'bg-accent-main text-bg-primary shadow-md font-extrabold'
+                        ? 'bg-accent-main text-bg-primary shadow-sm font-extrabold'
                         : 'text-text-muted hover:text-text-main'
                     }`}
                   >
@@ -791,40 +713,40 @@ export default function HomeView({
             </div>
 
             {/* Core Search Bar Row */}
-            <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-1.5">
               {/* Search input */}
-              <div className="flex-grow flex items-center gap-2 bg-bg-primary border border-border-main rounded-2xl p-3 focus-within:border-accent-main transition-all">
-                <Search className="text-text-muted shrink-0" size={16} />
+              <div className="flex-grow flex items-center gap-2 bg-bg-primary border border-border-main/60 rounded-xl px-2.5 py-1.5 focus-within:border-accent-main transition-all">
+                <Search className="text-text-muted shrink-0" size={13} />
                 <input
                   type="text"
                   value={localQuery}
                   onChange={(e) => setLocalQuery(e.target.value)}
                   placeholder={lang === 'en' ? "Search make, model, variant, keyword..." : "برانڈ، ماڈل یا گاڑی تلاش کریں..."}
-                  className="bg-transparent text-xs md:text-sm border-none outline-none focus:ring-0 text-text-main placeholder-text-muted/60 w-full font-sans"
+                  className="bg-transparent text-[11px] border-none outline-none focus:ring-0 text-text-main placeholder-text-muted/40 w-full font-sans py-0"
                 />
               </div>
 
               {/* Submit Search Button */}
               <button
                 type="submit"
-                className="bg-accent-main hover:bg-accent-hover text-bg-primary font-sans text-xs md:text-sm font-black uppercase tracking-widest px-6 py-4 rounded-2xl transition-all cursor-pointer whitespace-nowrap shadow-md shadow-accent-main/15 shrink-0 flex items-center justify-center gap-1"
+                className="bg-accent-main hover:bg-accent-hover text-bg-primary font-sans text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap shadow-sm shrink-0 flex items-center justify-center gap-1"
               >
-                <Search size={14} />
+                <Search size={11} />
                 {lang === 'en' ? 'SEARCH' : 'تلاش کریں'}
               </button>
             </div>
 
             {/* Default Filters Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-0.5">
               {/* City Selection */}
               <div>
-                <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block mb-1">
+                <label className="text-[8px] font-mono font-black uppercase text-accent-main tracking-widest block mb-0.5">
                   {lang === 'en' ? 'CHOOSE CITY' : 'شہر کا انتخاب'}
                 </label>
                 <select
                   value={searchCity}
                   onChange={(e) => setSearchCity(e.target.value)}
-                  className="w-full bg-bg-primary border border-border-main rounded-xl p-3 text-xs text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
+                  className="w-full bg-bg-primary border border-border-main rounded-lg px-2.5 py-1.5 text-[11px] text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
                 >
                   <option value="All">{lang === 'en' ? 'ALL PAKISTAN' : 'پورا پاکستان'}</option>
                   <option value="Peshawar">PESHAWAR</option>
@@ -836,13 +758,13 @@ export default function HomeView({
 
               {/* Budget Range Selection */}
               <div>
-                <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block mb-1">
+                <label className="text-[8px] font-mono font-black uppercase text-accent-main tracking-widest block mb-0.5">
                   {lang === 'en' ? 'MAX BUDGET' : 'زیادہ سے زیادہ بجٹ'}
                 </label>
                 <select
                   value={searchPrice}
                   onChange={(e) => setSearchPrice(e.target.value)}
-                  className="w-full bg-bg-primary border border-border-main rounded-xl p-3 text-xs text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
+                  className="w-full bg-bg-primary border border-border-main rounded-lg px-2.5 py-1.5 text-[11px] text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
                 >
                   <option value="All">{lang === 'en' ? 'ANY PRICE' : 'کوئی بھی قیمت'}</option>
                   <option value="Under 15 Lakhs">{lang === 'en' ? 'UNDER 1.5 MILLION (15 LAKH)' : '15 لاکھ سے کم'}</option>
@@ -854,13 +776,13 @@ export default function HomeView({
 
               {/* Fuel Selection */}
               <div>
-                <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block mb-1">
+                <label className="text-[8px] font-mono font-black uppercase text-accent-main tracking-widest block mb-0.5">
                   {lang === 'en' ? 'FUEL CATEGORY' : 'فیول کی قسم'}
                 </label>
                 <select
                   value={searchFuel}
                   onChange={(e) => setSearchFuel(e.target.value)}
-                  className="w-full bg-bg-primary border border-border-main rounded-xl p-3 text-xs text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
+                  className="w-full bg-bg-primary border border-border-main rounded-lg px-2.5 py-1.5 text-[11px] text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
                 >
                   <option value="All">{lang === 'en' ? 'ANY FUEL' : 'تمام فیول'}</option>
                   <option value="Petrol">PETROL</option>
@@ -872,13 +794,13 @@ export default function HomeView({
 
               {/* Transmission */}
               <div>
-                <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block mb-1">
+                <label className="text-[8px] font-mono font-black uppercase text-accent-main tracking-widest block mb-0.5">
                   {lang === 'en' ? 'GEARBOX TRANSMISSION' : 'ٹرانسمیشن'}
                 </label>
                 <select
                   value={searchTransmission}
                   onChange={(e) => setSearchTransmission(e.target.value)}
-                  className="w-full bg-bg-primary border border-border-main rounded-xl p-3 text-xs text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
+                  className="w-full bg-bg-primary border border-border-main rounded-lg px-2.5 py-1.5 text-[11px] text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
                 >
                   <option value="All">{lang === 'en' ? 'ANY TRANSMISSION' : 'تمام ٹرانسمیشن'}</option>
                   <option value="Automatic">AUTOMATIC</option>
@@ -903,17 +825,17 @@ export default function HomeView({
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-border-main/5"
+                className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-border-main/5"
               >
                 {/* Year range option */}
                 <div>
-                  <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block mb-1">
+                  <label className="text-[8px] font-mono font-black uppercase text-accent-main tracking-widest block mb-0.5">
                     {lang === 'en' ? 'YEAR MODEL' : 'ماڈل سال'}
                   </label>
                   <select
                     value={searchYear}
                     onChange={(e) => setSearchYear(e.target.value)}
-                    className="w-full bg-bg-primary border border-border-main rounded-xl p-3 text-xs text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
+                    className="w-full bg-bg-primary border border-border-main rounded-lg px-2.5 py-1.5 text-[11px] text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
                   >
                     <option value="All">ANY YEAR</option>
                     <option value="2025">2025 & Above</option>
@@ -925,28 +847,28 @@ export default function HomeView({
 
                 {/* Seller Type filter */}
                 <div>
-                  <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block mb-1">
+                  <label className="text-[8px] font-mono font-black uppercase text-accent-main tracking-widest block mb-0.5">
                     {lang === 'en' ? 'SELLER TYPE' : 'بیچنے والے کی قسم'}
                   </label>
-                  <div className="flex gap-1 bg-bg-primary border border-border-main p-1.5 rounded-xl">
+                  <div className="flex gap-1 bg-bg-primary border border-border-main p-1 rounded-lg">
                     <button
                       type="button"
                       onClick={() => setSearchSeller('all')}
-                      className={`flex-1 py-1.5 rounded text-[10px] font-bold ${searchSeller === 'all' ? 'bg-accent-main text-bg-primary' : 'text-text-muted hover:text-text-main'}`}
+                      className={`flex-1 py-1 rounded text-[10px] font-bold ${searchSeller === 'all' ? 'bg-accent-main text-bg-primary' : 'text-text-muted hover:text-text-main'}`}
                     >
                       ALL
                     </button>
                     <button
                       type="button"
                       onClick={() => setSearchSeller('showroom')}
-                      className={`flex-1 py-1.5 rounded text-[10px] font-bold ${searchSeller === 'showroom' ? 'bg-accent-main text-bg-primary' : 'text-text-muted hover:text-text-main'}`}
+                      className={`flex-1 py-1 rounded text-[10px] font-bold ${searchSeller === 'showroom' ? 'bg-accent-main text-bg-primary' : 'text-text-muted hover:text-text-main'}`}
                     >
                       DEALER
                     </button>
                     <button
                       type="button"
                       onClick={() => setSearchSeller('individual')}
-                      className={`flex-1 py-1.5 rounded text-[10px] font-bold ${searchSeller === 'individual' ? 'bg-accent-main text-bg-primary' : 'text-text-muted hover:text-text-main'}`}
+                      className={`flex-1 py-1 rounded text-[10px] font-bold ${searchSeller === 'individual' ? 'bg-accent-main text-bg-primary' : 'text-text-muted hover:text-text-main'}`}
                     >
                       PRIVATE
                     </button>
@@ -954,8 +876,8 @@ export default function HomeView({
                 </div>
 
                 {/* Info Text */}
-                <div className="flex items-center gap-2 p-3.5 bg-bg-primary/50 border border-border-main rounded-xl text-[10px] text-text-muted">
-                  <Info size={16} className="text-accent-main shrink-0" />
+                <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary/50 border border-border-main rounded-lg text-[9px] text-text-muted">
+                  <Info size={14} className="text-accent-main shrink-0" />
                   <span>Verified Badging filter will be applied to listings instantly upon searching.</span>
                 </div>
               </motion.div>
@@ -1188,318 +1110,7 @@ export default function HomeView({
         </div>
       </section>
 
-      {/* SECTION 7: INTERACTIVE AUTO FINANCE & LOAN EMI CALCULATOR */}
-      <section className="max-w-7xl mx-auto w-full px-4 space-y-6">
-        <div className="text-center space-y-2">
-          <h2 className="text-xl md:text-2xl font-black uppercase tracking-wider text-text-main flex items-center justify-center gap-2">
-            <Percent size={20} className="text-accent-main" />
-            {lang === 'en' ? 'BAZAR360 Auto Finance Calculator' : 'آٹو لون فنانس کیلکولیٹر'}
-          </h2>
-          <p className="text-xs text-text-muted max-w-md mx-auto">
-            {lang === 'en' ? 'Get exact markup quotes and monthly installments dynamically based on down payment percent.' : 'اپنے بجٹ کے مطابق ماہانہ اقساط اور بینک مارک اپ کا لائیو حساب کریں۔'}
-          </p>
-        </div>
 
-        <div className="bg-bg-secondary border border-border-main rounded-3xl p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 shadow-lg text-left">
-          {/* Controls Form Left (7 cols) */}
-          <div className="lg:col-span-7 space-y-6">
-            {/* Quick Car Selection buttons */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-mono font-black uppercase text-accent-main tracking-widest block">
-                Quick Selection / Vehicle Valuation (PKR)
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[1500000, 3500000, 6500000, 12000000].map((val) => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => setFinPrice(val)}
-                    className={`py-2 rounded-xl text-xs font-mono font-black border transition-all ${
-                      finPrice === val
-                        ? 'bg-accent-main border-accent-main text-bg-primary'
-                        : 'bg-bg-primary border-border-main text-text-main hover:border-text-muted/40'
-                    }`}
-                  >
-                    Rs. {(val / 100000).toFixed(0)} Lakh
-                  </button>
-                ))}
-              </div>
-              {/* Custom Input */}
-              <div className="pt-2">
-                <input
-                  type="number"
-                  value={finPrice}
-                  onChange={(e) => setFinPrice(Math.max(100000, Number(e.target.value)))}
-                  className="w-full bg-bg-primary border border-border-main rounded-xl p-3 text-xs font-mono text-text-main focus:outline-none focus:border-accent-main"
-                  placeholder="Enter Custom Car Price..."
-                />
-              </div>
-            </div>
-
-            {/* Down Payment % Slider */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-bold uppercase">
-                <span className="text-text-muted">Down Payment Percent</span>
-                <span className="text-accent-main font-mono">{finDownPercent}% (Rs. {((finPrice * finDownPercent) / 100).toLocaleString()} PKR)</span>
-              </div>
-              <input
-                type="range"
-                min="15"
-                max="70"
-                value={finDownPercent}
-                onChange={(e) => setFinDownPercent(Number(e.target.value))}
-                className="w-full h-2 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-accent-main"
-              />
-              <div className="flex justify-between text-[9px] text-text-muted font-mono font-bold">
-                <span>MIN 15%</span>
-                <span>MAX 70%</span>
-              </div>
-            </div>
-
-            {/* Interest rate / Markup % Slider */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-bold uppercase">
-                <span className="text-text-muted">Markup Rate (Per Annum)</span>
-                <span className="text-accent-main font-mono">{finInterest}%</span>
-              </div>
-              <input
-                type="range"
-                min="8"
-                max="24"
-                step="0.5"
-                value={finInterest}
-                onChange={(e) => setFinInterest(Number(e.target.value))}
-                className="w-full h-2 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-accent-main"
-              />
-              <div className="flex justify-between text-[9px] text-text-muted font-mono font-bold">
-                <span>8% (State Minimum)</span>
-                <span>24% Commercial</span>
-              </div>
-            </div>
-
-            {/* Loan Tenure years selection buttons */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-mono font-black uppercase text-accent-main tracking-widest block">
-                Financing Term / Tenure
-              </label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 5, 7].map((yr) => (
-                  <button
-                    key={yr}
-                    type="button"
-                    onClick={() => setFinTenure(yr)}
-                    className={`flex-1 py-2 rounded-xl text-xs font-mono font-black border transition-all ${
-                      finTenure === yr
-                        ? 'bg-accent-main border-accent-main text-bg-primary'
-                        : 'bg-bg-primary border-border-main text-text-main hover:border-text-muted/40'
-                    }`}
-                  >
-                    {yr} Year{yr > 1 ? 's' : ''}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Results Summary Right Panel (5 cols) */}
-          <div className="lg:col-span-5 bg-bg-primary border border-border-main p-6 rounded-3xl flex flex-col justify-between space-y-6">
-            <div className="space-y-4">
-              <div className="border-b border-border-main pb-2">
-                <h4 className="text-xs font-mono font-black uppercase text-text-muted tracking-widest">
-                  ESTIMATED INSTALLMENT
-                </h4>
-                <p className="text-3xl font-black text-accent-main font-mono mt-1">
-                  Rs. {calculatedEMI.toLocaleString()}
-                  <span className="text-xs text-text-muted font-sans font-bold"> / Month</span>
-                </p>
-              </div>
-
-              {/* Financial breakdowns */}
-              <div className="space-y-2.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-text-muted font-medium">Vehicle Value:</span>
-                  <span className="font-mono text-text-main font-bold">Rs. {finPrice.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-text-muted font-medium">Financed Principal:</span>
-                  <span className="font-mono text-text-main font-bold">Rs. {(finPrice * (1 - finDownPercent / 100)).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-text-muted font-medium">Down Payment Amount:</span>
-                  <span className="font-mono text-text-main font-bold">Rs. {((finPrice * finDownPercent) / 100).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-text-muted font-medium">Interest Markup Tenure:</span>
-                  <span className="font-mono text-text-main font-bold">{finTenure} Years @ {finInterest}%</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2 pt-4 border-t border-border-main/40">
-              <p className="text-[10px] text-text-muted leading-relaxed font-sans">
-                * Rates are indicative of current State Bank monetary benchmarks. Exact terms will vary depending on customer credit biometrics and active banking partner criteria.
-              </p>
-              <a
-                href={`https://wa.me/923159085086?text=${encodeURIComponent(`Hi BAZAR360, I want to apply for Auto Finance on a vehicle worth Rs. ${finPrice.toLocaleString()} with Rs. ${((finPrice * finDownPercent) / 100).toLocaleString()} down payment.`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full mt-2 bg-emerald-500 hover:bg-emerald-600 text-bg-primary font-sans font-black text-xs uppercase tracking-wider py-3.5 rounded-xl transition-all cursor-pointer block text-center"
-              >
-                📥 Apply with Partner Bank
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 8: INTERACTIVE INSURANCE PACKAGES ESTIMATOR */}
-      <section className="max-w-7xl mx-auto w-full px-4 space-y-6">
-        <div className="text-center space-y-2">
-          <h2 className="text-xl md:text-2xl font-black uppercase tracking-wider text-text-main flex items-center justify-center gap-2">
-            <Shield size={22} className="text-accent-main" />
-            {lang === 'en' ? 'BAZAR360 Premium Insurance Estimates' : 'انشورنس اور تحفظ کی خدمات'}
-          </h2>
-          <p className="text-xs text-text-muted max-w-md mx-auto">
-            {lang === 'en' ? 'Instantly calculate your yearly premium and select custom secure coverages for complete safety.' : 'گاڑی کی مارکیٹ قیمت کے مطابق بہترین انشورنس پلانز اور ماہانہ قسط چیک کریں۔'}
-          </p>
-        </div>
-
-        <div className="bg-bg-secondary border border-border-main rounded-3xl p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 shadow-lg text-left">
-          {/* Form left (6 cols) */}
-          <div className="lg:col-span-6 space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-mono font-black uppercase text-accent-main tracking-widest block">
-                Car Valuation Market Estimate (PKR)
-              </label>
-              <input
-                type="number"
-                value={insValue}
-                onChange={(e) => setInsValue(Math.max(100000, Number(e.target.value)))}
-                className="w-full bg-bg-primary border border-border-main rounded-xl p-3 text-xs font-mono text-text-main focus:outline-none focus:border-accent-main"
-                placeholder="Car Value..."
-              />
-              <input
-                type="range"
-                min="1000000"
-                max="25000000"
-                step="200000"
-                value={insValue}
-                onChange={(e) => setInsValue(Number(e.target.value))}
-                className="w-full h-2 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-accent-main mt-2"
-              />
-              <div className="flex justify-between text-[9px] text-text-muted font-mono">
-                <span>10 LAKH</span>
-                <span>2.5 CRORE</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-mono font-black uppercase text-accent-main tracking-widest block">
-                Select Protection Package Tier
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['silver', 'gold', 'platinum'] as const).map((tier) => (
-                  <button
-                    key={tier}
-                    type="button"
-                    onClick={() => setInsPlan(tier)}
-                    className={`py-3 rounded-xl border flex flex-col items-center gap-1 cursor-pointer transition-all ${
-                      insPlan === tier
-                        ? 'bg-accent-main border-accent-main text-bg-primary shadow-xs'
-                        : 'bg-bg-primary border-border-main text-text-main hover:border-text-muted/40'
-                    }`}
-                  >
-                    <span className="text-xs font-sans font-black uppercase">{tier}</span>
-                    <span className="text-[9px] font-mono opacity-80">
-                      {tier === 'silver' ? '1.2%' : tier === 'gold' ? '1.8%' : '2.5%'} Rate
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* List of protections */}
-            <div className="bg-bg-primary p-4 rounded-2xl border border-border-main space-y-2.5 text-xs text-text-muted">
-              <div className="flex items-center gap-2 text-text-main font-bold">
-                <ShieldCheck size={14} className="text-accent-main" />
-                <span>Standard Covered Risks &amp; Benefits</span>
-              </div>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pl-5 list-disc">
-                <li>Total Theft &amp; Snatching</li>
-                <li>Third-Party Legal Liability</li>
-                <li>Accidental Damage repair</li>
-                <li>Natural Disaster cover</li>
-                <li>Roadside Towing Help</li>
-                <li>Biometric legal claim aid</li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Results Summary Right Panel (6 cols) */}
-          <div className="lg:col-span-6 bg-bg-primary border border-border-main p-6 rounded-3xl flex flex-col justify-between space-y-6">
-            <div className="space-y-4">
-              <h4 className="text-xs font-mono font-black uppercase text-text-muted tracking-widest">
-                PREMIUM ESTIMATION OUTCOME
-              </h4>
-              <div className="grid grid-cols-2 gap-4 border-b border-border-main pb-4">
-                <div>
-                  <span className="text-[9px] font-mono text-text-muted block uppercase">YEARLY PREMIUM</span>
-                  <span className="text-2xl font-black text-accent-main font-mono">
-                    Rs. {calculatedInsurance.annual.toLocaleString()}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[9px] font-mono text-text-muted block uppercase">MONTHLY EQUIVALENT</span>
-                  <span className="text-2xl font-black text-text-main font-mono">
-                    Rs. {calculatedInsurance.monthly.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Plan Benefits explanation */}
-              <div className="space-y-3">
-                <span className="text-[10px] font-mono text-text-muted block uppercase font-bold">PLAN ADVANTAGE FEATURES</span>
-                {insPlan === 'silver' && (
-                  <p className="text-xs text-text-muted leading-relaxed">
-                    <strong>Silver basic package</strong> offers core protection ideal for budget commuting. Covers total accidental loss and standard third-party property damages.
-                  </p>
-                )}
-                {insPlan === 'gold' && (
-                  <p className="text-xs text-text-muted leading-relaxed">
-                    <strong>Gold premium package</strong> is our most balanced tier. Includes towing services, snatched tracker coordination, and comprehensive accidental panel replacements.
-                  </p>
-                )}
-                {insPlan === 'platinum' && (
-                  <p className="text-xs text-text-muted leading-relaxed">
-                    <strong>Platinum ultimate package</strong> is designed for high-value luxury sedans. Provides zero-depreciation coverage on paint, instant engine biometrics validation, and rent-a-car support during repair days.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-4 border-t border-border-main/40">
-              {insSuccess ? (
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-xl font-bold text-center">
-                  ✓ Booking Request Received! An insurance counselor will call you within 1 hour.
-                </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    setInsSuccess(true);
-                    setTimeout(() => setInsSuccess(false), 5000);
-                  }}
-                  className="w-full bg-accent-main hover:bg-accent-hover text-bg-primary font-sans font-black text-xs uppercase tracking-wider py-4 rounded-xl transition-all cursor-pointer"
-                >
-                  📥 Lock Premium Quote &amp; Book Counselor
-                </button>
-              )}
-              <p className="text-[9px] text-text-muted text-center font-mono leading-tight">
-                Subject to surveyor biometrics inspection. Standard terms apply.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* SECTION 9: 200-POINT INSPECTION BOOKING DECK */}
       <section className="max-w-7xl mx-auto w-full px-4 space-y-6">
@@ -1734,157 +1345,6 @@ export default function HomeView({
             </div>
           </div>
         )}
-      </section>
-
-      {/* SECTION 11: DOWNLOAD MOBILE APP BANNER */}
-      {ENABLE_DOWNLOAD_APP && (
-        <section className="max-w-7xl mx-auto w-full px-4 animate-fade-in">
-          <div className="relative rounded-[32px] bg-gradient-to-r from-bg-secondary via-bg-primary to-bg-secondary border border-border-main p-8 md:p-12 overflow-hidden shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8 text-left">
-            {/* Decorative overlay glow */}
-            <div className="absolute top-0 right-0 w-80 h-80 bg-accent-main/5 rounded-full blur-[90px] pointer-events-none"></div>
-
-            <div className="space-y-3 max-w-2xl text-center md:text-left">
-              <span className="text-[9px] font-mono font-black text-accent-main bg-accent-main/10 px-3 py-1 rounded-full border border-accent-main/20 uppercase tracking-widest inline-block">
-                📱 BAZAR360 SMARTPHONE COMPANION
-              </span>
-              <h3 className="text-xl md:text-2xl lg:text-3xl font-black text-text-main uppercase tracking-tight leading-none font-sans">
-                {t.downloadHeading}
-              </h3>
-              <p className="text-text-muted text-xs md:text-sm font-sans leading-relaxed">
-                {t.downloadText}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-3 shrink-0">
-              {/* Apple Store Button */}
-              <a
-                href="#app-store"
-                onClick={(e) => { e.preventDefault(); alert("BAZAR360 Apple iOS app is pending public testflight release."); }}
-                className="bg-bg-primary hover:bg-bg-secondary border border-border-main rounded-xl px-4 py-2.5 flex items-center gap-3 transition-all duration-150 active:scale-95 group select-none"
-              >
-                <Smartphone size={20} className="text-text-main group-hover:text-accent-main transition-colors" />
-                <div className="text-left font-sans">
-                  <span className="text-[9px] text-text-muted block leading-none font-bold uppercase">Download on the</span>
-                  <span className="text-xs text-text-main block leading-none font-black tracking-tight mt-1 group-hover:text-accent-main">App Store</span>
-                </div>
-              </a>
-
-              {/* Google Play Button */}
-              <a
-                href="#play-store"
-                onClick={(e) => { e.preventDefault(); alert("BAZAR360 Android Google Play app is pending production deployment."); }}
-                className="bg-bg-primary hover:bg-bg-secondary border border-border-main rounded-xl px-4 py-2.5 flex items-center gap-3 transition-all duration-150 active:scale-95 group select-none"
-              >
-                <Car size={20} className="text-text-main group-hover:text-accent-main transition-colors" />
-                <div className="text-left font-sans">
-                  <span className="text-[9px] text-text-muted block leading-none font-bold uppercase">GET IT ON</span>
-                  <span className="text-xs text-text-main block leading-none font-black tracking-tight mt-1 group-hover:text-accent-main">Google Play</span>
-                </div>
-              </a>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* SECTION 12: FAQ ACCORDION SECTION */}
-      <section className="max-w-4xl mx-auto w-full px-4 space-y-6">
-        <div className="text-center space-y-2">
-          <h2 className="text-xl md:text-2xl font-black uppercase tracking-wider text-text-main flex items-center justify-center gap-2">
-            <HelpCircle size={20} className="text-accent-main" />
-            {lang === 'en' ? 'Frequently Asked Questions' : 'عام سوالات کے جوابات'}
-          </h2>
-          <p className="text-xs text-text-muted max-w-sm mx-auto">
-            {lang === 'en' ? 'Clear answers to your queries about listing, verification, inspection, and auto financing.' : 'گاڑیوں کی خریدو فروخت، میکانکی معائنہ اور بینک فنانس سے متعلق تفصیلی سوال و جواب۔'}
-          </p>
-        </div>
-
-        <div className="space-y-3 text-left">
-          {[
-            {
-              q: "How do I list my car on BAZAR360?",
-              a: "You can post your vehicle ad for free in under 60 seconds by clicking on the 'Sell Your Car' or 'Post Ad' button in the menu. Enter basic chassis and variant specifications, attach clear high-resolution images, set an asking price, and save. Our team will verify and approve the listing instantly."
-            },
-            {
-              q: "What are BAZAR360 verified listings?",
-              a: "Verified listings are denoted by a special blue shield badge. It means a certified BAZAR360 inspector has matched the physical chassis number with the excise database, verified the owner's biometric credentials, and completed a pre-screen engine health assessment to guarantee complete buyer security."
-            },
-            {
-              q: "How does the side-by-side vehicle comparison work?",
-              a: "When browsing car listings in our search center, click on the '+' or 'Compare' button in the top-right corner of any vehicle card to append it to your active matchup pool. Click on the comparison tray button on the bottom of your screen to open a dual specifications matrix comparing engine capacity, fuel type, transmission lines, and prices."
-            },
-            {
-              q: "How can I book an inspection on BAZAR360?",
-              a: "Fill out the certified mechanical on-site inspection form above with your name, phone number, vehicle model, and date. Alternatively, contact our inspection division desk managed by Malak Mazhar at +92 315 9085086 on WhatsApp/Call. Inspections start from just Rs. 4,500 PKR."
-            },
-            {
-              q: "Can I estimate bank loan financing and insurance premiums?",
-              a: "Yes! Use our integrated, fully interactive dynamic Auto Finance and Premium Insurance Calculator sections above. Select a custom vehicle valuation, adjust your preferred loan down payment percent or coverage plans, and see the exact calculated monthly and annual quotes updated on your screen instantly."
-            }
-          ].map((item, index) => {
-            const isOpen = activeFaqIndex === index;
-            return (
-              <div
-                key={index}
-                className="bg-bg-secondary border border-border-main rounded-2xl overflow-hidden transition-all duration-150"
-              >
-                <button
-                  type="button"
-                  onClick={() => setActiveFaqIndex(isOpen ? null : index)}
-                  className="w-full text-left p-5 flex justify-between items-center text-text-main font-sans font-black text-xs md:text-sm uppercase tracking-tight cursor-pointer hover:bg-bg-primary/30"
-                >
-                  <span>{item.q}</span>
-                  <ChevronDown
-                    size={16}
-                    className={`text-accent-main transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                {isOpen && (
-                  <div className="p-5 pt-0 border-t border-border-main/10 text-xs md:text-sm text-text-muted leading-relaxed font-medium font-sans">
-                    {item.a}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* SECTION 13: NEWSLETTER FORM */}
-      <section className="max-w-3xl mx-auto w-full px-4">
-        <div className="bg-bg-secondary border border-border-main rounded-3xl p-6 md:p-8 space-y-4 text-center">
-          <div className="w-12 h-12 rounded-full bg-accent-main/10 border border-accent-main/20 text-accent-main flex items-center justify-center mx-auto mb-2">
-            <Mail size={22} className="text-accent-main" />
-          </div>
-          <h3 className="text-lg font-sans font-black uppercase tracking-wider text-text-main">
-            {lang === 'en' ? 'Subscribe to BAZAR360 Insider' : 'تازہ ترین اپ ڈیٹس حاصل کریں'}
-          </h3>
-          <p className="text-xs text-text-muted max-w-md mx-auto">
-            {lang === 'en' ? 'Get weekly alerts on newly listed verified listings, price drops on premium sedans, and upcoming hybrid models.' : 'پاکستان بھر کی نئی انوینٹریز اور قیمتوں میں کمی کے نوٹیفیکیشنز بذریعہ ای میل حاصل کریں۔'}
-          </p>
-
-          {newsletterSuccess ? (
-            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl text-xs font-bold max-w-md mx-auto">
-              ✓ Subscribed Successful! We have registered your email for premium automotive updates.
-            </div>
-          ) : (
-            <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto">
-              <input
-                type="email"
-                required
-                value={newsletterEmail}
-                onChange={(e) => setNewsletterEmail(e.target.value)}
-                placeholder="Enter your email address..."
-                className="flex-grow bg-bg-primary border border-border-main text-xs rounded-xl p-3 focus:outline-none focus:border-accent-main text-text-main placeholder-text-muted/60"
-              />
-              <button
-                type="submit"
-                className="bg-accent-main hover:bg-accent-hover text-bg-primary font-sans font-black text-xs uppercase tracking-widest px-5 py-3 rounded-xl cursor-pointer transition-all active:scale-95 whitespace-nowrap shrink-0"
-              >
-                Subscribe
-              </button>
-            </form>
-          )}
-        </div>
       </section>
 
       {/* Dynamic Toast Notification Overlay */}

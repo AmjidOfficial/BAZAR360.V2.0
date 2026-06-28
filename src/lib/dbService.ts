@@ -25,8 +25,8 @@ export interface UserProfile {
   phoneVerified?: boolean;
   city?: string;
   state?: string;
-  role: 'Admin' | 'Showroom Owner' | 'Sales Rep' | 'Private Seller' | 'Buyer' | 'Dealer';
-  status: 'Active' | 'Pending Approval' | 'Suspended';
+  role: 'Admin' | 'Showroom Owner' | 'Individual User' | 'Visitor' | 'Sales Rep' | 'Private Seller' | 'Buyer' | 'Dealer';
+  status: 'Active' | 'Pending Approval' | 'Suspended' | 'Pending';
   socials?: {
     website?: string;
     facebook?: string;
@@ -39,6 +39,28 @@ export interface UserProfile {
   updatedAt: string;
   region?: string;    // Compatibility with existing subviews
   salesPodId?: string; // Compatibility with showroom manager bindings
+
+  // Enterprise redesign fields
+  profilePhoto?: string;
+  gender?: string;
+  dob?: string;
+  country?: string;
+  province?: string;
+  address?: string;
+  bio?: string;
+  acceptedTerms?: boolean;
+  preferredLanguage?: 'en' | 'ur';
+  preferredTheme?: 'light' | 'dark';
+
+  notificationSettings?: {
+    emailAlerts?: boolean;
+    smsAlerts?: boolean;
+    whatsappAlerts?: boolean;
+  };
+  privacySettings?: {
+    showPhonePublicly?: boolean;
+    showEmailPublicly?: boolean;
+  };
 }
 
 const DEALERS_COLLECTION = 'dealers';
@@ -149,11 +171,15 @@ export async function dbFetchDealers(): Promise<Dealer[]> {
     const list: Dealer[] = [];
     snap.forEach((doc) => {
       const data = doc.data();
+      const rawAvatar = data.avatarUrl || '';
+      const avatarUrl = doc.id === 'auto-choice-peshawar'
+        ? '/auto_choice_logo_1781509565476.jpg'
+        : (rawAvatar.startsWith('.') ? rawAvatar.substring(1) : rawAvatar);
       list.push({
         id: doc.id,
         name: data.name || '',
         avatarLetter: data.avatarLetter || data.name?.substring(0, 2).toUpperCase() || 'D',
-        avatarUrl: data.avatarUrl || '',
+        avatarUrl,
         subtitle: data.subtitle || '',
         location: data.location || '',
         rating: typeof data.rating === 'number' ? data.rating : 4.5,
@@ -251,11 +277,34 @@ export async function dbSaveUserProfile(profile: UserProfile): Promise<void> {
 
   try {
     const userDocRef = doc(db, USERS_COLLECTION, profile.uid);
-    await setDoc(userDocRef, {
+    const profileDocRef = doc(db, 'profiles', profile.uid);
+    const timeStr = new Date().toISOString();
+    
+    const payload = {
       ...profile,
-      updatedAt: new Date().toISOString()
-    });
-    console.log('User profile saved successfully to Firestore:', profile.uid);
+      updatedAt: timeStr
+    };
+
+    // Save to /users
+    await setDoc(userDocRef, payload);
+
+    // Save to /profiles (split-collection personal details)
+    await setDoc(profileDocRef, payload);
+
+    console.log('User profile saved successfully to Firestore /users and /profiles:', profile.uid);
+
+    // Save to /auditLogs
+    await dbSaveAuditLog({
+      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      userId: profile.uid,
+      userName: profile.displayName || 'System User',
+      userRole: profile.role || 'Individual User',
+      action: 'PROFILE_UPDATE',
+      details: `Profile saved/updated in Firestore collections /users and /profiles.`,
+      status: 'SUCCESS',
+      timestamp: timeStr
+    }).catch(e => console.warn('Audit logging skipped:', e));
+
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `${USERS_COLLECTION}/${profile.uid}`);
   }
@@ -711,6 +760,582 @@ export async function dbFetchLeadActions(): Promise<TrackedLeadAction[]> {
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   } catch (err) {
     console.warn('Offline lead actions fetch issue:', err);
+    return [];
+  }
+}
+
+// ==========================================================
+// 13. REDESIGNED ENTERPRISE DATABASE LAYER (ALL 26 COLLECTIONS)
+// ==========================================================
+
+export async function dbSaveShowroom(showroom: any): Promise<void> {
+  try {
+    const ref = doc(db, 'showrooms', showroom.id);
+    await setDoc(ref, {
+      ...showroom,
+      updatedAt: new Date().toISOString(),
+      activeFlag: showroom.activeFlag !== false,
+      status: showroom.status || 'Active'
+    });
+    console.log('Showroom saved to /showrooms:', showroom.id);
+  } catch (err) {
+    console.warn('Showroom save bypassed:', err);
+  }
+}
+
+export async function dbFetchShowrooms(): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'showrooms'));
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push({ id: d.id, ...d.data() });
+    });
+    return list;
+  } catch (err) {
+    console.warn('Showrooms fetch bypassed:', err);
+    return [];
+  }
+}
+
+export async function dbSaveShowroomStaff(staff: any): Promise<void> {
+  try {
+    const ref = doc(db, 'showroomStaff', staff.id);
+    await setDoc(ref, {
+      ...staff,
+      updatedAt: new Date().toISOString(),
+      activeFlag: staff.activeFlag !== false,
+      status: staff.status || 'Active'
+    });
+  } catch (err) {
+    console.warn('Showroom staff save bypassed:', err);
+  }
+}
+
+export async function dbFetchShowroomStaff(): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'showroomStaff'));
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push({ id: d.id, ...d.data() });
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveVehicle(vehicle: any): Promise<void> {
+  try {
+    const ref = doc(db, 'vehicles', vehicle.id);
+    await setDoc(ref, {
+      ...vehicle,
+      updatedAt: new Date().toISOString(),
+      activeFlag: vehicle.activeFlag !== false,
+      status: vehicle.status || 'Approved'
+    });
+    console.log('Vehicle saved to /vehicles:', vehicle.id);
+  } catch (err) {
+    console.warn('Vehicle save bypassed:', err);
+  }
+}
+
+export async function dbFetchVehicles(): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'vehicles'));
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push({ id: d.id, ...d.data() });
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveVehicleImage(img: any): Promise<void> {
+  try {
+    const ref = doc(db, 'vehicleImages', img.id);
+    await setDoc(ref, {
+      ...img,
+      createdAt: img.createdAt || new Date().toISOString(),
+      activeFlag: true,
+      status: 'Active'
+    });
+  } catch (err) {
+    console.warn('vehicleImages save bypassed:', err);
+  }
+}
+
+export async function dbSaveVehicleVideo(vid: any): Promise<void> {
+  try {
+    const ref = doc(db, 'vehicleVideos', vid.id);
+    await setDoc(ref, {
+      ...vid,
+      createdAt: vid.createdAt || new Date().toISOString(),
+      activeFlag: true,
+      status: 'Active'
+    });
+  } catch (err) {
+    console.warn('vehicleVideos save bypassed:', err);
+  }
+}
+
+export async function dbToggleFavorite(userId: string, vehicleId: string, isFav: boolean): Promise<void> {
+  try {
+    const favId = `fav-${userId}-${vehicleId}`;
+    const ref = doc(db, 'favorites', favId);
+    if (isFav) {
+      await setDoc(ref, {
+        id: favId,
+        userId,
+        vehicleId,
+        activeFlag: true,
+        status: 'Active',
+        createdAt: new Date().toISOString()
+      });
+    } else {
+      await deleteDoc(ref);
+    }
+  } catch (err) {
+    console.warn('Favorites write bypassed:', err);
+  }
+}
+
+export async function dbFetchFavorites(userId: string): Promise<any[]> {
+  try {
+    const q = query(collection(db, 'favorites'), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push(d.data());
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveMessage(msg: any): Promise<void> {
+  try {
+    const ref = doc(db, 'messages', msg.id);
+    await setDoc(ref, {
+      ...msg,
+      timestamp: msg.timestamp || new Date().toISOString(),
+      activeFlag: true,
+      status: 'Delivered'
+    });
+  } catch (err) {
+    console.warn('message save bypassed:', err);
+  }
+}
+
+export async function dbFetchMessages(chatId: string): Promise<any[]> {
+  try {
+    const q = query(collection(db, 'messages'), where('chatId', '==', chatId), orderBy('timestamp', 'asc'));
+    const snap = await getDocs(q);
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push(d.data());
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveChat(chat: any): Promise<void> {
+  try {
+    const ref = doc(db, 'chats', chat.id);
+    await setDoc(ref, {
+      ...chat,
+      lastMessageAt: chat.lastMessageAt || new Date().toISOString(),
+      activeFlag: true,
+      status: 'Active'
+    });
+  } catch (err) {
+    console.warn('chat save bypassed:', err);
+  }
+}
+
+export async function dbFetchChats(userId: string): Promise<any[]> {
+  try {
+    const q = query(collection(db, 'chats'), where('participantIds', 'array-contains', userId));
+    const snap = await getDocs(q);
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push(d.data());
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveNotification(notification: any): Promise<void> {
+  try {
+    const ref = doc(db, 'notifications', notification.id);
+    await setDoc(ref, {
+      ...notification,
+      createdAt: notification.createdAt || new Date().toISOString(),
+      activeFlag: true,
+      status: 'Active'
+    });
+  } catch (err) {
+    console.warn('notification save bypassed:', err);
+  }
+}
+
+export async function dbFetchNotifications(userId: string): Promise<any[]> {
+  try {
+    const q = query(collection(db, 'notifications'), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push(d.data());
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveSearchHistory(search: any): Promise<void> {
+  try {
+    const ref = doc(db, 'searchHistory', search.id);
+    await setDoc(ref, {
+      ...search,
+      createdAt: search.createdAt || new Date().toISOString(),
+      activeFlag: true,
+      status: 'Active'
+    });
+  } catch (err) {
+    console.warn('searchHistory save bypassed:', err);
+  }
+}
+
+export async function dbFetchSearchHistory(userId: string): Promise<any[]> {
+  try {
+    const q = query(collection(db, 'searchHistory'), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push(d.data());
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveRecentView(view: any): Promise<void> {
+  try {
+    const ref = doc(db, 'recentViews', view.id);
+    await setDoc(ref, {
+      ...view,
+      viewedAt: view.viewedAt || new Date().toISOString(),
+      activeFlag: true,
+      status: 'Active'
+    });
+  } catch (err) {
+    console.warn('recentViews save bypassed:', err);
+  }
+}
+
+export async function dbFetchRecentViews(userId: string): Promise<any[]> {
+  try {
+    const q = query(collection(db, 'recentViews'), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push(d.data());
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveReview(review: any): Promise<void> {
+  try {
+    const ref = doc(db, 'reviews', review.id);
+    await setDoc(ref, {
+      ...review,
+      createdAt: review.createdAt || new Date().toISOString(),
+      activeFlag: true,
+      status: 'Approved'
+    });
+  } catch (err) {
+    console.warn('review save bypassed:', err);
+  }
+}
+
+export async function dbSaveRating(rating: any): Promise<void> {
+  try {
+    const ref = doc(db, 'ratings', rating.id);
+    await setDoc(ref, {
+      ...rating,
+      updatedAt: new Date().toISOString(),
+      activeFlag: true,
+      status: 'Active'
+    });
+  } catch (err) {
+    console.warn('rating save bypassed:', err);
+  }
+}
+
+export async function dbFetchRatings(targetId: string): Promise<any[]> {
+  try {
+    const q = query(collection(db, 'ratings'), where('targetId', '==', targetId));
+    const snap = await getDocs(q);
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push(d.data());
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveSupportTicket(ticket: any): Promise<void> {
+  try {
+    const ref = doc(db, 'supportTickets', ticket.id);
+    await setDoc(ref, {
+      ...ticket,
+      updatedAt: new Date().toISOString(),
+      activeFlag: ticket.activeFlag !== false,
+      status: ticket.status || 'Open'
+    });
+  } catch (err) {
+    console.warn('supportTickets save bypassed:', err);
+  }
+}
+
+export async function dbFetchSupportTickets(): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'supportTickets'));
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push({ id: d.id, ...d.data() });
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSavePayment(payment: any): Promise<void> {
+  try {
+    const ref = doc(db, 'payments', payment.id);
+    await setDoc(ref, {
+      ...payment,
+      createdAt: payment.createdAt || new Date().toISOString(),
+      activeFlag: true,
+      status: payment.status || 'Completed'
+    });
+  } catch (err) {
+    console.warn('payment save bypassed:', err);
+  }
+}
+
+export async function dbFetchPayments(): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'payments'));
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push({ id: d.id, ...d.data() });
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveSubscription(sub: any): Promise<void> {
+  try {
+    const ref = doc(db, 'subscriptions', sub.id);
+    await setDoc(ref, {
+      ...sub,
+      createdAt: sub.createdAt || new Date().toISOString(),
+      activeFlag: sub.activeFlag !== false,
+      status: sub.status || 'Active'
+    });
+  } catch (err) {
+    console.warn('subscription save bypassed:', err);
+  }
+}
+
+export async function dbFetchSubscriptions(): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'subscriptions'));
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push({ id: d.id, ...d.data() });
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveAdvertisement(ad: any): Promise<void> {
+  try {
+    const ref = doc(db, 'advertisements', ad.id);
+    await setDoc(ref, {
+      ...ad,
+      createdAt: ad.createdAt || new Date().toISOString(),
+      activeFlag: ad.activeFlag !== false,
+      status: ad.status || 'Active'
+    });
+  } catch (err) {
+    console.warn('advertisement save bypassed:', err);
+  }
+}
+
+export async function dbFetchAdvertisements(): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'advertisements'));
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push({ id: d.id, ...d.data() });
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveAnalytics(evt: any): Promise<void> {
+  try {
+    const ref = doc(db, 'analytics', evt.id);
+    await setDoc(ref, {
+      ...evt,
+      timestamp: evt.timestamp || new Date().toISOString(),
+      activeFlag: true,
+      status: 'Active'
+    });
+  } catch (err) {
+    console.warn('analytics save bypassed:', err);
+  }
+}
+
+export async function dbFetchAnalytics(): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'analytics'));
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push({ id: d.id, ...d.data() });
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveSetting(setting: any): Promise<void> {
+  try {
+    const ref = doc(db, 'settings', setting.id);
+    await setDoc(ref, {
+      ...setting,
+      updatedAt: new Date().toISOString(),
+      activeFlag: true,
+      status: 'Active'
+    });
+  } catch (err) {
+    console.warn('settings save bypassed:', err);
+  }
+}
+
+export async function dbFetchSettings(): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'settings'));
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push({ id: d.id, ...d.data() });
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveAuditLog(log: any): Promise<void> {
+  try {
+    const ref = doc(db, 'auditLogs', log.id);
+    await setDoc(ref, {
+      ...log,
+      timestamp: log.timestamp || new Date().toISOString(),
+      activeFlag: true,
+      status: 'Logged'
+    });
+  } catch (err) {
+    console.warn('auditLogs save bypassed:', err);
+  }
+}
+
+export async function dbFetchAuditLogs(): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'auditLogs'));
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push({ id: d.id, ...d.data() });
+    });
+    return list.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveSeo(seo: any): Promise<void> {
+  try {
+    const ref = doc(db, 'seo', seo.id);
+    await setDoc(ref, {
+      ...seo,
+      updatedAt: new Date().toISOString(),
+      activeFlag: true,
+      status: 'Active'
+    });
+  } catch (err) {
+    console.warn('seo save bypassed:', err);
+  }
+}
+
+export async function dbFetchSeo(): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'seo'));
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push({ id: d.id, ...d.data() });
+    });
+    return list;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function dbSaveSystemLog(log: any): Promise<void> {
+  try {
+    const ref = doc(db, 'systemLogs', log.id);
+    await setDoc(ref, {
+      ...log,
+      timestamp: log.timestamp || new Date().toISOString(),
+      activeFlag: true,
+      status: 'Active'
+    });
+  } catch (err) {
+    console.warn('systemLogs save bypassed:', err);
+  }
+}
+
+export async function dbFetchSystemLogs(): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'systemLogs'));
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push({ id: d.id, ...d.data() });
+    });
+    return list;
+  } catch (err) {
     return [];
   }
 }

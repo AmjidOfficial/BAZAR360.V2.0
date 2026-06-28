@@ -15,7 +15,6 @@ interface TopAppBarProps {
   isWithTicker?: boolean;
   currentCategory?: 'gateway' | 'auto' | 'footwear' | 'food';
   onCategoryChange?: (category: 'gateway' | 'auto' | 'footwear' | 'food') => void;
-  onMobileMenuToggle: () => void;
   lang: 'en' | 'ur';
   onLanguageToggle: () => void;
 }
@@ -32,7 +31,6 @@ export default function TopAppBar({
   isWithTicker,
   currentCategory = 'gateway',
   onCategoryChange,
-  onMobileMenuToggle,
   lang,
   onLanguageToggle
 }: TopAppBarProps) {
@@ -46,28 +44,87 @@ export default function TopAppBar({
         <div className="cursor-pointer active:scale-95 transition-transform" onClick={() => setTab('home')}>
           {/* BAZAR360 Premium Responsive Logo Component */}
           <div className="flex items-center space-x-2 select-none">
-            {/* Interactive 360-Degree Orbital Icon */}
-            <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-[#1E293B] border border-white/10 shadow-sm transition-transform">
-              <svg className="w-5 h-5 text-orange-500 animate-[spin_20s_linear_infinite]" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path>
+            {/* Real high-fidelity shopping bag "360" brand logo from guidelines */}
+            <div className="flex items-center gap-2">
+              <svg className="w-10 h-10 select-none flex-shrink-0" viewBox="0 0 160 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Top dark blue/white arching bracket/arrow */}
+                <path 
+                  d="M 40 50 H 60 C 75 25, 110 25, 125 50" 
+                  strokeWidth="8" 
+                  strokeLinecap="round" 
+                  fill="none" 
+                  className="stroke-[#0B2240] dark:stroke-white" 
+                />
+                {/* 2 white/blue rivets on the left of upper arc */}
+                <circle cx="46" cy="45" r="2.5" className="fill-white dark:fill-[#0F2E59]" />
+                <circle cx="54" cy="45" r="2.5" className="fill-white dark:fill-[#0F2E59]" />
+
+                {/* Bottom orange arrow arc */}
+                <path 
+                  d="M 35 95 C 45 130, 95 130, 115 105" 
+                  stroke="#FF6B00" 
+                  strokeWidth="8" 
+                  strokeLinecap="round" 
+                  fill="none" 
+                />
+                {/* Arrow head for orange arc */}
+                <path d="M 110 106 L 122 102 L 118 114 Z" fill="#FF6B00" />
+
+                {/* Number "36" of 360 */}
+                <text 
+                  x="18" 
+                  y="96" 
+                  className="font-sans font-black fill-[#0B2240] dark:fill-white" 
+                  fontSize="70" 
+                  letterSpacing="-4"
+                >
+                  36
+                </text>
+
+                {/* Orange filled circle with shopping cart icon (representing "0") */}
+                <circle cx="115" cy="75" r="24" fill="url(#orangeLogoGrad)" />
+                <circle cx="115" cy="75" r="18" fill="#FFFFFF" />
+                
+                {/* Orange shopping cart path inside the circle */}
+                <path 
+                  d="M 103 66 L 107 66 L 110 78 L 123 78 L 126 69 L 109 69" 
+                  stroke="#FF6B00" 
+                  strokeWidth="2.5" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  fill="none" 
+                />
+                <circle cx="113" cy="84" r="2.5" fill="#FF6B00" />
+                <circle cx="121" cy="84" r="2.5" fill="#FF6B00" />
+
+                <defs>
+                  <linearGradient id="orangeLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#FF8A00" />
+                    <stop offset="100%" stopColor="#FF5200" />
+                  </linearGradient>
+                </defs>
               </svg>
-              <span className="absolute text-[9px] font-black text-[#38BDF8] tracking-tighter">360</span>
-            </div>
-            {/* Typography Wrapper */}
-            <div className="flex items-center">
-              <div className="flex flex-col text-left">
-                <span className="text-[17px] font-black text-white tracking-widest leading-none font-sans">BAZAR<span className="text-orange-500">360</span></span>
-                <span className="text-[8px] font-bold text-sky-400 tracking-[0.22em] uppercase pl-0.5 font-mono">Ecosystem</span>
-              </div>
-              {currentCategory === 'auto' && (
-                <>
-                  <div className="h-6 w-px bg-white/10 mx-3 hidden sm:block" id="brand-vertical-divider"></div>
-                  <div className="flex flex-col text-left hidden sm:flex" id="brand-premium-tag">
-                    <span className="text-xs font-black text-white uppercase tracking-wider leading-none font-sans">AUTO CHOICE</span>
-                    <span className="text-[7.5px] font-black text-orange-500 tracking-widest uppercase mt-0.5 leading-none">PREMIUM PARTNER</span>
+              {/* Typography Wrapper */}
+              <div className="flex items-center">
+                <div className="flex flex-col text-left">
+                  <div className="flex items-baseline leading-none">
+                    <span className="text-[18px] font-black text-slate-900 dark:text-white tracking-tight font-sans">BAZAR<span className="text-orange-500">360</span></span>
+                    <span className="text-[11px] font-extrabold text-[#38BDF8] ml-0.5 font-sans lowercase">.online</span>
                   </div>
-                </>
-              )}
+                  <span className="text-[7.5px] font-bold text-slate-500 dark:text-slate-400 tracking-[0.18em] uppercase pl-0.5 mt-0.5 font-sans">
+                    BUY <span className="text-orange-500 font-black">|</span> SELL <span className="text-orange-500 font-black">|</span> CONNECT
+                  </span>
+                </div>
+                {currentCategory === 'auto' && (
+                  <>
+                    <div className="h-6 w-px bg-white/10 mx-3 hidden sm:block" id="brand-vertical-divider"></div>
+                    <div className="flex flex-col text-left hidden sm:flex" id="brand-premium-tag">
+                      <span className="text-xs font-black text-white uppercase tracking-wider leading-none font-sans">AUTO CHOICE</span>
+                      <span className="text-[7.5px] font-black text-orange-500 tracking-widest uppercase mt-0.5 leading-none">PREMIUM PARTNER</span>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -175,39 +232,6 @@ export default function TopAppBar({
         >
           <PlusCircle size={15} />
           {lang === 'en' ? 'Post Your Ad' : 'اشتہار لگائیں'}
-        </button>
-      </div>
-
-      {/* Mobile-Only Language & Menu Container */}
-      <div className="flex md:hidden items-center gap-2">
-        {/* Mobile Theme Switcher */}
-        <button
-          onClick={toggleTheme}
-          className="p-2 bg-[#1E293B]/80 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#38BDF8] rounded-xl border border-white/10 cursor-pointer active:scale-95 select-none"
-          style={{ minHeight: '36px' }}
-          title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
-        >
-          {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-        </button>
-
-        {/* Mobile-Only Language Switcher */}
-        <button
-          onClick={onLanguageToggle}
-          className="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-slate-950 font-mono font-black text-[10px] rounded-xl border border-orange-400/20 cursor-pointer active:scale-95 select-none uppercase tracking-wider"
-          style={{ minHeight: '36px' }}
-        >
-          {lang === 'en' ? 'اردو' : 'EN'}
-        </button>
-
-        {/* Mobile-Only Burger Menu Trigger Button */}
-        <button
-          onClick={onMobileMenuToggle}
-          className="flex text-slate-300 hover:text-orange-500 transition-all p-2 bg-[#1E293B] rounded-xl border border-white/5 cursor-pointer active:scale-95"
-          style={{ minHeight: '36px' }}
-          id="mobile-drawer-toggle-btn"
-          title="Open Navigation Menu"
-        >
-          <Menu size={20} />
         </button>
       </div>
     </header>

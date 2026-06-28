@@ -6,7 +6,7 @@ export const INITIAL_DEALERS: Dealer[] = [
     name: 'Auto Choice',
     avatarLetter: 'AC',
     coverImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB7L3tc6G8oV2yG6bD2-4rkocsDR68Fv03AYKixBC3Jo7z3F2dxC7l1k4a5qF2lg9sOFyDrPsAyPlvZ6lr6DN1PB651SzZXlvwyRfHsTV44M01h5rtpJZP3vkPARPkwkcD8rbWhw9phqyv92EMw-dvIsScW2rCrgiunc8yMndccSDmD5SZni8J5SJF098meLiFId3ebyei-RpMdRt4bsa4Ot5PZonvepRTSshKKpywxQZF24fSlk6DLYXf6M5s4qDFp0VhtnsirnJI',
-    avatarUrl: './auto_choice_logo_1781509565476.jpg',
+    avatarUrl: '/auto_choice_logo_1781509565476.jpg',
     subtitle: 'To buy and Sell New and Used Cars, Jeeps and SUVs',
     location: 'Alamas Car Village, Ring Road, Peshawar',
     rating: 4.9,
@@ -184,7 +184,10 @@ export const INITIAL_LISTINGS: CarListing[] = [
     images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuBZtBmgc7whl0zLeKAWRQtQFFaqpX0BeFFFhv-7s4eS0XJv8a1i88YYMhBhIwgqiGj0A7rd6ANHhOigA9qyoVbvYOAnweQXtNq7ErLbCyQjxwaBqRacvP9ywt_OdSJTgjIghQ1HJJryxlmkvysweO35ZG8mIQ-GXkXc9eRcG8W6mfooetlurMVEfJwBT5kA3gsemMgkdQQ1x8uV6kvo-7Fd2TWs0eo0DbfHCrGCCkwIOepT-cmfMIReSrrjlnJsv7mXR0lNxmLRanQ'],
     assemblyType: 'Imported',
     dentPaintDescription: 'Pristine exterior, zero dents or scratches.',
-    tokenTaxStatus: 'Paid'
+    tokenTaxStatus: 'Paid',
+    topSpeed: '193 mph',
+    acceleration: '3.2s',
+    range: '450 km'
   },
   {
     id: 'car-mercedes-g63',
@@ -219,7 +222,10 @@ export const INITIAL_LISTINGS: CarListing[] = [
     images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuDJqJ3MkFiS7DRa6OqXFSkJcsI3cZ9685e7vJevGiglSWNC2IfxmZhySZymL0jE7nrtUXMK6mf7aHDMHqlrZWKmkCE0srhAhIAspnSs8zwfdjDTe-dg6nn_Aga0qdRS4HRXFWY3F_q8ZawA6LnWHg_skTG6XUMyQyjW-p2_o3ang_YT0dQhOTTRaDaYBO7_Qu4gbU9bE6JvdTXnmdtv7C205mCo97G1dOgK0FxT0Ydptt8zcbWU1l6sXYT9tEUyNWIkdrgiPIn9esI'],
     assemblyType: 'Imported',
     dentPaintDescription: 'Total original paint, scratchless showroom condition.',
-    tokenTaxStatus: 'Paid'
+    tokenTaxStatus: 'Paid',
+    topSpeed: '149 mph',
+    acceleration: '4.5s',
+    range: '550 km'
   },
   {
     id: 'car-bmw-m4-comp',
@@ -254,7 +260,10 @@ export const INITIAL_LISTINGS: CarListing[] = [
     images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuBkRyZgqdwVho1YG4awPp4toJiKUSqH05IGmlCDeY-esoL_rsDYbAkp7FPKlnXbFzCmNSSrCuHqwrXO_non2l8_jM8QfzbMxg4aYyOMfOsMhs3rpT2R8j1Gx1Mf3knoB5B5hIqUiVq3mIkhn8Bc_376AboW7iBngDAdVbQRCj0uupxH2V2RrluMiTA106UgPdQQb-5gB_A5arpTkTHIfrGwAj737v9D8LD8iIwl-xWDtVKgoKbuQ9XpeQ3NVP4I-N1tqLxV1YsPjWs'],
     assemblyType: 'Imported',
     dentPaintDescription: 'Front bumper has slight scratch but overall completely original.',
-    tokenTaxStatus: 'Paid'
+    tokenTaxStatus: 'Paid',
+    topSpeed: '180 mph',
+    acceleration: '3.7s',
+    range: '500 km'
   },
   {
     id: 'car-audi-rsq8',
@@ -289,7 +298,10 @@ export const INITIAL_LISTINGS: CarListing[] = [
     images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuDJqJ3MkFiS7DRa6OqXFSkJcsI3cZ9685e7vJevGiglSWNC2IfxmZhySZymL0jE7nrtUXMK6mf7aHDMHqlrZWKmkCE0srhAhIAspnSs8zwfdjDTe-dg6nn_Aga0qdRS4HRXFWY3F_q8ZawA6LnWHg_skTG6XUMyQyjW-p2_o3ang_YT0dQhOTTRaDaYBO7_Qu4gbU9bE6JvdTXnmdtv7C205mCo97G1dOgK0FxT0Ydptt8zcbWU1l6sXYT9tEUyNWIkdrgiPIn9esI'],
     assemblyType: 'Imported',
     dentPaintDescription: 'Slight bumper touchups, side fenders completely original.',
-    tokenTaxStatus: 'Paid'
+    tokenTaxStatus: 'Paid',
+    topSpeed: '155 mph',
+    acceleration: '3.8s',
+    range: '600 km'
   },
   {
     id: 'car-porsche-911-carrera',
@@ -324,7 +336,10 @@ export const INITIAL_LISTINGS: CarListing[] = [
     images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuBHs7Za22_aYMs1VGHEYckNGnFgDZzkirSxzLiCJBbCB2xad7rRbbQo7M1xi7RyGNq8fvUUeGKfFFf93rh8AmKvNpWDRSLWCByW_bP0wK9XhH89wGXq5pXT2Px4I9jvkv5MBaJz82g9lonJQn3tomdmnq1xkOb7_VYzNv57n_oDsol7EzCfdb7PAysiZ_xKKaKLUSX2asp4D15fPMkZ87Rak4ev3Dn7scIHsYk-rDEk0lhfaS18RDIBh_FH8gp3SYVfy_24Oiv87Uw'],
     assemblyType: 'Imported',
     dentPaintDescription: 'Total genuine paint, pristine condition.',
-    tokenTaxStatus: 'Paid'
+    tokenTaxStatus: 'Paid',
+    topSpeed: '182 mph',
+    acceleration: '4.0s',
+    range: '480 km'
   },
   {
     id: 'car-fortuner-legender',
@@ -356,10 +371,13 @@ export const INITIAL_LISTINGS: CarListing[] = [
     registrationCity: 'Peshawar',
     documentType: 'Smart Card',
     tokenTaxPaid: true,
-    images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuDJqJ3MkFiS7DRa6OqXFSkJcsI3cZ9685e7vJevGiglSWNC2IfxmZhySZymL0jE7nrtUXMK6mf7aHDMHqlrZWKmkCE0srhAhIAspnSs8zwfdjDTe-dg6nn_Aga0qdRS4HRXFWY3F_q8ZawA6LnWHg_skTG6XUMyQyjW-p2_o3ang_YT0dQhOTTRaDaYBO7_Qu4gbU9bE6JvdTXnmdtv7C205mCo97G1dOgK0FxT0Ydptt8zcbWU1l6sXYT9tEUyNWIkdrgiPIn9esI'],
+    images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuDJqJ3MkFiS7DRa6OqXFSkJcsI3cZ9685e7vJevGiglSWNC2IfxmZhySZymL0jE7nrtUXMK6mf7aHDMHqlrZWKmkCE0srhAhIAspnSs8zwspan_Aga0qdRS4HRXFWY3F_q8ZawA6LnWHg_skTG6XUMyQyjW-p2_o3ang_YT0dQhOTTRaDaYBO7_Qu4gbU9bE6JvdTXnmdtv7C205mCo97G1dOgK0FxT0Ydptt8zcbWU1l6sXYT9tEUyNWIkdrgiPIn9esI'],
     assemblyType: 'Local',
     dentPaintDescription: 'Spotless, bumper to bumper total genuine.',
-    tokenTaxStatus: 'Paid'
+    tokenTaxStatus: 'Paid',
+    topSpeed: '115 mph',
+    acceleration: '9.5s',
+    range: '750 km'
   }
 ];
 

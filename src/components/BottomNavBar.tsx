@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Home, Plus, Menu, X, ClipboardList, TrendingUp, User, Store, Sparkles, PhoneCall } from 'lucide-react';
+import { Home, Plus, Menu, X, ClipboardList, TrendingUp, User, Store, Sparkles, PhoneCall, Sun, Moon } from 'lucide-react';
 
 interface BottomNavBarProps {
   currentTab: string;
@@ -8,6 +8,9 @@ interface BottomNavBarProps {
   currentCategory?: 'gateway' | 'auto' | 'footwear' | 'food';
   onCategoryChange?: (category: 'gateway' | 'auto' | 'footwear' | 'food') => void;
   lang: 'en' | 'ur';
+  onLanguageToggle: () => void;
+  theme: 'dark' | 'light';
+  toggleTheme: () => void;
 }
 
 export default function BottomNavBar({ 
@@ -15,7 +18,10 @@ export default function BottomNavBar({
   setTab,
   currentCategory = 'gateway',
   onCategoryChange,
-  lang
+  lang,
+  onLanguageToggle,
+  theme,
+  toggleTheme
 }: BottomNavBarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -35,11 +41,13 @@ export default function BottomNavBar({
       founder: 'Founder',
       helpline: 'Helpline Connect',
       items: {
+        home: { label: 'Home Dashboard', desc: 'Main hub & spotlight features' },
         inventory: { label: 'Vehicle Inventory', desc: 'Faceted search & filters' },
         insights: { label: 'Market Insights', desc: 'Pricing indexes & analytics' },
         portal: { label: 'Profile & Auth', desc: 'Sign In / Sign Up suite' },
         dealers: { label: 'Showrooms', desc: 'Verified dealer storefronts' },
-        services: { label: 'Auto Services', desc: 'Inspections & financing' }
+        services: { label: 'Auto Services', desc: 'Inspections & financing' },
+        contact: { label: 'Contact Help', desc: '24/7 customer assistance' }
       }
     },
     ur: {
@@ -51,21 +59,25 @@ export default function BottomNavBar({
       founder: 'بانی',
       helpline: 'ہیلپ لائن رابطہ',
       items: {
+        home: { label: 'ہوم ڈیش بورڈ', desc: 'مرکزی ہب اور اہم خصوصیات' },
         inventory: { label: 'گاڑیوں کی انوینٹری', desc: 'سرچ اور فلٹرز کے ساتھ گاڑیوں کی تلاش' },
         insights: { label: 'مارکیٹ کے تجزیات', desc: 'گاڑیوں کی قیمتوں کا موازنہ' },
         portal: { label: 'پروفائل اور لاگ ان', desc: 'سائن ان اور اکاؤنٹ بنائیں' },
         dealers: { label: 'شورومز', desc: 'تصدیق شدہ برانڈ شورومز' },
-        services: { label: 'آٹو سروسز', desc: 'گاڑیوں کی انسپکشن اور فنانسنگ' }
+        services: { label: 'آٹو سروسز', desc: 'گاڑیوں کی انسپکشن اور فنانسنگ' },
+        contact: { label: 'رابطہ کریں', desc: '24/7 کسٹمر سپورٹ رابطہ' }
       }
     }
   }[lang];
 
   const menuItems = [
+    { id: 'home', label: t.items.home.label, icon: Home, desc: t.items.home.desc },
     { id: 'inventory', label: t.items.inventory.label, icon: ClipboardList, desc: t.items.inventory.desc },
-    { id: 'insights', label: t.items.insights.label, icon: TrendingUp, desc: t.items.insights.desc },
-    { id: 'portal', label: t.items.portal.label, icon: User, desc: t.items.portal.desc },
     { id: 'dealers', label: t.items.dealers.label, icon: Store, desc: t.items.dealers.desc },
+    { id: 'insights', label: t.items.insights.label, icon: TrendingUp, desc: t.items.insights.desc },
     { id: 'services', label: t.items.services.label, icon: PhoneCall, desc: t.items.services.desc },
+    { id: 'portal', label: t.items.portal.label, icon: User, desc: t.items.portal.desc },
+    { id: 'contact', label: t.items.contact.label, icon: PhoneCall, desc: t.items.contact.desc },
   ];
 
   return (
@@ -157,6 +169,27 @@ export default function BottomNavBar({
                   className="w-8 h-8 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-gray-400 hover:text-white transition-colors cursor-pointer"
                 >
                   <X size={15} />
+                </button>
+              </div>
+
+              {/* Quick Settings Row (Merged from Top AppBar for Mobile Cleanliness) */}
+              <div className="grid grid-cols-2 gap-3 mb-6 shrink-0">
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="flex items-center justify-center gap-2 p-3 bg-white/5 border border-white/5 rounded-2xl text-xs font-sans font-extrabold uppercase tracking-wider text-slate-300 hover:text-white hover:border-white/10 active:scale-95 transition-all cursor-pointer"
+                >
+                  {theme === 'dark' ? <Sun size={15} className="text-amber-500" /> : <Moon size={15} className="text-[#38BDF8]" />}
+                  <span>{theme === 'dark' ? 'Light Theme' : 'Dark Theme'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onLanguageToggle}
+                  className="flex items-center justify-center gap-2 p-3 bg-white/5 border border-white/5 rounded-2xl text-xs font-sans font-extrabold uppercase tracking-wider text-[#38BDF8] hover:text-white hover:border-[#38BDF8]/40 active:scale-95 transition-all cursor-pointer"
+                >
+                  <span className="text-sm">🌐</span>
+                  <span>{lang === 'en' ? 'اردو' : 'English'}</span>
                 </button>
               </div>
 

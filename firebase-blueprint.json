@@ -1,175 +1,427 @@
 {
   "entities": {
     "user": {
-      "title": "User Profile",
-      "description": "Standard profiles for admins, showroom owners, sales reps, and buyers within Bazar360.",
+      "title": "User Account",
+      "description": "Core account credentials and registration status for Firebase Auth sync.",
       "type": "object",
       "properties": {
         "uid": { "type": "string", "description": "Unique Firebase Authentication UID." },
-        "email": { "type": "string", "format": "email", "description": "Email address of the registered profile." },
-        "displayName": { "type": "string", "description": "Full name of the user." },
-        "phoneNumber": { "type": "string", "description": "Verified or registered phone number of the user." },
-        "phoneVerified": { "type": "boolean", "description": "Indicates if the phone number was verified via OTP." },
-        "role": { "type": "string", "enum": ["Admin", "Showroom Owner", "Sales Rep", "Private Seller", "Buyer", "Dealer"] },
-        "status": { "type": "string", "enum": ["Active", "Pending Approval", "Suspended"] },
-        "showroomId": { "type": "string", "description": "Optional reference to the owned showroom." },
+        "email": { "type": "string", "format": "email" },
+        "phoneNumber": { "type": "string" },
+        "phoneVerified": { "type": "boolean" },
+        "role": { "type": "string", "enum": ["Visitor", "Individual User", "Showroom Owner", "Admin"] },
+        "status": { "type": "string", "enum": ["Active", "Pending", "Suspended"] },
+        "acceptedTerms": { "type": "boolean" },
+        "preferredLanguage": { "type": "string", "enum": ["en", "ur"] },
+        "preferredTheme": { "type": "string", "enum": ["light", "dark"] },
         "createdAt": { "type": "string", "format": "date-time" },
         "lastLogin": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["uid", "email", "displayName", "role", "status", "createdAt", "lastLogin"]
+      "required": ["uid", "email", "role", "status", "createdAt"]
     },
-    "visitor": {
-      "title": "Visitor Session Log",
-      "description": "Visitor session telemetry, analyzing frequency (1st Time, 2nd Time, Regular) and full search/view clickstream.",
+    "profile": {
+      "title": "User Profile",
+      "description": "Complete editable profile storing comprehensive human-readable personal information.",
       "type": "object",
       "properties": {
-        "visitorId": { "type": "string", "description": "Client-generated persistent cookie uuid." },
-        "firstSeen": { "type": "string", "format": "date-time" },
-        "lastSeen": { "type": "string", "format": "date-time" },
-        "frequencyCategory": { "type": "string", "enum": ["1st Time", "2nd Time", "3rd Time", "Regular"] },
-        "sessionCount": { "type": "integer" },
-        "totalViews": { "type": "integer" },
-        "searchHistory": { "type": "array", "items": { "type": "string" } },
-        "viewHistory": { "type": "array", "items": { "type": "string" } },
-        "clicksToCall": { "type": "integer" },
-        "clicksToWhatsApp": { "type": "integer" },
-        "deviceMetrics": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "profilePhoto": { "type": "string" },
+        "gender": { "type": "string" },
+        "dob": { "type": "string" },
+        "country": { "type": "string" },
+        "province": { "type": "string" },
+        "city": { "type": "string" },
+        "address": { "type": "string" },
+        "bio": { "type": "string" },
+        "notificationSettings": {
           "type": "object",
           "properties": {
-            "viewportWidth": { "type": "integer" },
-            "viewportHeight": { "type": "integer" },
-            "userAgent": { "type": "string" }
-          }
-        }
-      },
-      "required": ["visitorId", "firstSeen", "lastSeen", "frequencyCategory", "sessionCount"]
-    },
-    "showroom": {
-      "title": "Showroom Dealership Profile",
-      "description": "Multi-tenant showroom brand containing customizable metadata, layouts, themes, and physical addresses.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string", "description": "Unique URL slug or identifier of the showroom." },
-        "name": { "type": "string", "description": "Dealership brand name." },
-        "avatarUrl": { "type": "string" },
-        "subtitle": { "type": "string" },
-        "location": { "type": "string" },
-        "rating": { "type": "number" },
-        "vehiclesCount": { "type": "integer" },
-        "followersCount": { "type": "string" },
-        "coverImage": { "type": "string" },
-        "description": { "type": "string" },
-        "phone": { "type": "string" },
-        "whatsapp": { "type": "string" },
-        "flagshipVerified": { "type": "boolean" },
-        "themeSettings": {
-          "type": "object",
-          "properties": {
-            "primaryColor": { "type": "string" },
-            "secondaryColor": { "type": "string" },
-            "fontFamily": { "type": "string" },
-            "bgStyle": { "type": "string", "enum": ["dark", "light", "emerald", "gold"] }
+            "emailAlerts": { "type": "boolean" },
+            "smsAlerts": { "type": "boolean" },
+            "whatsappAlerts": { "type": "boolean" }
           }
         },
-        "socials": {
+        "privacySettings": {
           "type": "object",
           "properties": {
-            "facebook": { "type": "string" },
-            "instagram": { "type": "string" },
-            "tiktok": { "type": "string" },
-            "youtube": { "type": "string" },
-            "website": { "type": "string" }
+            "showPhonePublicly": { "type": "boolean" },
+            "showEmailPublicly": { "type": "boolean" }
           }
         },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "name", "location", "phone", "whatsapp", "createdAt"]
+      "required": ["uid", "displayName", "createdAt"]
     },
-    "vehicle": {
-      "title": "Vehicle Listing",
-      "description": "Individual automotive vehicle post, with status tracking, specifications, approvals, and pricing logs.",
+    "showroom": {
+      "title": "Showroom Business Profile",
+      "description": "Detailed showroom dealership metadata, branding, and registration details.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique showroom ID or slug." },
+        "name": { "type": "string" },
+        "ownerUid": { "type": "string" },
+        "mobile": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "email": { "type": "string" },
+        "website": { "type": "string" },
+        "logo": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "gallery": { "type": "array", "items": { "type": "string" } },
+        "videos": { "type": "array", "items": { "type": "string" } },
+        "address": { "type": "string" },
+        "googleMap": { "type": "string" },
+        "ntn": { "type": "string" },
+        "registrationNumber": { "type": "string" },
+        "businessDocuments": { "type": "array", "items": { "type": "string" } },
+        "verified": { "type": "boolean" },
+        "activeTheme": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "ownerUid", "createdAt"]
+    },
+    "showroomStaff": {
+      "title": "Showroom Staff Assignment",
+      "description": "Links users as team members to parent showrooms with granular delegation roles.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "dealerId": { "type": "string", "description": "Belonging showroom or 'private' identifier." },
+        "showroomId": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "role": { "type": "string", "enum": ["CEO", "Manager", "Sales Representative"] },
+        "phone": { "type": "string" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "showroomId", "userId", "role", "active"]
+    },
+    "vehicle": {
+      "title": "Vehicle Post",
+      "description": "Consolidated listing details, pricing, and specs.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
         "title": { "type": "string" },
         "brand": { "type": "string" },
-        "modelYear": { "type": "string" },
-        "priceRaw": { "type": "integer", "description": "Price in PKR." },
-        "priceFormatted": { "type": "string" },
-        "mileage": { "type": "string" },
+        "make": { "type": "string" },
+        "model": { "type": "string" },
+        "year": { "type": "integer" },
+        "priceRaw": { "type": "integer" },
         "mileageRaw": { "type": "integer" },
-        "fuelType": { "type": "string", "enum": ["Petrol", "Diesel", "Hybrid", "Electric"] },
-        "transmission": { "type": "string", "enum": ["Automatic", "Manual"] },
-        "images": { "type": "array", "items": { "type": "string" } },
-        "category": { "type": "string" },
-        "exteriorColor": { "type": "string" },
-        "conditionScore": { "type": "number" },
+        "fuelType": { "type": "string" },
+        "transmission": { "type": "string" },
         "description": { "type": "string" },
-        "approved": { "type": "boolean", "description": "Admin approval workflow state indicator." },
+        "approved": { "type": "boolean" },
         "isSold": { "type": "boolean" },
         "isReserved": { "type": "boolean" },
         "isPremium": { "type": "boolean" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "createdBy": { "type": "string" },
+        "dealerId": { "type": "string" },
+        "status": { "type": "string", "enum": ["Draft", "Pending", "Approved", "Sold", "Rejected"] },
+        "activeFlag": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "dealerId", "title", "brand", "priceRaw", "approved", "createdAt"]
+      "required": ["id", "title", "priceRaw", "createdBy", "status", "activeFlag", "createdAt"]
     },
-    "lead": {
-      "title": "Lead Inquiry Record",
-      "description": "High-intent client actions tracking CTR, call requests, WhatsApp routes, and Concierge inquiries.",
+    "vehicleImage": {
+      "title": "Vehicle Image Meta",
+      "description": "Metadata for uploaded listing media assets.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "type": { "type": "string", "enum": ["Showroom Lead", "Request Callback", "WhatsApp Connect", "Call Connect", "Concierge Inquiry"] },
+        "vehicleId": { "type": "string" },
+        "url": { "type": "string" },
+        "size": { "type": "integer" },
+        "mimeType": { "type": "string" },
+        "uploadedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "vehicleId", "url", "uploadedBy"]
+    },
+    "vehicleVideo": {
+      "title": "Vehicle Video Meta",
+      "description": "Metadata for uploaded walkaround videos.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "vehicleId": { "type": "string" },
+        "url": { "type": "string" },
+        "size": { "type": "integer" },
+        "duration": { "type": "integer" },
+        "uploadedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "vehicleId", "url", "uploadedBy"]
+    },
+    "favorite": {
+      "title": "User Favorite Mapping",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "vehicleId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "vehicleId"]
+    },
+    "message": {
+      "title": "Chat Message Document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "chatId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "chatId", "senderId", "text", "timestamp"]
+    },
+    "chat": {
+      "title": "Chat Thread Record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "participantIds": { "type": "array", "items": { "type": "string" } },
+        "lastMessage": { "type": "string" },
+        "lastMessageAt": { "type": "string", "format": "date-time" },
+        "lastMessageSenderId": { "type": "string" }
+      },
+      "required": ["id", "participantIds"]
+    },
+    "notification": {
+      "title": "In-App Notification Banner",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "read": { "type": "boolean" },
+        "type": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "body", "read"]
+    },
+    "searchHistory": {
+      "title": "Saved Search Keywords",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "queryText": { "type": "string" },
+        "filters": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "queryText"]
+    },
+    "recentView": {
+      "title": "Recently Viewed Carousel Logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "vehicleId": { "type": "string" },
+        "viewedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "vehicleId"]
+    },
+    "review": {
+      "title": "Showroom Review Log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "targetId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "rating": { "type": "integer" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "targetId", "authorName", "rating", "comment"]
+    },
+    "rating": {
+      "title": "Dealership Scorecard Rollup",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "targetId": { "type": "string" },
+        "averageRating": { "type": "number" },
+        "totalRatings": { "type": "integer" }
+      },
+      "required": ["id", "targetId", "averageRating", "totalRatings"]
+    },
+    "lead": {
+      "title": "Customer CRM Lead Tracker",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
         "title": { "type": "string" },
         "userName": { "type": "string" },
         "userPhone": { "type": "string" },
         "userEmail": { "type": "string" },
         "city": { "type": "string" },
         "details": { "type": "string" },
-        "metadata": {
-          "type": "object",
-          "properties": {
-            "sourceShowroomId": { "type": "string" },
-            "viewedInventoryId": { "type": "string" },
-            "intentCategory": { "type": "string" },
-            "deviceContext": { "type": "string" }
-          }
-        },
+        "metadata": { "type": "object" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "type", "userName", "userPhone", "createdAt"]
     },
-    "suggestion": {
-      "title": "Marketplace Suggestion Feed",
-      "description": "General visitor submissions regarding marketplace expansions and categories.",
+    "visitor": {
+      "title": "Visitor clickstream",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "user_id": { "type": "string" },
-        "suggestion_text": { "type": "string" },
-        "submitted_at": { "type": "string", "format": "date-time" }
+        "visitorId": { "type": "string" },
+        "firstSeen": { "type": "string" },
+        "lastSeen": { "type": "string" },
+        "frequencyCategory": { "type": "string" },
+        "sessionCount": { "type": "integer" },
+        "totalViews": { "type": "integer" }
       },
-      "required": ["id", "suggestion_text", "submitted_at"]
+      "required": ["visitorId", "firstSeen"]
     },
-    "ad_workflow_log": {
-      "title": "Ad State Machine Log",
-      "description": "History of ad postings, state progression, and approvals.",
+    "supportTicket": {
+      "title": "Support Desk Ticket",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "listingId": { "type": "string" },
-        "action": { "type": "string", "enum": ["Create Draft", "Submit For Review", "Approve", "Reject", "Archive", "Toggle Premium", "Toggle Sold", "Toggle Reserved"] },
-        "performedBy": { "type": "string", "description": "UID or 'visitor'." },
-        "previousState": { "type": "string" },
-        "newState": { "type": "string" },
-        "timestamp": { "type": "string", "format": "date-time" },
-        "notes": { "type": "string" }
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["Open", "In Progress", "Resolved", "Closed"] },
+        "priority": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] },
+        "category": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "listingId", "action", "performedBy", "timestamp"]
+      "required": ["id", "userName", "title", "status"]
+    },
+    "payment": {
+      "title": "Payment Order Log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "integer" },
+        "currency": { "type": "string" },
+        "status": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "paymentType": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "amount", "status"]
+    },
+    "subscription": {
+      "title": "Showroom Premium Package",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "planId": { "type": "string" },
+        "status": { "type": "string" },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "autoRenew": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "planId", "status"]
+    },
+    "advertisement": {
+      "title": "Sponsor Banner Slot",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "targetUrl": { "type": "string" },
+        "position": { "type": "string" },
+        "status": { "type": "string" },
+        "views": { "type": "integer" },
+        "clicks": { "type": "integer" },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "imageUrl", "position", "status"]
+    },
+    "analytics": {
+      "title": "Business Intelligence Telemetry Log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "eventType": { "type": "string" },
+        "eventName": { "type": "string" },
+        "userId": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "properties": { "type": "object" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "eventType", "eventName", "timestamp"]
+    },
+    "settings": {
+      "title": "System Parameters",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "key": { "type": "string" },
+        "value": { "type": "string" },
+        "description": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "key", "value"]
+    },
+    "auditLog": {
+      "title": "Security Trail Log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userRole": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "status": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userName", "action", "timestamp"]
+    },
+    "seo": {
+      "title": "SEO Page Descriptor",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "pagePath": { "type": "string" },
+        "metaTitle": { "type": "string" },
+        "metaDescription": { "type": "string" },
+        "keywords": { "type": "array", "items": { "type": "string" } },
+        "canonicalUrl": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "pagePath", "metaTitle"]
+    },
+    "systemLog": {
+      "title": "Application Critical System Log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "severity": { "type": "string" },
+        "message": { "type": "string" },
+        "stackTrace": { "type": "string" },
+        "component": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "severity", "message", "timestamp"]
     }
   },
   "firestore": {
@@ -179,31 +431,107 @@
     },
     "users/{userId}": {
       "schema": "user",
-      "description": "Collection of user registration profiles."
+      "description": "Enterprise secure credentials, role mapping, and status indicators."
     },
-    "visitors/{visitorId}": {
-      "schema": "visitor",
-      "description": "Clickstream and session frequency analyzer logs."
+    "profiles/{profileId}": {
+      "schema": "profile",
+      "description": "Rich, split-collection user personal information (PII-isolated)."
     },
-    "dealers/{dealerId}": {
+    "showrooms/{showroomId}": {
       "schema": "showroom",
-      "description": "Multi-tenant physical & digital showroom registry."
+      "description": "High-fidelity showroom brands and configurations."
     },
-    "listings/{listingId}": {
+    "showroomStaff/{staffId}": {
+      "schema": "showroomStaff",
+      "description": "Links users to dealers for backend privilege elevation."
+    },
+    "vehicles/{vehicleId}": {
       "schema": "vehicle",
-      "description": "Consolidated luxury marketplace inventory allocation listings."
+      "description": "Consolidated luxury automotive inventory postings."
+    },
+    "vehicleImages/{imageId}": {
+      "schema": "vehicleImage",
+      "description": "Photo asset storage schemas."
+    },
+    "vehicleVideos/{videoId}": {
+      "schema": "vehicleVideo",
+      "description": "Video walkthrough metadata tracking."
+    },
+    "favorites/{favoriteId}": {
+      "schema": "favorite",
+      "description": "User saved/bookmarked listing linkages."
+    },
+    "messages/{messageId}": {
+      "schema": "message",
+      "description": "Granular chat exchange records."
+    },
+    "chats/{chatId}": {
+      "schema": "chat",
+      "description": "Ongoing user conversation metadata records."
+    },
+    "notifications/{notificationId}": {
+      "schema": "notification",
+      "description": "System-generated transactional alerts."
+    },
+    "searchHistory/{searchId}": {
+      "schema": "searchHistory",
+      "description": "Visitor organic search filters snapshot tracker."
+    },
+    "recentViews/{viewId}": {
+      "schema": "recentView",
+      "description": "Recents carousel logs."
+    },
+    "reviews/{reviewId}": {
+      "schema": "review",
+      "description": "Dealership user ratings and textual reviews."
+    },
+    "ratings/{ratingId}": {
+      "schema": "rating",
+      "description": "Showroom ratings statistics summaries."
     },
     "leads/{leadId}": {
       "schema": "lead",
-      "description": "CRM dashboard lead capturing records."
+      "description": "Captured inquiries for dealership analytics."
     },
-    "suggestions/{suggestionId}": {
-      "schema": "suggestion",
-      "description": "Crowdsourced category expansion requests."
+    "visitors/{visitorId}": {
+      "schema": "visitor",
+      "description": "Session clickstream telemetry."
     },
-    "logs/{logId}": {
-      "schema": "ad_workflow_log",
-      "description": "Audit trails for listings status machine transitions."
+    "supportTickets/{ticketId}": {
+      "schema": "supportTicket",
+      "description": "Customer support logs."
+    },
+    "payments/{paymentId}": {
+      "schema": "payment",
+      "description": "Ad postings transaction ledger."
+    },
+    "subscriptions/{subscriptionId}": {
+      "schema": "subscription",
+      "description": "Dealer premium tier registrations."
+    },
+    "advertisements/{adId}": {
+      "schema": "advertisement",
+      "description": "Targeted marketing campaigns."
+    },
+    "analytics/{analyticsId}": {
+      "schema": "analytics",
+      "description": "Aggregated BI tracker records."
+    },
+    "settings/{settingId}": {
+      "schema": "settings",
+      "description": "Core dynamic app constants."
+    },
+    "auditLogs/{logId}": {
+      "schema": "auditLog",
+      "description": "Transactional user activity security ledger."
+    },
+    "seo/{seoId}": {
+      "schema": "seo",
+      "description": "Custom programmatic metadata injections."
+    },
+    "systemLogs/{logId}": {
+      "schema": "systemLog",
+      "description": "Critical client/server runtime diagnostic reports."
     }
   }
 }

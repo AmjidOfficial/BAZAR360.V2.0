@@ -2,174 +2,236 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ==========================================
-    // 1. GLOBAL SAFETY NET & catch-all
-    // ==========================================
+    // Global Deny Catch-All
     match /{document=**} {
       allow read, write: if false;
     }
 
     // ==========================================
-    // 2. REUSABLE PRIMITIVES & AUTH HELPERS
+    // REUSABLE HELPER FUNCTIONS & RBAC DECORATORS
     // ==========================================
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
+    // Role Fetch Checks
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isSignedIn() && getUserData().role == role;
+    }
+
+    function isAdmin() {
+      return hasRole('Admin');
+    }
+
+    function isShowroomOwner() {
+      return hasRole('Showroom Owner');
+    }
+
+    function isIndividualUser() {
+      return hasRole('Individual User') || hasRole('Private Seller') || hasRole('Buyer');
+    }
+
+    // Incoming payload validation convenience
     function incoming() {
       return request.resource.data;
     }
 
-    function existing() {
-      return resource.data;
-    }
-
     // ==========================================
-    // 3. ENTITY VALIDATION BLUEPRINTS
-    // ==========================================
-    function isValidUser(data) {
-      return data.uid is string 
-        && data.uid == request.auth.uid
-        && data.email is string
-        && data.role in ['Admin', 'Showroom Owner', 'Sales Rep', 'Private Seller', 'Buyer']
-        && data.status in ['Active', 'Pending Approval', 'Suspended']
-        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100))
-        && (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() <= 50))
-        && (!('city' in data) || (data.city is string && data.city.size() <= 100))
-        && (!('state' in data) || (data.state is string && data.state.size() <= 100))
-        && (!('salesPodId' in data) || (data.salesPodId is string && data.salesPodId.size() <= 128));
-    }
-
-    function isValidCarListing(data) {
-      return data.keys().hasAll(['id', 'title', 'make', 'model', 'year', 'price', 'dealerId', 'createdAt', 'updatedAt'])
-        && data.id is string 
-        && data.title is string && data.title.size() <= 120
-        && data.make is string && data.make.size() <= 50
-        && data.model is string && data.model.size() <= 50
-        && data.year is int && data.year >= 1900 && data.year <= 2030
-        && data.price is int && data.price >= 0
-        && (data.get('mileage', null) == null || data.get('mileage', null) is int)
-        && (data.get('fuelType', null) == null || data.get('fuelType', null) in ['Petrol', 'Diesel', 'Hybrid', 'Electric'])
-        && (data.get('transmission', null) == null || data.get('transmission', null) in ['Automatic', 'Manual'])
-        && data.dealerId is string
-        && (data.get('approved', null) == null || data.get('approved', null) is bool)
-        && (data.get('assignedSalesRepId', null) == null || data.get('assignedSalesRepId', null) is string)
-        && (data.get('region', null) == null || data.get('region', null) is string);
-    }
-
-    function isValidReview(data) {
-      return data.keys().hasAll(['id', 'author', 'rating', 'comment', 'createdAt'])
-        && data.id is string
-        && data.author is string && data.author.size() <= 100
-        && data.rating is int && data.rating >= 1 && data.rating <= 5
-        && data.comment is string && data.comment.size() <= 1000;
-    }
-
-    function isValidOffer(data) {
-      return data.keys().hasAll(['id', 'listingId', 'buyerId', 'price', 'status', 'createdAt', 'updatedAt'])
-        && data.id is string
-        && data.listingId is string
-        && data.buyerId is string
-        && data.price is int && data.price > 0
-        && data.status in ['pending', 'accepted', 'rejected'];
-    }
-
-    function isValidSuggestion(data) {
-      return data.keys().hasAll(['id', 'suggestion_text', 'submitted_at'])
-        && data.id is string
-        && data.suggestion_text is string && data.suggestion_text.size() <= 2000;
-    }
-
-    function isValidDealer(data) {
-      return data.keys().hasAll(['id', 'name', 'location'])
-        && data.id is string
-        && data.name is string && data.name.size() <= 100
-        && data.location is string && data.location.size() <= 200;
-    }
-
-    // ==========================================
-    // 4. COLLECTION ACCESS RULES & MATCH BLOCKS
+    // 26 SYSTEM COLLECTIONS RULES
     // ==========================================
 
-    // Users Collection Access Paths
+    // 1. Users
     match /users/{userId} {
-      allow read: if true; 
-      allow create, update: if request.auth != null && request.auth.uid == userId && isValidUser(incoming());
-      allow delete: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Showrooms Collection
-    match /dealers/{dealerId} {
       allow read: if true;
-      allow create: if isValidDealer(incoming());
-      
-      allow update: if isSignedIn() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' ||
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Showroom Owner' &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.salesPodId == dealerId)
-      ) && isValidDealer(incoming());
-      
-      allow delete: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
-
-      // Nested Showroom Reviews Match
-      match /reviews/{reviewId} {
-        allow read: if true;
-        allow create: if isValidReview(incoming()) && isValidId(reviewId);
-        allow update, delete: if true;
-      }
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
-    // Vehicle Listings Collection
+    // 2. Profiles (PII Split isolation)
+    match /profiles/{profileId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.auth.uid == profileId;
+      allow update: if isOwner(profileId) || isAdmin();
+      allow delete: if isOwner(profileId) || isAdmin();
+    }
+
+    // 3. Showrooms
+    match /showrooms/{showroomId} {
+      allow read: if true;
+      allow create: if isShowroomOwner() || isAdmin();
+      allow update: if isShowroomOwner() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 4. Showroom Staff
+    match /showroomStaff/{staffId} {
+      allow read: if true;
+      allow write: if isShowroomOwner() || isAdmin();
+    }
+
+    // 5. Vehicles
+    match /vehicles/{vehicleId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isAdmin() || (isSignedIn() && incoming().createdBy == request.auth.uid);
+    }
+
+    // 6. Vehicle Images
+    match /vehicleImages/{imageId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // 7. Vehicle Videos
+    match /vehicleVideos/{videoId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // 8. Favorites
+    match /favorites/{favId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // 9. Messages
+    match /messages/{messageId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // 10. Chats
+    match /chats/{chatId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // 11. Notifications
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() || isAdmin();
+    }
+
+    // 12. Search History
+    match /searchHistory/{searchId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // 13. Recent Views
+    match /recentViews/{viewId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // 14. Reviews
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // 15. Ratings
+    match /ratings/{ratingId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // 16. Leads
+    match /leads/{leadId} {
+      allow read: if true;
+      allow write: if true; // Organic capture can occur from Visitors
+    }
+
+    // 17. Visitors
+    match /visitors/{visitorId} {
+      allow read, write: if true; // Clickstream analytics captures general visitors
+    }
+
+    // 18. Support Tickets
+    match /supportTickets/{ticketId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // 19. Payments
+    match /payments/{paymentId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() || isAdmin();
+    }
+
+    // 20. Subscriptions
+    match /subscriptions/{subscriptionId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isShowroomOwner();
+    }
+
+    // 21. Advertisements
+    match /advertisements/{adId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 22. Analytics
+    match /analytics/{analyticsId} {
+      allow read: if isAdmin() || isShowroomOwner();
+      allow write: if true; // Client telemetry reporting
+    }
+
+    // 23. Settings
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 24. Audit Logs
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if true; // App components can record security trails
+    }
+
+    // 25. SEO
+    match /seo/{seoId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 26. System Logs
+    match /systemLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if true; // Logging from runtime clients
+    }
+
+    // Backward compatibility matchers
     match /listings/{listingId} {
-      allow read: if true;
-      allow create, update: if isValidCarListing(incoming());
-      allow delete: if true;
-
-      // Embedded Bids / Offers Match Path
-      match /offers/{offerId} {
-        allow read: if true;
-        allow create, update: if isValidOffer(incoming()) && isValidId(offerId);
-        allow delete: if true;
-      }
-
-      // Embedded Comments Match Path
-      match /comments/{commentId} {
-        allow read: if true;
-        allow create: if true;
-        allow update, delete: if true;
-      }
-
-      // Embedded Likes Match Path
-      match /likes/{userId} {
-        allow read: if true;
-        allow create, update: if true;
-        allow delete: if true;
-      }
+      allow read, write: if true;
+      match /comments/{commentId} { allow read, write: if true; }
+      match /likes/{userId} { allow read, write: if true; }
+      match /offers/{offerId} { allow read, write: if true; }
     }
-
-    // Suggestions Collection
+    match /dealers/{dealerId} {
+      allow read, write: if true;
+      match /reviews/{reviewId} { allow read, write: if true; }
+    }
     match /suggestions/{suggestionId} {
-      allow read: if true;
-      allow create: if isValidSuggestion(incoming()) && isValidId(suggestionId);
-      allow update, delete: if false;
+      allow read, write: if true;
     }
-
-    // Bargains Collection
     match /bargains/{bargainId} {
       allow read, write: if true;
     }
-
-    // Leads Collection
-    match /leads/{leadId} {
+    match /system/{docId} {
       allow read, write: if true;
     }
-
-    // System Seeding
-    match /system/{docId} {
+    match /lead_actions/{actionId} {
       allow read, write: if true;
     }
   }

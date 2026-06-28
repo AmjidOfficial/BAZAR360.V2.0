@@ -151,10 +151,42 @@ function App() {
     setShowInstallBanner(false);
   };
 
-  const [currentTab, setTab] = useState<string>('home');
+  const getInitialStateFromUrl = () => {
+    const path = window.location.pathname;
+    let tab = 'home';
+    let dealerId = 'auto-choice-peshawar';
+    let listing: CarListing | null = null;
+
+    if (path.startsWith('/dealers/')) {
+      const segments = path.split('/').filter(Boolean);
+      const dId = segments[1];
+      if (dId) {
+        dealerId = dId;
+        tab = 'dealer-storefront';
+        if (segments[2] === 'listings' && segments[3]) {
+          const lId = segments[3];
+          const found = INITIAL_LISTINGS.find(l => l.id === lId);
+          if (found) {
+            listing = found;
+          }
+        }
+      }
+    } else if (path !== '/' && path !== '') {
+      const tName = path.slice(1);
+      const validTabs = ['inventory', 'media', 'insights', 'concierge', 'dealers', 'sell', 'portal', 'search'];
+      if (validTabs.includes(tName)) {
+        tab = tName;
+      }
+    }
+    return { tab, dealerId, listing };
+  };
+
+  const initialState = getInitialStateFromUrl();
+
+  const [currentTab, setTab] = useState<string>(initialState.tab);
   const [showroomSearch, setShowroomSearch] = useState<string>('');
-  const [selectedDealerId, setSelectedDealerId] = useState<string>('auto-choice-peshawar');
-  const [selectedListing, setSelectedListing] = useState<CarListing | null>(null);
+  const [selectedDealerId, setSelectedDealerId] = useState<string>(initialState.dealerId);
+  const [selectedListing, setSelectedListing] = useState<CarListing | null>(initialState.listing);
   const [activeDetailTab, setActiveDetailTab] = useState<'Design' | 'Safety' | 'Luxury' | 'Performance'>('Design');
   const [activeHotspotId, setActiveHotspotId] = useState<string | null>(null);
   const [compareList, setCompareList] = useState<CarListing[]>([]);
@@ -982,7 +1014,7 @@ function App() {
                 <div className="flex items-center gap-4 shrink-0">
                   <div className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center border border-sky-500/20 shadow-sm bg-slate-900/40">
                     <img 
-                      src="/auto_choice_logo_1781509565476.jpg" 
+                      src="/auto_choice_logo_1781509565476.png" 
                       alt="Auto Choice Flagship Logo" 
                       className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
                       referrerPolicy="no-referrer"

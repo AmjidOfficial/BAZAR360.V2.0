@@ -173,7 +173,7 @@ export async function dbFetchDealers(): Promise<Dealer[]> {
       const data = doc.data();
       const rawAvatar = data.avatarUrl || '';
       const avatarUrl = doc.id === 'auto-choice-peshawar'
-        ? '/auto_choice_logo_1781509565476.jpg'
+        ? '/auto_choice_logo_1781509565476.png'
         : (rawAvatar.startsWith('.') ? rawAvatar.substring(1) : rawAvatar);
       list.push({
         id: doc.id,

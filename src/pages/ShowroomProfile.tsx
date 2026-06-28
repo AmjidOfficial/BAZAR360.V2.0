@@ -333,8 +333,9 @@ export default function ShowroomProfile() {
                 dealer={dealer}
                 variant="grid"
                 onSelect={(selectedCar) => {
-                  registerShowroomLead('View Inventory Details', selectedCar.title, selectedCar.id);
-                  navigate('/');
+                registerShowroomLead('View Inventory Details', selectedCar.title, selectedCar.id);
+                // Change '/' to your actual vehicle details route
+                navigate(`/vehicles/${selectedCar.id}`); 
                 }}
               />
             ))}

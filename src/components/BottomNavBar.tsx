@@ -150,88 +150,22 @@ export default function BottomNavBar({
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-[#0b0f19] border-t border-white/5 rounded-t-[32px] p-6 pb-10 z-[111] shadow-[0_-12px_40px_rgba(0,0,0,0.8)] text-white flex flex-col max-h-[80vh] md:hidden"
+              // Updated background logic to work for both themes
+              className={`fixed bottom-0 left-0 right-0 max-w-lg mx-auto border-t rounded-t-[32px] p-6 pb-10 z-[111] shadow-[0_-12px_40px_rgba(0,0,0,0.3)] flex flex-col max-h-[80vh] md:hidden ${
+                theme === 'light' ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#0b0f19] border-white/5 text-white'
+              }`}
             >
-              {/* Grab Notch */}
-              <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-6 shrink-0" />
-
-              <div className="flex items-center justify-between mb-6 shrink-0">
-                <div>
-                  <h3 className="text-sm font-sans font-black uppercase tracking-wider text-white flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-[#38BDF8]" /> {t.title}
-                  </h3>
-                  <p className="text-[10px] text-gray-400 font-sans tracking-wide">
-                    {t.subtitle}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setIsMenuOpen(false)}
-                  className="w-8 h-8 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-gray-400 hover:text-white transition-colors cursor-pointer"
-                >
-                  <X size={15} />
-                </button>
+              {/* Logo Section - Added Here */}
+              <div className="flex justify-center mb-6">
+                <img 
+                  src={theme === 'light' ? '/logo-light.jpg' : '/logo-dark.jpg'} 
+                  alt="Bazar360 Logo" 
+                  className="h-16 w-auto rounded-2xl shadow-md"
+                />
               </div>
 
-              {/* Quick Settings Row (Merged from Top AppBar for Mobile Cleanliness) */}
-              <div className="grid grid-cols-2 gap-3 mb-6 shrink-0">
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className="flex items-center justify-center gap-2 p-3 bg-white/5 border border-white/5 rounded-2xl text-xs font-sans font-extrabold uppercase tracking-wider text-slate-300 hover:text-white hover:border-white/10 active:scale-95 transition-all cursor-pointer"
-                >
-                  {theme === 'dark' ? <Sun size={15} className="text-amber-500" /> : <Moon size={15} className="text-[#38BDF8]" />}
-                  <span>{theme === 'dark' ? 'Light Theme' : 'Dark Theme'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onLanguageToggle}
-                  className="flex items-center justify-center gap-2 p-3 bg-white/5 border border-white/5 rounded-2xl text-xs font-sans font-extrabold uppercase tracking-wider text-[#38BDF8] hover:text-white hover:border-[#38BDF8]/40 active:scale-95 transition-all cursor-pointer"
-                >
-                  <span className="text-sm">🌐</span>
-                  <span>{lang === 'en' ? 'اردو' : 'English'}</span>
-                </button>
-              </div>
-
-              {/* Navigation list */}
-              <div className="space-y-3 overflow-y-auto pr-1 no-scrollbar">
-                {menuItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = currentTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleMenuItemClick(item.id)}
-                      className={`w-full flex items-center gap-4 p-4 rounded-2xl border text-left transition-all duration-200 cursor-pointer ${
-                        isActive
-                          ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]'
-                          : 'bg-[#030712]/60 border-white/5 hover:border-white/10 text-white'
-                      }`}
-                    >
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                        isActive ? 'bg-[#38BDF8] text-slate-950' : 'bg-white/5 border border-white/5 text-gray-400'
-                      }`}>
-                        <Icon size={18} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-sans font-extrabold uppercase tracking-wider leading-tight">
-                          {item.label}
-                        </p>
-                        <p className="text-[10px] text-gray-400 tracking-wide mt-1 font-sans">
-                          {item.desc}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Secure Hotline Details */}
-              <div className="mt-6 pt-5 border-t border-white/5 text-center text-[10px] font-mono text-gray-400 uppercase tracking-widest leading-relaxed">
-                {t.founder}: <strong className="text-white">Muhammad Amjid</strong> <br />
-                {t.helpline}: <a href="tel:03149198403" className="text-[#38BDF8] font-bold">03149198403</a>
-              </div>
-            </motion.div>
+              {/* Grab Notch - Adjusted opacity for light mode */}
+              <div className={`w-12 h-1.5 rounded-full mx-auto mb-6 shrink-0 ${theme === 'light' ? 'bg-slate-300' : 'bg-white/10'}`} />
           </>
         )}
       </AnimatePresence>

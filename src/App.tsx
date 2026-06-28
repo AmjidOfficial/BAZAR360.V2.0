@@ -75,12 +75,19 @@ export default function AppWrapper() {
     <ThemeProvider>
       <ThemeEngine />
       <Router>
-        <Routes>
-          <Route path="/" element={<App />} />
-          <Route path="/dealers/:showroomSlug" element={<App />} />
-          <Route path="/dealers/:showroomSlug/listings/:listingId" element={<App />} />
-          <Route path="/showroom/:showroomSlug" element={<ShowroomProfile />} />
-        </Routes>
+       <Routes>
+  {/* The Home page remains App */}
+  <Route path="/" element={<App />} />
+  
+  {/* Corrected: Map dealer routes to ShowroomProfile */}
+  <Route path="/dealers/:showroomSlug" element={<ShowroomProfile />} />
+  
+  {/* If you have a specific listing view, create a component for it */}
+  <Route path="/dealers/:showroomSlug/listings/:listingId" element={<VehicleDetails />} />
+  
+  {/* You can keep this if you want, or remove it to avoid duplicate routes */}
+  <Route path="/showroom/:showroomSlug" element={<ShowroomProfile />} />
+</Routes>
       </Router>
     </ThemeProvider>
   );

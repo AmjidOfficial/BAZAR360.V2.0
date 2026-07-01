@@ -1109,7 +1109,7 @@ export default function RegistrationPortal({
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
-          className="max-w-xl mx-auto bg-[#0b0f19]/90 border border-white/10 p-6 sm:p-10 rounded-3xl shadow-2xl relative overflow-hidden backdrop-blur-xl text-left"
+          className="max-w-xl mx-auto bg-[#0b0f19]/90 border border-white/10 p-5 sm:p-10 rounded-3xl shadow-2xl relative overflow-hidden backdrop-blur-xl text-left"
           id="guest-auth-card"
         >
           {/* Decorative Glowing Orbs for Glassmorphism Background */}
@@ -1121,7 +1121,7 @@ export default function RegistrationPortal({
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-orange-500 to-amber-400 rounded-2xl shadow-lg shadow-orange-500/20 mb-4">
               <span className="text-stone-900 text-2xl font-black font-sans tracking-tighter">B360</span>
             </div>
-            <h1 className="text-3xl font-black text-white tracking-tight uppercase">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase">
               BAZAR360<span className="text-orange-500 font-mono">.online</span>
             </h1>
             <p className="text-xs text-slate-400 font-medium tracking-wide mt-1.5 uppercase">

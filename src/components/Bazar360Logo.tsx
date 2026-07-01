@@ -77,10 +77,13 @@ export function Bazar360Logo({ className = '', showText = true, showTagline = tr
             <span className="text-[17px] font-black tracking-tight text-[var(--color-text-main)] uppercase">
               BAZAR<span className="text-[#FF6B00] font-black">360</span>
             </span>
+            <span className="text-[12px] font-black text-[#2563EB] dark:text-[#38BDF8] lowercase ml-1 sm:hidden">
+              .online
+            </span>
           </div>
 
           {showTagline && (
-            <div className="flex flex-col mt-1 space-y-1">
+            <div className="hidden sm:flex flex-col mt-1 space-y-1">
               {/* Row 2: —— [icons] —— .online */}
               <div className="flex items-center gap-1.5 text-[8px] text-[var(--color-text-muted)] font-bold leading-none">
                 <div className="h-[1px] w-4 bg-slate-500/50"></div>

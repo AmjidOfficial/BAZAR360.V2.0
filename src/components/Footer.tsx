@@ -77,9 +77,13 @@ export default function Footer({ lang = 'en', setTab, onOpenSupportDrawer }: Foo
     adminMazhar: isUrdu ? 'ملک مظہر (سروسز)' : 'Malak Mazhar (Head of Automotive Sales | Vehicle Sales • Negotiations • Customer Advisory
 
 )',
-    adminAmjid: isUrdu ? 'محمد امجد (ڈویلپر)' : 'Muhammad Amjid (Founder & CEO | Product Strategy • Technology • Platform Development)',
-
-    adminGhani: isUrdu ? 'غانی خان (انونٹری & میڈیا مینیجر)' : 'Ghani Khan (Media & Inventory Manager | Vehicle Listings • Media Management • Marketplace Operations)',
+  // Ensure lines 75 to 83 match cleanly like this:
+  adminAmjid: isUrdu 
+    ? 'محمد امجد (ڈویلپر)' 
+    : 'Muhammad Amjid (Founder & CEO | Product Strategy • Technology • Platform Development)',
+  adminGhani: isUrdu 
+    ? 'غانی خان (انونٹری & میڈیا مینیجر)' 
+    : 'Ghani Khan (Media & Inventory Manager | Vehicle Listings • Media Management • Marketplace Operations)',
 
     badgeNative: isUrdu ? 'پشاور نیٹورک' : 'Peshawar Regional',
   };

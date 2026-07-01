@@ -74,8 +74,8 @@ export default function Footer({ lang = 'en', setTab, onOpenSupportDrawer }: Foo
     btnSend: isUrdu ? 'ارسال کریں' : 'Submit',
     successMsg: isUrdu ? 'تجویز جمع کرانے کا شکریہ! یہ ایڈمن کو ارسال کر دی گئی ہے۔' : 'Thank you! Your feedback has been registered.',
     openTicket: isUrdu ? 'سپورٹ ٹکٹ کھولیں' : 'Open Support Ticket',
-    adminMazhar: isUrdu ? 'ملک مظہر (سروسز)' : 'Malak Mazhar (Services)',
-    adminAmjid: isUrdu ? 'محمد امجد (ڈویلپر)' : 'Muhammad Amjid (Developer)',
+    adminMazhar: isUrdu ? 'ملک مظہر (سروسز)' : 'Malak Mazhar (All kind of Automobile Services)',
+    adminAmjid: isUrdu ? 'محمد امجد (ڈویلپر)' : 'Muhammad Amjid (Founder & CEO)',
     badgeNative: isUrdu ? 'پشاور نیٹورک' : 'Peshawar Regional',
   };
 

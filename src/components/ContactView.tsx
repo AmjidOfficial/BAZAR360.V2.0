@@ -148,7 +148,7 @@ export default function ContactView({ lang, onOpenSupportDrawer }: ContactViewPr
               </div>
             </a>
 
-            {/* Muhammad Amjid Founder Card & Contact */}
+            {/* Muhammad Amjid Founder & CEO Card & Contact */}
             <a 
               href="https://wa.me/923149198403" 
               target="_blank"

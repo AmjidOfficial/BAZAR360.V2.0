@@ -25,8 +25,8 @@ export interface UserProfile {
   phoneVerified?: boolean;
   city?: string;
   state?: string;
-  role: 'Admin' | 'Showroom Owner' | 'Individual User' | 'Visitor' | 'Sales Rep' | 'Private Seller' | 'Buyer' | 'Dealer';
-  status: 'Active' | 'Pending Approval' | 'Suspended' | 'Pending';
+  role: 'Admin' | 'Showroom Owner' | 'Individual User' | 'Visitor' | 'Sales Rep' | 'Private Seller' | 'Buyer' | 'Dealer' | 'Sales Representative' | 'Super Admin';
+  status: 'Active' | 'Pending Approval' | 'Suspended' | 'Pending' | 'Email Verified' | 'Blocked' | 'Deleted';
   socials?: {
     website?: string;
     facebook?: string;

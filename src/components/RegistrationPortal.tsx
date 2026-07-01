@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   UserPlus, 
   Car, 
@@ -33,11 +33,30 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { UserProfile, dbSaveUserProfile, dbFetchListings, dbSaveListing, dbFetchDealers } from '../lib/dbService';
+import { UserProfile, dbSaveUserProfile, dbFetchUserProfile, dbFetchListings, dbSaveListing, dbFetchDealers } from '../lib/dbService';
 import { CarListing, Dealer } from '../types';
-import { auth, db } from '../firebase';
-import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { auth, db, googleProvider, facebookProvider, linkedinProvider } from '../firebase';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  sendPasswordResetEmail, 
+  sendEmailVerification, 
+  signInWithPopup,
+  updatePassword,
+  deleteUser,
+  reauthenticateWithCredential,
+  EmailAuthProvider
+} from 'firebase/auth';
+import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { callRegisterUser } from '../services/api';
+
+// Extend Window interface for clean typing of Firebase Auth variables
+declare global {
+  interface Window {
+    recaptchaVerifier: any;
+    confirmationResult: any;
+  }
+}
 
 interface RegistrationPortalProps {
   currentUser: UserProfile | null;
@@ -83,26 +102,38 @@ export default function RegistrationPortal({
   const [successMessage, setSuccessMessage] = useState<string>('');
   
   // Registration Inputs
+  const [regFirstName, setRegFirstName] = useState<string>('');
+  const [regLastName, setRegLastName] = useState<string>('');
   const [regName, setRegName] = useState<string>('');
   const [regPhone, setRegPhone] = useState<string>('');
   const [regEmail, setRegEmail] = useState<string>('');
   const [regPass, setRegPass] = useState<string>('');
-  const [regRole, setRegRole] = useState<'Private Seller' | 'Buyer' | 'Dealer' | 'Admin'>('Private Seller');
+  const [regRole, setRegRole] = useState<'Private Seller' | 'Buyer' | 'Dealer' | 'Admin' | 'Sales Representative' | 'Showroom Owner'>('Buyer');
   const [regCity, setRegCity] = useState<string>('Peshawar');
+  const [regProvince, setRegProvince] = useState<string>('Khyber Pakhtunkhwa');
   const [regCountry, setRegCountry] = useState<string>('Pakistan');
+  const [regCompany, setRegCompany] = useState<string>('');
   const [regLang, setRegLang] = useState<'en' | 'ur'>('en');
   const [acceptedTerms, setAcceptedTerms] = useState<boolean>(false);
+  const [regNewsletter, setRegNewsletter] = useState<boolean>(false);
+  const [regProfilePhoto, setRegProfilePhoto] = useState<string>('');
+  const [captchaVerified, setCaptchaVerified] = useState<boolean>(false);
+  const [captchaModalOpen, setCaptchaModalOpen] = useState<boolean>(false);
 
-  // WhatsApp OTP Authentication flow states
-  const [otpSent, setOtpSent] = useState<boolean>(false);
-  const [enteredOtp, setEnteredOtp] = useState<string>('');
-  const [generatedOtp, setGeneratedOtp] = useState<string>('');
-  const [whatsappSending, setWhatsappSending] = useState<boolean>(false);
+  // Email + Password & Google Identity states
+  const [regConfirmPass, setRegConfirmPass] = useState<string>('');
+  const [resetEmail, setResetEmail] = useState<string>('');
+  const [isForgotPasswordMode, setIsForgotPasswordMode] = useState<boolean>(false);
+  const [isEmailVerified, setIsEmailVerified] = useState<boolean>(true);
 
-  // Onboarding Wizard states
-  const [wizardStep, setWizardStep] = useState<number>(1);
-  const [otpTimer, setOtpTimer] = useState<number>(0);
-  const [otpRequestCount, setOtpRequestCount] = useState<number>(0);
+  // Security & Settings state variables
+  const [changePassNew, setChangePassNew] = useState<string>('');
+  const [changePassConfirm, setChangePassConfirm] = useState<string>('');
+  const [securityActionError, setSecurityActionError] = useState<string>('');
+  const [securityActionSuccess, setSecurityActionSuccess] = useState<string>('');
+  const [isReauthModalOpen, setIsReauthModalOpen] = useState<boolean>(false);
+  const [reauthPassword, setReauthPassword] = useState<string>('');
+  const [reauthActionType, setReauthActionType] = useState<'password' | 'delete'>('password');
 
   // Minimal Business/Showroom states
   const [showroomSlogan, setShowroomSlogan] = useState<string>('');
@@ -116,19 +147,22 @@ export default function RegistrationPortal({
   // Individual profile state
   const [individualAddress, setIndividualAddress] = useState<string>('');
 
-  // Rate limiter track
-  const [isRateLimited, setIsRateLimited] = useState<boolean>(false);
-
-  // Timer Effect
+  // Active email verification checker
   useEffect(() => {
-    let interval: any;
-    if (otpTimer > 0) {
-      interval = setInterval(() => {
-        setOtpTimer(prev => prev - 1);
-      }, 1000);
-    }
+    const checkEmailVerification = async () => {
+      if (auth.currentUser) {
+        try {
+          await auth.currentUser.reload();
+          setIsEmailVerified(auth.currentUser.emailVerified);
+        } catch (err) {
+          console.warn('Failed to reload current user for email verif:', err);
+        }
+      }
+    };
+    checkEmailVerification();
+    const interval = setInterval(checkEmailVerification, 6000);
     return () => clearInterval(interval);
-  }, [otpTimer]);
+  }, [currentUser]);
 
   // Quick state for loaded inventory inside Dashboard
   const [allVehicles, setAllVehicles] = useState<CarListing[]>([]);
@@ -294,10 +328,121 @@ export default function RegistrationPortal({
     }
   };
 
+  const handleReauthenticate = async (password: string): Promise<boolean> => {
+    if (!auth.currentUser || !auth.currentUser.email) return false;
+    try {
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      return true;
+    } catch (err: any) {
+      console.error("Reauthentication failed:", err);
+      let errMsg = err.message;
+      if (err.code === 'auth/wrong-password') {
+        errMsg = "Incorrect password. Please verify and try again.";
+      }
+      setSecurityActionError(errMsg);
+      return false;
+    }
+  };
+
   const handleDeleteAccount = () => {
-    if (confirm('⚠️ WARNING: Are you sure you want to permanently delete your Bazar360 account and wipe all registered vehicle listings? This action is irreversible.')) {
-      alert('Your Bazar360 profile and all listings have been compiled for purging and permanently wiped from the secure ledger.');
-      setCurrentUser(null);
+    setSecurityActionError('');
+    setSecurityActionSuccess('');
+    setReauthPassword('');
+    
+    // Check if the user is a social login user (Google/Facebook/LinkedIn) or password user
+    const isPasswordUser = auth.currentUser?.providerData.some(p => p.providerId === 'password');
+    if (!isPasswordUser) {
+      if (confirm('⚠️ WARNING: Are you sure you want to permanently delete your Bazar360 account and wipe all registered vehicle listings? This action is irreversible.')) {
+        // Delete social logins immediately without password modal
+        executeDeleteAccountDirect();
+      }
+      return;
+    }
+
+    setReauthActionType('delete');
+    setIsReauthModalOpen(true);
+  };
+
+  const executeDeleteAccountDirect = async () => {
+    try {
+      if (auth.currentUser) {
+        const { doc, deleteDoc } = await import('firebase/firestore');
+        const { db } = await import('../firebase');
+        await deleteDoc(doc(db, 'users', auth.currentUser.uid));
+        await deleteUser(auth.currentUser);
+        setCurrentUser(null);
+        setSuccessMessage('✓ Your account has been permanently deleted.');
+        setTimeout(() => setSuccessMessage(''), 4000);
+      }
+    } catch (err: any) {
+      console.error("Account deletion failed:", err);
+      alert(`Deletion Failed: ${err.message}`);
+    }
+  };
+
+  const executeDeleteAccount = async () => {
+    const isReauthed = await handleReauthenticate(reauthPassword);
+    if (!isReauthed) return;
+
+    try {
+      if (auth.currentUser) {
+        const { doc, deleteDoc } = await import('firebase/firestore');
+        const { db } = await import('../firebase');
+        await deleteDoc(doc(db, 'users', auth.currentUser.uid));
+        await deleteUser(auth.currentUser);
+        
+        setIsReauthModalOpen(false);
+        setReauthPassword('');
+        setCurrentUser(null);
+        setSuccessMessage('✓ Your account has been permanently deleted.');
+        setTimeout(() => setSuccessMessage(''), 4000);
+      }
+    } catch (err: any) {
+      console.error("Account deletion failed:", err);
+      setSecurityActionError(`Deletion Failed: ${err.message}`);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSecurityActionError('');
+    setSecurityActionSuccess('');
+
+    if (changePassNew !== changePassConfirm) {
+      setSecurityActionError("Confirmation password does not match.");
+      return;
+    }
+
+    const strength = checkPasswordStrength(changePassNew);
+    if (strength.score < 4) {
+      setSecurityActionError("New password is not strong enough. Ensure it meets all enterprise complexity guidelines.");
+      return;
+    }
+
+    // Prompt for re-authentication
+    setReauthPassword('');
+    setReauthActionType('password');
+    setIsReauthModalOpen(true);
+  };
+
+  const executeChangePassword = async () => {
+    const isReauthed = await handleReauthenticate(reauthPassword);
+    if (!isReauthed) return;
+
+    try {
+      if (auth.currentUser) {
+        await updatePassword(auth.currentUser, changePassNew);
+        setSecurityActionSuccess("✓ Password successfully updated in Google Identity Platform.");
+        setChangePassNew('');
+        setChangePassConfirm('');
+        setIsReauthModalOpen(false);
+        setReauthPassword('');
+        setTimeout(() => setSecurityActionSuccess(''), 5000);
+      }
+    } catch (err: any) {
+      console.error("Password update failed:", err);
+      setSecurityActionError(`Password Update Failed: ${err.message}`);
     }
   };
 
@@ -332,224 +477,376 @@ export default function RegistrationPortal({
     }
   };
 
-  // Handle WhatsApp OTP generation request with countdown and rate limit
-  const handleRequestOtp = (phoneVal?: string) => {
-    const phoneToUse = (phoneVal || regPhone || '').trim();
-    if (!phoneToUse || phoneToUse.length < 5) {
-      setAuthError('Please enter a valid Mobile Phone Number first.');
-      return;
-    }
-
-    if (isRateLimited) {
-      setAuthError('Too many request attempts. Please wait before requesting another OTP.');
-      return;
-    }
-
-    if (otpTimer > 0) {
-      setAuthError(`Please wait ${otpTimer} seconds before requesting a new code.`);
-      return;
-    }
-
-    // Rate-limiting check
-    const currentRequests = otpRequestCount + 1;
-    setOtpRequestCount(currentRequests);
-    if (currentRequests > 5) {
-      setIsRateLimited(true);
-      setAuthError('Security Alert: Rate limit exceeded. Contact BAZAR360 support or retry later.');
-      return;
-    }
-
-    setAuthError('');
-    setWhatsappSending(true);
-
-    // Simulate or perform dispatch
-    setTimeout(() => {
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedOtp(code);
-      setOtpSent(true);
-      setWizardStep(2); // Progress to OTP Verification Step
-      setOtpTimer(60); // 60 seconds countdown
-      setWhatsappSending(false);
-      setSuccessMessage('💬 Verification code successfully dispatched via secure SMS/WhatsApp. Please enter the 6-digit code below.');
-      
-      // Log silently to developer console for testing (never on screen!)
-      console.log("=========================================");
-      console.log(`[BAZAR360 SECURE OTP CODE FOR +92${phoneToUse}]: ${code}`);
-      console.log("For easy preview testing, you can also use bypass code: 360360");
-      console.log("=========================================");
-    }, 1200);
-  };
-
-  // Simulate authentication locally & persistently
-  const handleAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
-    setSuccessMessage('');
-
-    if (wizardStep === 1) {
-      handleRequestOtp();
-      return;
-    }
-
-    if (wizardStep === 2) {
-      if (!enteredOtp) {
-        setAuthError('Please enter the 6-digit verification code.');
-        return;
-      }
-
-      // Check OTP code
-      if (enteredOtp !== generatedOtp && enteredOtp !== '360360' && enteredOtp !== '123456') {
-        setAuthError('Invalid verification code. Please check your SMS/WhatsApp and retry.');
-        return;
-      }
-
-      // Successful verification!
-      setSuccessMessage('✓ Mobile verification successful!');
-      
-      // Look up existing user by phone number
-      try {
-        const phoneFormatted = regPhone.trim();
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('phoneNumber', '==', phoneFormatted));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          // Existing user found! Log them in instantly
-          const userDoc = querySnapshot.docs[0];
-          const fetchedProfile = userDoc.data() as UserProfile;
-          setCurrentUser(fetchedProfile);
-          setSuccessMessage(`✓ Welcome back! Session restored under role ${fetchedProfile.role}.`);
-          setWizardStep(1); // Reset
-        } else {
-          // New user: progress to step 3 (onboarding setup)
-          setWizardStep(3);
-        }
-      } catch (err) {
-        console.warn('Existing user lookup bypassed or failed, defaulting to Step 3 Setup:', err);
-        setWizardStep(3);
-      }
-    }
-  };
-
-  const handleCompleteOnboarding = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
-    setSuccessMessage('');
-
-    if (isShowroomRegistration) {
-      if (!regName.trim()) {
-        setAuthError('Please enter your Showroom Name.');
-        return;
-      }
-      if (!showroomOwnerName.trim()) {
-        setAuthError('Please enter the Owner/CEO Name.');
-        return;
-      }
-      if (!showroomLocation.trim()) {
-        setAuthError('Please enter the Physical Location.');
-        return;
-      }
-    } else {
-      if (!regName.trim()) {
-        setAuthError('Please enter your Full Name.');
-        return;
-      }
-    }
-
-    const assignedUid = `usr-${Date.now().toString().slice(-6)}`;
-    const userRole = isShowroomRegistration ? 'Dealer' : 'Individual User';
-
-    const finalProfile: UserProfile = {
-      uid: assignedUid,
-      email: `${regName.toLowerCase().replace(/[^a-z0-9]/g, '')}@bazar360.pk`,
-      displayName: isShowroomRegistration ? regName.trim() : regName.trim(),
-      phoneNumber: regPhone.trim(),
-      phoneVerified: true,
-      city: regCity,
-      state: regCity === 'Peshawar' ? 'KP' : regCity === 'Karachi' ? 'Sindh' : 'Punjab',
-      country: regCountry,
-      role: userRole,
-      status: 'Active',
+  // Automatic User Profile creator helper
+  const createNewUserProfile = async (uid: string, email: string, displayName: string, role: any, extraFields: any) => {
+    const profile: UserProfile = {
+      uid,
+      email,
+      displayName,
+      role: role as any,
+      status: auth.currentUser?.emailVerified ? 'Active' : 'Pending',
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      phoneNumber: extraFields.phoneNumber || regPhone || '',
+      city: extraFields.city || regCity || 'Peshawar',
+      state: extraFields.province || regProvince || 'Khyber Pakhtunkhwa',
+      country: extraFields.country || regCountry || 'Pakistan',
+      preferredLanguage: 'en',
+      profilePhoto: extraFields.profilePhoto || regProfilePhoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+      cnic: '',
+      whatsappNumber: extraFields.phoneNumber || regPhone || '',
       acceptedTerms: true,
-      preferredLanguage: regLang,
-      preferredTheme: 'dark',
+      preferredTheme: 'light',
+      province: extraFields.province || regProvince || 'Khyber Pakhtunkhwa',
+      address: extraFields.address || '',
+      bio: '',
+      postalCode: '',
+      occupation: '',
       notificationSettings: {
         emailAlerts: true,
-        smsAlerts: true,
+        smsAlerts: false,
         whatsappAlerts: true
       },
       privacySettings: {
         showPhonePublicly: true,
         showEmailPublicly: false
-      },
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      salesPodId: isShowroomRegistration ? 'auto-choice-peshawar' : undefined
+      }
     };
 
     try {
-      // Save profile to users collection
-      await dbSaveUserProfile(finalProfile);
+      // Save profile directly to Firestore collections via the local service helper
+      await dbSaveUserProfile(profile);
+    } catch (err) {
+      console.warn('Failed to save user profile via standard service:', err);
+    }
+    return profile;
+  };
 
-      // If they are a showroom owner, let's also create the showroom document
-      if (isShowroomRegistration) {
-        const showroomId = regName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  // Real-time Password Security Validator Metrics
+  const checkPasswordStrength = (password: string) => {
+    const requirements = {
+      length: password.length >= 12,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[^A-Za-z0-9]/.test(password)
+    };
+    const score = Object.values(requirements).filter(Boolean).length;
+    let label = 'Weak';
+    let color = 'bg-rose-500';
+    if (score === 5) {
+      label = 'Excellent (Strong)';
+      color = 'bg-emerald-500';
+    } else if (score >= 4) {
+      label = 'Strong';
+      color = 'bg-teal-500';
+    } else if (score >= 3) {
+      label = 'Good';
+      color = 'bg-amber-500';
+    } else if (score >= 2) {
+      label = 'Fair';
+      color = 'bg-orange-500';
+    }
+    return { requirements, score, label, color };
+  };
+
+  // Facebook Sign-In Handler
+  const handleFacebookSignIn = async () => {
+    try {
+      setAuthError('');
+      setSuccessMessage('');
+      const result = await signInWithPopup(auth, facebookProvider);
+      const user = result.user;
+      
+      const fetchedProfile = await dbFetchUserProfile(user.uid);
+      if (fetchedProfile) {
+        setCurrentUser(fetchedProfile);
+        setSuccessMessage('✓ Session successfully restored via Facebook Sign-In.');
+      } else {
+        const assignedRole = user.email === 'amjid.bisconni@gmail.com' ? 'Admin' : 'Buyer';
+        const newProfile = await createNewUserProfile(
+          user.uid,
+          user.email || 'user-facebook@bazar360.online',
+          user.displayName || 'Bazar360 Facebook User',
+          assignedRole,
+          { phoneNumber: user.phoneNumber || '' }
+        );
+        setCurrentUser(newProfile);
+        setSuccessMessage('✓ Welcome! Profile successfully created via Facebook Identity.');
+      }
+    } catch (err: any) {
+      console.error('Facebook Sign-In Error:', err);
+      if (err.code === 'auth/account-exists-with-different-credential') {
+        setAuthError('An account already exists with this email address under a different login method. Please sign in using your original method (e.g., Google or Email).');
+      } else {
+        setAuthError(`Facebook Sign-In failed: ${err.message || err}`);
+      }
+    }
+  };
+
+  // LinkedIn Sign-In Handler
+  const handleLinkedInSignIn = async () => {
+    try {
+      setAuthError('');
+      setSuccessMessage('');
+      const result = await signInWithPopup(auth, linkedinProvider);
+      const user = result.user;
+      
+      const fetchedProfile = await dbFetchUserProfile(user.uid);
+      if (fetchedProfile) {
+        setCurrentUser(fetchedProfile);
+        setSuccessMessage('✓ Session successfully restored via LinkedIn Sign-In.');
+      } else {
+        const assignedRole = user.email === 'amjid.bisconni@gmail.com' ? 'Admin' : 'Buyer';
+        const newProfile = await createNewUserProfile(
+          user.uid,
+          user.email || 'user-linkedin@bazar360.online',
+          user.displayName || 'Bazar360 LinkedIn User',
+          assignedRole,
+          { phoneNumber: user.phoneNumber || '' }
+        );
+        setCurrentUser(newProfile);
+        setSuccessMessage('✓ Welcome! Profile successfully created via LinkedIn Identity.');
+      }
+    } catch (err: any) {
+      console.error('LinkedIn Sign-In Error:', err);
+      if (err.code === 'auth/account-exists-with-different-credential') {
+        setAuthError('An account already exists with this email address under a different login method. Please sign in using your original method (e.g., Google or Email).');
+      } else {
+        setAuthError(`LinkedIn Sign-In failed: ${err.message || err}`);
+      }
+    }
+  };
+
+  // Google Sign-In Handler (Primary 1-click option)
+  const handleGoogleSignIn = async () => {
+    try {
+      setAuthError('');
+      setSuccessMessage('');
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      // Look up existing user by uid
+      const fetchedProfile = await dbFetchUserProfile(user.uid);
+      if (fetchedProfile) {
+        setCurrentUser(fetchedProfile);
+        setSuccessMessage('✓ Session successfully restored via Google Sign-In.');
+      } else {
+        // First-time login: Automatically create profile in Firestore
+        const assignedRole = user.email === 'amjid.bisconni@gmail.com' ? 'Admin' : 'Buyer';
+        const newProfile = await createNewUserProfile(
+          user.uid,
+          user.email || 'user@bazar360.online',
+          user.displayName || 'Bazar360 User',
+          assignedRole,
+          { phoneNumber: user.phoneNumber || '' }
+        );
+        setCurrentUser(newProfile);
+        setSuccessMessage('✓ Welcome! Profile successfully created via Google Identity.');
+      }
+    } catch (err: any) {
+      console.error('Google Sign-In Error:', err);
+      setAuthError(`Google Sign-In failed: ${err.message || err}`);
+    }
+  };
+
+  // Email + Password Login Handler
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setAuthError('');
+      setSuccessMessage('');
+      
+      const userCredential = await signInWithEmailAndPassword(auth, regEmail.trim(), regPass);
+      const user = userCredential.user;
+      
+      const fetchedProfile = await dbFetchUserProfile(user.uid);
+      if (fetchedProfile) {
+        setCurrentUser(fetchedProfile);
+        setSuccessMessage('✓ Welcome back! Successfully authenticated.');
+      } else {
+        // Fallback profile creation if none exists in Firestore
+        const assignedRole = user.email === 'amjid.bisconni@gmail.com' ? 'Admin' : 'Buyer';
+        const newProfile = await createNewUserProfile(
+          user.uid,
+          user.email || regEmail.trim(),
+          regEmail.split('@')[0],
+          assignedRole,
+          {}
+        );
+        setCurrentUser(newProfile);
+        setSuccessMessage('✓ Logged in and temporary profile initialized.');
+      }
+    } catch (err: any) {
+      console.error('Email Login Error:', err);
+      setAuthError(`Authentication Failed: ${err.message || 'Incorrect email or password.'}`);
+    }
+  };
+
+  // Email + Password Registration Handler
+  const handleEmailRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setSuccessMessage('');
+
+    if (!regFirstName.trim() || !regLastName.trim()) {
+      setAuthError('First name and Last name are strictly required fields.');
+      return;
+    }
+
+    const computedDisplayName = `${regFirstName.trim()} ${regLastName.trim()}`;
+
+    // Enforce Password Security Metrics
+    const strength = checkPasswordStrength(regPass);
+    if (strength.score < 5) {
+      setAuthError('Security Violation: Password does not meet the minimum complexity requirements (at least 12 characters, including Uppercase, Lowercase, Number, and Special character).');
+      return;
+    }
+
+    if (regPass !== regConfirmPass) {
+      setAuthError('Passwords do not match. Please ensure both passwords match.');
+      return;
+    }
+
+    // Enforce Google reCAPTCHA Verification
+    if (!captchaVerified) {
+      setAuthError('Security Verification Required: Please complete the Google reCAPTCHA challenge.');
+      return;
+    }
+
+    if (!acceptedTerms) {
+      setAuthError('You must accept the Terms and Conditions to proceed.');
+      return;
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, regEmail.trim(), regPass);
+      const user = userCredential.user;
+
+      // Assign role (individual users default to Buyer or Private Seller, showroom registration maps to Dealer)
+      let selectedRole: any = isShowroomRegistration ? 'Dealer' : (regRole || 'Buyer');
+      if (user.email === 'amjid.bisconni@gmail.com') {
+        selectedRole = 'Admin';
+      }
+
+      // Create primary Firestore User Profile with all required fields
+      const newProfile = await createNewUserProfile(
+        user.uid,
+        user.email || regEmail.trim(),
+        computedDisplayName,
+        selectedRole,
+        {
+          firstName: regFirstName.trim(),
+          lastName: regLastName.trim(),
+          phoneNumber: regPhone.trim(),
+          city: regCity,
+          province: regProvince,
+          country: regCountry,
+          company: regCompany.trim(),
+          profilePhoto: regProfilePhoto.trim() || undefined,
+          newsletter: regNewsletter
+        }
+      );
+
+      // If registered as Showroom Owner, instantiate commercial Showroom record concurrently
+      if (selectedRole === 'Dealer') {
+        const dealerId = `showroom-${user.uid}`;
         const newShowroom: Dealer = {
-          id: showroomId,
-          name: regName.trim(),
-          avatarLetter: regName.substring(0, 2).toUpperCase(),
-          avatarUrl: showroomLogo,
-          subtitle: showroomSlogan || 'Verified Premium Motors',
-          location: showroomLocation,
+          id: dealerId,
+          name: computedDisplayName,
+          avatarLetter: regFirstName.trim().substring(0, 1).toUpperCase() + regLastName.trim().substring(0, 1).toUpperCase(),
+          avatarUrl: regProfilePhoto.trim() || 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&w=120&q=80',
+          subtitle: showroomSlogan || 'Verified Premium Dealership',
+          location: showroomLocation || regCity,
           rating: 5.0,
           vehiclesCount: 0,
           followersCount: '0',
           coverImage: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=1200&q=80',
-          description: `${regName.trim()} provides premium quality vehicles under compliance codes. Owned by ${showroomOwnerName.trim()}.`,
+          description: `${computedDisplayName} provides premium automotive listings. Commercial entity owned by ${showroomOwnerName || computedDisplayName}.`,
           phone: regPhone.trim(),
-          whatsapp: showroomWhatsapp || regPhone.trim(),
-          flagshipVerified: true,
+          whatsapp: regPhone.trim(),
+          flagshipVerified: false,
           verified: true,
           activityFeed: [],
           themeSettings: {
-            primaryColor: '#00d2ff',
+            primaryColor: '#0ea5e9',
             secondaryColor: '#ffffff',
             fontFamily: 'sans',
             bgStyle: 'dark'
           },
           socials: {}
         };
-        
+
         const { dbRegisterDealership } = await import('../lib/dbService');
-        await dbRegisterDealership(newShowroom);
+        await dbRegisterDealership(newShowroom).catch(err => console.warn('Failed to register dealership document:', err));
+        
         if (onDealerRegistered) {
           onDealerRegistered(newShowroom);
         }
 
-        // Silent Merge Duplicate entries check:
-        // If they registered "Auto Choice" or "Auto Choice Peshawar", merge if applicable
-        if (showroomId.includes('auto-choice')) {
-          console.log('[Showroom Consolidation] Auto Choice / Auto Choice Peshawar detected. Consolidated view mapped.');
-        }
+        // Attach sales pod connection to user profile
+        newProfile.salesPodId = dealerId;
+        await dbSaveUserProfile(newProfile);
       }
 
-      // Log activity
-      const { dbSaveAuditLog } = await import('../lib/dbService');
-      await dbSaveAuditLog({
-        id: `audit-${Date.now()}`,
-        userId: assignedUid,
-        action: 'USER_REGISTRATION',
-        details: `User registered as ${userRole}`,
-        timestamp: new Date().toISOString()
-      });
+      // Automatically dispatch verification email immediately on registration
+      try {
+        await sendEmailVerification(user);
+        console.log('Verification email dispatched to:', user.email);
+      } catch (verifErr: any) {
+        console.warn('Could not dispatch verification email immediately:', verifErr);
+      }
 
-      setCurrentUser(finalProfile);
-      setSuccessMessage(`✓ Onboarding completed! Welcome, ${finalProfile.displayName}.`);
-      setWizardStep(1); // Reset step tracker
-    } catch (err) {
-      console.error('Onboarding save error, using fallback:', err);
-      setCurrentUser(finalProfile);
+      // Synchronize database audit logs
+      try {
+        const { dbSaveAuditLog } = await import('../lib/dbService');
+        await dbSaveAuditLog({
+          id: `audit-${Date.now()}`,
+          userId: user.uid,
+          action: 'USER_REGISTRATION',
+          details: `User registered via email as role ${selectedRole}. Email verification sent.`,
+          timestamp: new Date().toISOString()
+        });
+      } catch (auditErr) {
+        console.warn('Audit logging bypassed:', auditErr);
+      }
+
+      setCurrentUser(newProfile);
+      setSuccessMessage('✓ Account created successfully! Please verify your email via the link sent to your inbox.');
+    } catch (err: any) {
+      console.error('Email Registration Error:', err);
+      let errorMsg = 'Please check your input values and try again.';
+      if (err.code === 'auth/email-already-in-use') {
+        errorMsg = 'An account is already registered with this email address.';
+      } else if (err.code === 'auth/weak-password') {
+        errorMsg = 'The password is too weak according to Firebase specifications.';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMsg = 'The email address provided is not in a valid format.';
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      setAuthError(`Registration Failed: ${errorMsg}`);
+    }
+  };
+
+  // Password Reset Link Handler
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail.trim()) {
+      setAuthError('Please enter your email address to receive the password reset link.');
+      return;
+    }
+
+    try {
+      setAuthError('');
+      setSuccessMessage('');
+      await sendPasswordResetEmail(auth, resetEmail.trim());
+      setSuccessMessage('✓ Password reset link successfully dispatched. Please inspect your email inbox.');
+      setIsForgotPasswordMode(false);
+    } catch (err: any) {
+      console.error('Password Reset Error:', err);
+      setAuthError(`Password Reset Failed: ${err.message || 'Could not send reset email.'}`);
     }
   };
 
@@ -812,421 +1109,750 @@ export default function RegistrationPortal({
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
-          className="max-w-md mx-auto bg-white dark:bg-[#0b0f19] border border-slate-200 dark:border-white/5 p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl dark:shadow-2xl transition-all"
+          className="max-w-xl mx-auto bg-[#0b0f19]/90 border border-white/10 p-6 sm:p-10 rounded-3xl shadow-2xl relative overflow-hidden backdrop-blur-xl text-left"
+          id="guest-auth-card"
         >
-          {/* STEPPER PROGRESS INDICATOR */}
-          <div className="flex items-center justify-center gap-2 mb-6" id="onboarding-stepper-progress">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold font-mono transition-all duration-300 ${wizardStep === 1 ? 'bg-sky-500 text-white font-black ring-4 ring-sky-500/10' : wizardStep > 1 ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
-              {wizardStep > 1 ? '✓' : '1'}
+          {/* Decorative Glowing Orbs for Glassmorphism Background */}
+          <div className="absolute top-0 left-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute bottom-0 right-0 w-32 h-32 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          {/* BRAND PRESENCE HEADER */}
+          <div className="text-center mb-8 relative z-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-orange-500 to-amber-400 rounded-2xl shadow-lg shadow-orange-500/20 mb-4">
+              <span className="text-stone-900 text-2xl font-black font-sans tracking-tighter">B360</span>
             </div>
-            <div className={`h-1 w-12 rounded transition-all duration-300 ${wizardStep > 1 ? 'bg-emerald-500' : 'bg-slate-100 dark:bg-slate-800'}`}></div>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold font-mono transition-all duration-300 ${wizardStep === 2 ? 'bg-sky-500 text-white font-black ring-4 ring-sky-500/10' : wizardStep > 2 ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
-              {wizardStep > 2 ? '✓' : '2'}
-            </div>
-            <div className={`h-1 w-12 rounded transition-all duration-300 ${wizardStep > 2 ? 'bg-emerald-500' : 'bg-slate-100 dark:bg-slate-800'}`}></div>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold font-mono transition-all duration-300 ${wizardStep === 3 ? 'bg-sky-500 text-white font-black ring-4 ring-sky-500/10' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
-              3
-            </div>
+            <h1 className="text-3xl font-black text-white tracking-tight uppercase">
+              BAZAR360<span className="text-orange-500 font-mono">.online</span>
+            </h1>
+            <p className="text-xs text-slate-400 font-medium tracking-wide mt-1.5 uppercase">
+              Pakistan's Trusted Automotive Marketplace
+            </p>
           </div>
 
-          {/* STEP 1: MOBILE ENTRY & TOGGLE */}
-          {wizardStep === 1 && (
-            <div className="space-y-4 animate-fade-in" id="wizard-step-1-form">
-              {/* SELECTION TOGGLE BUTTON FOR REGISTRATION TYPE */}
-              <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-900/60 p-1.5 rounded-2xl border border-slate-200 dark:border-white/5 mb-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsShowroomRegistration(false);
-                    setRegRole('Buyer');
-                    setAuthError('');
-                  }}
-                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    !isShowroomRegistration
-                      ? 'bg-sky-500 text-white shadow-md font-black'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <User size={14} />
-                  <span>{regLang === 'en' ? 'Individual User' : 'انفرادی صارف'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsShowroomRegistration(true);
-                    setRegRole('Dealer');
-                    setAuthError('');
-                  }}
-                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    isShowroomRegistration
-                      ? 'bg-sky-500 text-white shadow-md font-black'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Store size={14} />
-                  <span>{regLang === 'en' ? 'Showroom Registration' : 'شوروم رجسٹریشن'}</span>
-                </button>
-              </div>
-
-              <div className="text-center mb-6">
-                <h3 className="text-lg font-black text-slate-950 dark:text-white uppercase tracking-tight">
-                  {isShowroomRegistration ? 'Showroom Member Center' : 'Sign In or Register'}
+          {/* FORGOT PASSWORD MODE */}
+          {isForgotPasswordMode ? (
+            <div className="space-y-5 animate-fade-in relative z-10" id="forgot-password-flow">
+              <div className="text-center mb-4">
+                <div className="w-12 h-12 bg-sky-500/10 text-sky-400 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-sky-500/20">
+                  <Lock size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-white uppercase tracking-tight">
+                  Recover Credentials
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
-                  {isShowroomRegistration 
-                    ? 'Register or log in to access verified showroom dealership panels & leads'
-                    : 'Enter your mobile number to instantly log in or setup your free buyer account'}
+                <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
+                  Enter your registered email address below to receive an authenticated link to reset your BAZAR360 password.
                 </p>
               </div>
 
               {authError && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs rounded-xl font-semibold flex items-center gap-2">
-                  <AlertTriangle size={15} className="shrink-0 text-rose-500" />
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl font-semibold flex items-center gap-2">
+                  <AlertTriangle size={15} className="shrink-0 text-rose-400" />
                   <span>{authError}</span>
                 </div>
               )}
 
-              <form onSubmit={handleAuthSubmit} className="space-y-4">
+              {successMessage && (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-xl font-semibold">
+                  {successMessage}
+                </div>
+              )}
+
+              <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1.5 font-bold">
-                    Mobile Phone Number *
+                  <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1.5 font-bold">
+                    Email Address *
                   </label>
-                  <div className="relative flex shadow-sm rounded-xl overflow-hidden">
-                    <div className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 border-r-0 px-3 flex items-center justify-center gap-1 text-xs text-slate-700 dark:text-slate-300 font-mono">
-                      <span>🇵🇰</span>
-                      <span>+92</span>
-                    </div>
+                  <input
+                    type="email"
+                    required
+                    placeholder="name@example.com"
+                    value={resetEmail}
+                    onChange={e => setResetEmail(e.target.value)}
+                    className="w-full bg-[#111827] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-stone-950 font-extrabold py-3 rounded-xl uppercase tracking-wider text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-orange-500/15"
+                >
+                  <Mail size={14} />
+                  Send Reset Instructions
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPasswordMode(false);
+                    setAuthError('');
+                    setSuccessMessage('');
+                  }}
+                  className="w-full text-center text-[10px] text-slate-400 hover:text-white font-bold uppercase tracking-wider pt-2 block"
+                >
+                  ← Back to Portal Gateway
+                </button>
+              </form>
+            </div>
+          ) : (
+            /* STANDARD LOGIN & REGISTRATION PANELS */
+            <div className="space-y-6 relative z-10">
+              
+              {/* TABS SELECTOR (GLASSMORPHIC HOVER TILES) */}
+              <div className="flex bg-[#111827]/80 p-1.5 rounded-2xl border border-white/5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLoginMode(true);
+                    setAuthError('');
+                    setSuccessMessage('');
+                  }}
+                  className={`flex-1 py-3 text-xs font-black uppercase tracking-wider text-center rounded-xl transition-all cursor-pointer ${
+                    isLoginMode 
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-stone-950 shadow-md font-black' 
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLoginMode(false);
+                    setAuthError('');
+                    setSuccessMessage('');
+                  }}
+                  className={`flex-1 py-3 text-xs font-black uppercase tracking-wider text-center rounded-xl transition-all cursor-pointer ${
+                    !isLoginMode 
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-stone-950 shadow-md font-black' 
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Create Account
+                </button>
+              </div>
+
+              {authError && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl font-semibold flex items-center gap-2 animate-pulse">
+                  <AlertTriangle size={15} className="shrink-0 text-rose-400" />
+                  <span>{authError}</span>
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-xl font-semibold">
+                  {successMessage}
+                </div>
+              )}
+
+              {/* SOCIAL LOGINS GROUP */}
+              <div className="space-y-3">
+                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block text-center font-bold">Secure Instant Sign-In</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Google */}
+                  <button
+                    type="button"
+                    onClick={handleGoogleSignIn}
+                    className="bg-[#111827] hover:bg-[#161f30] border border-white/10 text-white py-2.5 px-3 rounded-xl transition-all text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer hover:border-orange-500/40"
+                    title="Sign in with Google"
+                  >
+                    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                    </svg>
+                    Google
+                  </button>
+
+                  {/* Facebook */}
+                  <button
+                    type="button"
+                    onClick={handleFacebookSignIn}
+                    className="bg-[#111827] hover:bg-[#161f30] border border-white/10 text-white py-2.5 px-3 rounded-xl transition-all text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer hover:border-blue-500/40"
+                    title="Sign in with Facebook"
+                  >
+                    <svg className="w-3.5 h-3.5 fill-current text-[#1877F2]" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                    Facebook
+                  </button>
+
+                  {/* LinkedIn */}
+                  <button
+                    type="button"
+                    onClick={handleLinkedInSignIn}
+                    className="bg-[#111827] hover:bg-[#161f30] border border-white/10 text-white py-2.5 px-3 rounded-xl transition-all text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer hover:border-[#0A66C2]/40"
+                    title="Sign in with LinkedIn"
+                  >
+                    <svg className="w-3.5 h-3.5 fill-current text-[#0A66C2]" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                    </svg>
+                    LinkedIn
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3 py-2">
+                  <div className="h-px bg-white/5 flex-1"></div>
+                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest font-black shrink-0">or secure credentials channel</span>
+                  <div className="h-px bg-white/5 flex-1"></div>
+                </div>
+              </div>
+
+              {/* EMAIL SIGN IN MODE */}
+              {isLoginMode ? (
+                <form onSubmit={handleEmailLogin} className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1.5 font-bold">
+                      Email Address *
+                    </label>
                     <input
-                      type="tel"
+                      type="email"
                       required
-                      placeholder="e.g. 3159085086"
-                      value={regPhone}
-                      onChange={e => {
-                        const val = e.target.value.replace(/\D/g, '');
-                        setRegPhone(val.startsWith('0') ? val.slice(1) : val);
-                      }}
-                      className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-r-xl p-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
+                      placeholder="name@example.com"
+                      value={regEmail}
+                      onChange={e => setRegEmail(e.target.value)}
+                      className="w-full bg-[#111827] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
                     />
                   </div>
-                  <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1.5 leading-snug">
-                    Provide a valid mobile number. Verification codes will be silently dispatched via secure API protocols.
-                  </p>
-                </div>
 
-                <div className="flex items-start gap-2 pt-1">
-                  <input
-                    type="checkbox"
-                    id="accept-terms-checkbox"
-                    checked={acceptedTerms}
-                    onChange={e => setAcceptedTerms(e.target.checked)}
-                    className="mt-0.5 rounded border-slate-300 dark:border-white/10 text-sky-500 focus:ring-sky-500 cursor-pointer"
-                  />
-                  <label htmlFor="accept-terms-checkbox" className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug cursor-pointer select-none">
-                    I accept the <b>Terms of Service</b>, <b>Privacy Policy</b>, and consent to receiving mobile verifications via SMS / WhatsApp.
-                  </label>
-                </div>
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider font-bold">
+                        Password *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsForgotPasswordMode(true);
+                          setAuthError('');
+                          setSuccessMessage('');
+                        }}
+                        className="text-[10px] font-bold text-orange-400 hover:text-orange-500 hover:underline uppercase tracking-wider"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={regPass}
+                      onChange={e => setRegPass(e.target.value)}
+                      className="w-full bg-[#111827] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                    />
+                  </div>
 
-                <button
-                  type="submit"
-                  disabled={whatsappSending || !acceptedTerms}
-                  className="w-full bg-sky-500 hover:bg-sky-600 dark:bg-sky-500 dark:hover:bg-sky-600 text-white font-extrabold py-3.5 rounded-xl uppercase tracking-wider text-xs transition-all mt-4 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-sky-500/10"
-                >
-                  {whatsappSending ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                      Requesting Secure OTP...
-                    </>
+                  <button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-stone-950 font-extrabold py-3.5 rounded-xl uppercase tracking-wider text-xs transition-all mt-4 shadow-lg shadow-orange-500/15 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Lock size={13} />
+                    Login to BAZAR360
+                  </button>
+                </form>
+              ) : (
+                /* EMAIL REGISTRATION FORM (EXPANDED TO ALL USER CRITERIA) */
+                <form onSubmit={handleEmailRegister} className="space-y-4">
+                  
+                  {/* SELECTION FOR REGISTRATION TYPE */}
+                  <div className="flex bg-[#111827] p-1 rounded-xl border border-white/5 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsShowroomRegistration(false);
+                        setRegRole('Buyer');
+                      }}
+                      className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        !isShowroomRegistration
+                          ? 'bg-orange-500 text-stone-950 font-black'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <User size={12} />
+                      <span>Individual / Client</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsShowroomRegistration(true);
+                        setRegRole('Dealer');
+                      }}
+                      className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        isShowroomRegistration
+                          ? 'bg-orange-500 text-stone-950 font-black'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Store size={12} />
+                      <span>Showroom Entity</span>
+                    </button>
+                  </div>
+
+                  {/* FIRST & LAST NAME GRID */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1 font-bold">First Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Amjid"
+                        value={regFirstName}
+                        onChange={e => setRegFirstName(e.target.value)}
+                        className="w-full bg-[#111827] border border-white/10 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1 font-bold">Last Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Khan"
+                        value={regLastName}
+                        onChange={e => setRegLastName(e.target.value)}
+                        className="w-full bg-[#111827] border border-white/10 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* CONDITIONAL SHOWROOM INFORMATION DETAILS */}
+                  {isShowroomRegistration ? (
+                    <div className="space-y-3 p-3 bg-white/5 rounded-2xl border border-white/5 animate-fade-in">
+                      <div>
+                        <label className="text-[10px] font-mono uppercase text-slate-400 block mb-1 font-bold">
+                          Showroom Brand / Registered Slogan *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Peshawar Car Valley"
+                          value={showroomSlogan}
+                          onChange={e => setShowroomSlogan(e.target.value)}
+                          className="w-full bg-[#111827] border border-white/10 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-orange-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-mono uppercase text-slate-400 block mb-1 font-bold">
+                          Owner CNIC Representative Name *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Malak Mazhar"
+                          value={showroomOwnerName}
+                          onChange={e => setShowroomOwnerName(e.target.value)}
+                          className="w-full bg-[#111827] border border-white/10 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-orange-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-mono uppercase text-slate-400 block mb-1 font-bold">
+                          Showroom Outlet Physical Location *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Ring Road, Peshawar, Pakistan"
+                          value={showroomLocation}
+                          onChange={e => setShowroomLocation(e.target.value)}
+                          className="w-full bg-[#111827] border border-white/10 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
                   ) : (
-                    <>
-                      <Lock size={13} />
-                      Verify Mobile & Proceed
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* STEP 2: OTP VERIFICATION CODE */}
-          {wizardStep === 2 && (
-            <div className="space-y-4 animate-fade-in" id="wizard-step-2-form">
-              <div className="text-center mb-6">
-                <div className="w-12 h-12 bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm">
-                  <MessageSquare size={22} className="animate-pulse" />
-                </div>
-                <h3 className="text-lg font-black text-slate-950 dark:text-white uppercase tracking-tight">
-                  Verify Identity Code
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
-                  A 6-digit authentication token has been dispatched via SMS and WhatsApp. Enter it below to unlock access.
-                </p>
-              </div>
-
-              {authError && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs rounded-xl font-semibold flex items-center gap-2">
-                  <AlertTriangle size={15} className="shrink-0 text-rose-500" />
-                  <span>{authError}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleAuthSubmit} className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1.5 font-bold text-center">
-                    Enter Verification Code *
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    required
-                    placeholder="e.g. 123456"
-                    value={enteredOtp}
-                    onChange={e => setEnteredOtp(e.target.value.replace(/\D/g, ''))}
-                    className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3.5 text-center font-mono font-black text-xl tracking-[0.5em] text-slate-950 dark:text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
-                  />
-                  <p className="text-[9px] text-slate-400 dark:text-slate-500 text-center font-sans mt-2">
-                    Check developer console log for secure testing OTP or try bypass code: <b>360360</b>.
-                  </p>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full bg-sky-500 hover:bg-sky-600 dark:bg-sky-500 dark:hover:bg-sky-600 text-white font-extrabold py-3.5 rounded-xl uppercase tracking-wider text-xs transition-all shadow-md cursor-pointer"
-                >
-                  Verify Verification Token
-                </button>
-
-                <div className="flex justify-between text-[10px] font-mono uppercase font-black pt-3 border-t border-slate-100 dark:border-white/5">
-                  <button
-                    type="button"
-                    disabled={otpTimer > 0}
-                    onClick={() => handleRequestOtp()}
-                    className={`cursor-pointer ${otpTimer > 0 ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed' : 'text-emerald-500 hover:underline'}`}
-                  >
-                    {otpTimer > 0 ? `Resend Code in ${otpTimer}s` : 'Resend Code Now'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOtpSent(false);
-                      setEnteredOtp('');
-                      setWizardStep(1);
-                    }}
-                    className="text-slate-500 dark:text-slate-400 hover:underline cursor-pointer"
-                  >
-                    Change Details
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* STEP 3: SETUP PROFILE & SHOWROOM DETAILS */}
-          {wizardStep === 3 && (
-            <div className="space-y-4 animate-fade-in" id="wizard-step-3-form">
-              <div className="text-center mb-6">
-                <div className="w-12 h-12 bg-sky-500/10 text-sky-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm">
-                  <Sparkles size={22} className="animate-pulse" />
-                </div>
-                <h3 className="text-lg font-black text-slate-950 dark:text-white uppercase tracking-tight">
-                  {isShowroomRegistration ? 'Showroom Details Setup' : 'Personal Profile Setup'}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
-                  {isShowroomRegistration 
-                    ? 'Fill out required commercial business credentials for Bazar360 compliance mapping.'
-                    : 'Help us customize your portal. Complete these simple setup preferences.'}
-                </p>
-              </div>
-
-              {authError && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs rounded-xl font-semibold flex items-center gap-2">
-                  <AlertTriangle size={15} className="shrink-0 text-rose-500" />
-                  <span>{authError}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleCompleteOnboarding} className="space-y-3.5">
-                {isShowroomRegistration ? (
-                  /* SHOWROOM DETAIL FORM FIELDS */
-                  <>
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1 font-bold">
-                        Showroom Brand/Trade Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Auto Choice Peshawar"
-                        value={regName}
-                        onChange={e => setRegName(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1 font-bold">
-                        Owner / CEO Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Malak Mazhar"
-                        value={showroomOwnerName}
-                        onChange={e => setShowroomOwnerName(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1 font-bold">
-                        Showroom Slogan / Tagline
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Direct imports, premium luxury motors"
-                        value={showroomSlogan}
-                        onChange={e => setShowroomSlogan(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1 font-bold">
-                        Physical Showroom Address *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Ring Road, Phase 3 Peshawar"
-                        value={showroomLocation}
-                        onChange={e => setShowroomLocation(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500"
-                      />
-                    </div>
-
+                    /* INDIVIDUAL USER - USER TYPE ROLE SELECTOR */
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1 font-bold">Years Active</label>
-                        <select
-                          value={showroomExperience}
-                          onChange={e => setShowroomExperience(Number(e.target.value))}
-                          className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none cursor-pointer"
-                        >
-                          <option value="1">1 Year</option>
-                          <option value="3">3 Years</option>
-                          <option value="5">5 Years</option>
-                          <option value="10">10+ Years</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1 font-bold">Staff Count</label>
-                        <select
-                          value={showroomEmployees}
-                          onChange={e => setShowroomEmployees(Number(e.target.value))}
-                          className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none cursor-pointer"
-                        >
-                          <option value="2">1-3 Staff Members</option>
-                          <option value="5">4-10 Staff Members</option>
-                          <option value="15">10+ Employees</option>
-                        </select>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  /* INDIVIDUAL PROFILE FORM FIELDS */
-                  <>
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1 font-bold">
-                        Your Full Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Muhammad Amjid"
-                        value={regName}
-                        onChange={e => setRegName(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1 font-bold">
-                        Home or Business Address
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Sector F-11, Islamabad"
-                        value={individualAddress}
-                        onChange={e => setIndividualAddress(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1 font-bold">Onboarding Role</label>
+                        <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1 font-bold">User Type *</label>
                         <select
                           value={regRole}
                           onChange={e => setRegRole(e.target.value as any)}
-                          className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none cursor-pointer"
+                          className="w-full bg-[#111827] border border-white/10 rounded-xl p-2.5 text-xs text-white focus:outline-none cursor-pointer"
                         >
-                          <option value="Buyer">Interested Buyer</option>
-                          <option value="Private Seller">Private Outside Seller</option>
+                          <option value="Buyer">Buyer</option>
+                          <option value="Private Seller">Private Seller</option>
+                          <option value="Sales Representative">Sales Representative</option>
                         </select>
                       </div>
-
                       <div>
-                        <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1 font-bold">Preferred Language</label>
-                        <select
-                          value={regLang}
-                          onChange={e => setRegLang(e.target.value as any)}
-                          className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none cursor-pointer"
-                        >
-                          <option value="en">English (EN)</option>
-                          <option value="ur">Urdu (اردو)</option>
-                        </select>
+                        <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1 font-bold">Company (Optional)</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Bisconni Motors"
+                          value={regCompany}
+                          onChange={e => setRegCompany(e.target.value)}
+                          className="w-full bg-[#111827] border border-white/10 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none"
+                        />
                       </div>
                     </div>
-                  </>
-                )}
+                  )}
 
-                <div className="grid grid-cols-2 gap-3 pt-1">
+                  {/* EMAIL ADDRESS */}
                   <div>
-                    <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1 font-bold">Market City</label>
-                    <select
-                      value={regCity}
-                      onChange={e => setRegCity(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none cursor-pointer"
-                    >
-                      <option value="Peshawar">Peshawar (Almas)</option>
-                      <option value="Islamabad">Islamabad</option>
-                      <option value="Lahore">Lahore</option>
-                      <option value="Karachi">Karachi</option>
-                    </select>
+                    <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1 font-bold">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="name@example.com"
+                      value={regEmail}
+                      onChange={e => setRegEmail(e.target.value)}
+                      className="w-full bg-[#111827] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500"
+                    />
                   </div>
 
+                  {/* MOBILE NUMBER (OPTIONAL) */}
                   <div>
-                    <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 tracking-wider block mb-1 font-bold">Country</label>
-                    <select
-                      value={regCountry}
-                      onChange={e => setRegCountry(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none cursor-pointer"
-                    >
-                      <option value="Pakistan">Pakistan 🇵🇰</option>
-                      <option value="United Arab Emirates">UAE 🇦🇪</option>
-                      <option value="Saudi Arabia">KSA 🇸🇦</option>
-                    </select>
+                    <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1 font-bold">
+                      Mobile Contact Number (Optional)
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. 03149198403"
+                      value={regPhone}
+                      onChange={e => setRegPhone(e.target.value.replace(/\D/g, ''))}
+                      className="w-full bg-[#111827] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 font-mono"
+                    />
                   </div>
+
+                  {/* PROFILE PHOTO URL INPUT */}
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1 font-bold">
+                      Profile Avatar Image URL (Optional)
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://images.unsplash.com/..."
+                      value={regProfilePhoto}
+                      onChange={e => setRegProfilePhoto(e.target.value)}
+                      className="w-full bg-[#111827] border border-white/10 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+
+                  {/* PASSWORDS ENTRY */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1 font-bold">Password *</label>
+                      <input
+                        type="password"
+                        required
+                        placeholder="Min 12 characters"
+                        value={regPass}
+                        onChange={e => setRegPass(e.target.value)}
+                        className="w-full bg-[#111827] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1 font-bold">Confirm Password *</label>
+                      <input
+                        type="password"
+                        required
+                        placeholder="Re-enter password"
+                        value={regConfirmPass}
+                        onChange={e => setRegConfirmPass(e.target.value)}
+                        className="w-full bg-[#111827] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* REAL-TIME ENTERPRISE PASSWORD STRENGTH INDICATOR */}
+                  {regPass && (
+                    <div className="p-3.5 bg-white/5 border border-white/5 rounded-2xl space-y-2.5 animate-fade-in text-[11px]">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400 font-medium">Password Strength Rating:</span>
+                        <span className={`font-black font-mono uppercase px-2 py-0.5 rounded text-[9px] ${
+                          checkPasswordStrength(regPass).color === 'bg-rose-500' ? 'text-rose-400 bg-rose-500/10' :
+                          checkPasswordStrength(regPass).color === 'bg-orange-500' ? 'text-orange-400 bg-orange-500/10' :
+                          checkPasswordStrength(regPass).color === 'bg-amber-500' ? 'text-amber-400 bg-amber-500/10' :
+                          checkPasswordStrength(regPass).color === 'bg-teal-500' ? 'text-teal-400 bg-teal-500/10' :
+                          'text-emerald-400 bg-emerald-500/10'
+                        }`}>
+                          {checkPasswordStrength(regPass).label}
+                        </span>
+                      </div>
+                      
+                      {/* Segmented Strength Bar */}
+                      <div className="grid grid-cols-5 gap-1.5 h-1.5">
+                        {[1, 2, 3, 4, 5].map(idx => (
+                          <div 
+                            key={idx}
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              idx <= checkPasswordStrength(regPass).score 
+                                ? checkPasswordStrength(regPass).color 
+                                : 'bg-slate-800'
+                            }`}
+                          ></div>
+                        ))}
+                      </div>
+
+                      {/* Criteria Checklist Bullets */}
+                      <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-[9px] uppercase tracking-wider text-slate-400">
+                        <div className="flex items-center gap-1.5">
+                          <span className={checkPasswordStrength(regPass).requirements.length ? "text-emerald-400 font-extrabold" : "text-rose-400 font-extrabold"}>
+                            {checkPasswordStrength(regPass).requirements.length ? "✓" : "✗"}
+                          </span>
+                          <span>At least 12 chars</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className={checkPasswordStrength(regPass).requirements.uppercase ? "text-emerald-400 font-extrabold" : "text-rose-400 font-extrabold"}>
+                            {checkPasswordStrength(regPass).requirements.uppercase ? "✓" : "✗"}
+                          </span>
+                          <span>At least 1 UPPERCASE</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className={checkPasswordStrength(regPass).requirements.lowercase ? "text-emerald-400 font-extrabold" : "text-rose-400 font-extrabold"}>
+                            {checkPasswordStrength(regPass).requirements.lowercase ? "✓" : "✗"}
+                          </span>
+                          <span>At least 1 lowercase</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className={checkPasswordStrength(regPass).requirements.number ? "text-emerald-400 font-extrabold" : "text-rose-400 font-extrabold"}>
+                            {checkPasswordStrength(regPass).requirements.number ? "✓" : "✗"}
+                          </span>
+                          <span>At least 1 Number (0-9)</span>
+                        </div>
+                        <div className="col-span-2 flex items-center gap-1.5">
+                          <span className={checkPasswordStrength(regPass).requirements.special ? "text-emerald-400 font-extrabold" : "text-rose-400 font-extrabold"}>
+                            {checkPasswordStrength(regPass).requirements.special ? "✓" : "✗"}
+                          </span>
+                          <span>At least 1 Special Character (!@#$%^&*)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* GEOGRAPHICAL DROPDOWNS */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1 font-bold">City</label>
+                      <select
+                        value={regCity}
+                        onChange={e => setRegCity(e.target.value)}
+                        className="w-full bg-[#111827] border border-white/10 rounded-xl p-2.5 text-xs text-white focus:outline-none cursor-pointer"
+                      >
+                        <option value="Peshawar">Peshawar</option>
+                        <option value="Islamabad">Islamabad</option>
+                        <option value="Lahore">Lahore</option>
+                        <option value="Karachi">Karachi</option>
+                        <option value="Rawalpindi">Rawalpindi</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1 font-bold">Province</label>
+                      <select
+                        value={regProvince}
+                        onChange={e => setRegProvince(e.target.value)}
+                        className="w-full bg-[#111827] border border-white/10 rounded-xl p-2.5 text-xs text-white focus:outline-none cursor-pointer"
+                      >
+                        <option value="Khyber Pakhtunkhwa">Khyber Pakhtunkhwa (KP)</option>
+                        <option value="Punjab">Punjab</option>
+                        <option value="Sindh">Sindh</option>
+                        <option value="Balochistan">Balochistan</option>
+                        <option value="Islamabad Capital Territory">Islamabad (ICT)</option>
+                        <option value="Azad Kashmir">Azad Kashmir</option>
+                        <option value="Gilgit-Baltistan">Gilgit-Baltistan</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1 font-bold">Country</label>
+                      <select
+                        value={regCountry}
+                        onChange={e => setRegCountry(e.target.value)}
+                        className="w-full bg-[#111827] border border-white/10 rounded-xl p-2.5 text-xs text-white focus:outline-none cursor-pointer"
+                      >
+                        <option value="Pakistan">Pakistan 🇵🇰</option>
+                        <option value="United Arab Emirates">UAE 🇦🇪</option>
+                        <option value="Saudi Arabia">Saudi Arabia 🇸🇦</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* INTERACTIVE SIMULATED GOOGLE RECAPTCHA V3 */}
+                  <div className="p-4 bg-[#111827] border border-white/10 rounded-2xl flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!captchaVerified) {
+                            setCaptchaModalOpen(true);
+                          }
+                        }}
+                        className={`w-6 h-6 rounded border cursor-pointer transition-all flex items-center justify-center ${
+                          captchaVerified 
+                            ? 'bg-emerald-500 border-emerald-500 text-stone-950' 
+                            : 'bg-[#0b0f19] border-white/20 hover:border-orange-500'
+                        }`}
+                      >
+                        {captchaVerified && <Check size={14} className="stroke-[4px]" />}
+                      </button>
+                      <span className="text-xs text-slate-300 font-medium select-none">
+                        I'm not a robot (Secure Verification Check)
+                      </span>
+                    </div>
+                    <div className="text-center font-mono">
+                      <div className="w-8 h-8 mx-auto flex items-center justify-center">
+                        <svg className="w-6 h-6 text-sky-400 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: captchaVerified ? 'none' : 'block' }}>
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3" style={{ display: captchaVerified ? 'block' : 'none' }}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      </div>
+                      <span className="text-[7px] text-slate-500 uppercase tracking-widest block mt-0.5">reCAPTCHA</span>
+                    </div>
+                  </div>
+
+                  {/* NEWSLETTER SUBSCRIPTION CHECKBOX */}
+                  <div className="flex items-start gap-2.5 pt-1">
+                    <input
+                      type="checkbox"
+                      id="newsletter-checkbox"
+                      checked={regNewsletter}
+                      onChange={e => setRegNewsletter(e.target.checked)}
+                      className="mt-0.5 rounded border-white/20 text-orange-500 focus:ring-orange-500 cursor-pointer"
+                    />
+                    <label htmlFor="newsletter-checkbox" className="text-[10.5px] text-slate-400 leading-snug cursor-pointer select-none">
+                      I want to receive the weekly BAZAR360 automotive market newsletter and premium Peshawar dealership price drop updates.
+                    </label>
+                  </div>
+
+                  {/* TERMS & CONDITIONS CHECKBOX */}
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      id="accept-terms-checkbox"
+                      checked={acceptedTerms}
+                      onChange={e => setAcceptedTerms(e.target.checked)}
+                      className="mt-0.5 rounded border-white/20 text-orange-500 focus:ring-orange-500 cursor-pointer"
+                    />
+                    <label htmlFor="accept-terms-checkbox" className="text-[10.5px] text-slate-400 leading-snug cursor-pointer select-none">
+                      I accept the <b>Terms of Service</b>, <b>Privacy & Security Policies</b>, and consent to legal account registration.
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold py-3.5 rounded-xl uppercase tracking-wider text-xs transition-all mt-4 shadow-lg shadow-emerald-500/10 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <UserPlus size={14} />
+                    Register Secure Profile
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* SIMULATED GOOGLE RECAPTCHA PUZZLE OVERLAY MODAL */}
+          {captchaModalOpen && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in" id="recaptcha-modal">
+              <div className="bg-[#0b0f19] border border-white/10 rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl relative text-left">
+                <div className="bg-sky-500 p-4 rounded-t-2xl text-stone-950 -mx-5 -mt-5 flex justify-between items-start">
+                  <div>
+                    <span className="text-[8px] font-mono font-black uppercase tracking-widest block opacity-75">Google Security Suite</span>
+                    <h4 className="text-base font-black leading-tight uppercase tracking-tight">Select all Hybrid Luxury SUVs</h4>
+                    <p className="text-[9px] font-medium leading-relaxed opacity-90 mt-1">Click the respective thumbnails of SUVs from Peshawar showroom to verify you are human.</p>
+                  </div>
+                  <span className="bg-stone-950 text-white font-mono text-[9px] font-extrabold px-1.5 py-0.5 rounded">v3</span>
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3.5 rounded-xl uppercase tracking-wider text-xs transition-all mt-4 shadow-lg shadow-emerald-500/10 flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Check size={14} />
-                  Complete Setup & Launch
-                </button>
-              </form>
+                {/* Grid */}
+                <div className="grid grid-cols-3 gap-2 pt-2">
+                  {[
+                    { idx: 0, name: "Toyota Fortuner (Hybrid)", isCorrect: true, url: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=150&q=80" },
+                    { idx: 1, name: "Suzuki Alto (Hatchback)", isCorrect: false, url: "https://images.unsplash.com/photo-1625211910240-df6a445e5210?auto=format&fit=crop&w=150&q=80" },
+                    { idx: 2, name: "Honda Civic Sedan", isCorrect: false, url: "https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=150&q=80" },
+                    { idx: 3, name: "Porsche Cayenne (SUV)", isCorrect: true, url: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=150&q=80" },
+                    { idx: 4, name: "Vespa Scooter", isCorrect: false, url: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=150&q=80" },
+                    { idx: 5, name: "Hyundai Tucson (SUV)", isCorrect: true, url: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=150&q=80" },
+                    { idx: 6, name: "Yamaha Bike", isCorrect: false, url: "https://images.unsplash.com/photo-1449426468159-d96dbf08f19f?auto=format&fit=crop&w=150&q=80" },
+                    { idx: 7, name: "Range Rover Sport (SUV)", isCorrect: true, url: "https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?auto=format&fit=crop&w=150&q=80" },
+                    { idx: 8, name: "BMW Sedan", isCorrect: false, url: "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=150&q=80" }
+                  ].map((img, i) => {
+                    const isSelected = window.recaptchaVerifier && Array.isArray(window.recaptchaVerifier) ? window.recaptchaVerifier.includes(i) : false;
+                    return (
+                      <button
+                        type="button"
+                        key={img.idx}
+                        onClick={() => {
+                          if (!window.recaptchaVerifier || !Array.isArray(window.recaptchaVerifier)) {
+                            window.recaptchaVerifier = [];
+                          }
+                          if (window.recaptchaVerifier.includes(i)) {
+                            window.recaptchaVerifier = window.recaptchaVerifier.filter((item: any) => item !== i);
+                          } else {
+                            window.recaptchaVerifier.push(i);
+                          }
+                          // Force state update by toggling resetEmail or a simple force-update dummy state
+                          setResetEmail(prev => prev + ' ');
+                          setResetEmail(prev => prev.trim());
+                        }}
+                        className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all cursor-pointer bg-slate-900 group ${
+                          window.recaptchaVerifier && window.recaptchaVerifier.includes(i)
+                            ? 'border-sky-400 ring-2 ring-sky-400/30 opacity-70'
+                            : 'border-white/10 hover:border-white/25'
+                        }`}
+                      >
+                        <img 
+                          src={img.url} 
+                          alt={img.name} 
+                          className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-stone-950/80 p-1 text-center text-[7px] font-mono text-white truncate">
+                          {img.name}
+                        </div>
+                        {window.recaptchaVerifier && window.recaptchaVerifier.includes(i) && (
+                          <div className="absolute top-1 right-1 bg-sky-400 text-stone-950 rounded-full p-0.5">
+                            <Check size={8} className="stroke-[4px]" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Footer Controls */}
+                <div className="flex justify-between items-center border-t border-white/10 pt-3">
+                  <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">Secure Audit Active</span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.recaptchaVerifier = [];
+                        setCaptchaModalOpen(false);
+                      }}
+                      className="px-3 py-1.5 text-[10px] uppercase font-bold text-slate-400 hover:text-white transition-all cursor-pointer"
+                    >
+                      Bypass
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const selections = window.recaptchaVerifier || [];
+                        const correctIndices = [0, 3, 5, 7]; // fortuner, cayenne, tucson, range rover
+                        const selectedAllCorrect = correctIndices.every(idx => selections.includes(idx));
+                        const selectedNoIncorrect = selections.every((idx: any) => correctIndices.includes(idx));
+                        
+                        if (selectedAllCorrect && selectedNoIncorrect) {
+                          setCaptchaVerified(true);
+                          setCaptchaModalOpen(false);
+                          window.recaptchaVerifier = [];
+                          setSuccessMessage("✓ Security reCAPTCHA challenge successfully solved and verified.");
+                          setTimeout(() => setSuccessMessage(""), 4000);
+                        } else {
+                          alert("Security Challenge Failed: Selected images did not accurately match all specified luxury hybrid SUVs. Please try again.");
+                          window.recaptchaVerifier = [];
+                        }
+                      }}
+                      className="bg-sky-500 hover:bg-sky-400 text-stone-950 px-4 py-1.5 rounded-xl text-[10px] uppercase tracking-wider font-extrabold transition-all cursor-pointer"
+                    >
+                      Verify
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </motion.div>
@@ -1235,8 +1861,39 @@ export default function RegistrationPortal({
         /* ========================================================== */
         /* AUTHENTICATED WORKSPACES - MULTI ROLE DASHBOARD */
         /* ========================================================== */
-        <div className="grid grid-cols-1 gap-8" id="profile-authenticated-root">
+        <div className="grid grid-cols-1 gap-6" id="profile-authenticated-root">
           
+          {/* EMAIL VERIFICATION WARNING BANNER */}
+          {!isEmailVerified && auth.currentUser && (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-left shadow-lg animate-fade-in" id="email-verification-banner">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="text-amber-500 mt-0.5 shrink-0" size={18} />
+                <div>
+                  <h4 className="text-xs font-black text-amber-500 uppercase tracking-wider">Email Verification Pending</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">
+                    A confirmation email was sent to <b className="text-white font-mono">{auth.currentUser.email}</b>. Click the verification link to activate your trade dashboard & listing capabilities.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (auth.currentUser) {
+                    try {
+                      await sendEmailVerification(auth.currentUser);
+                      setSuccessMessage("✓ A fresh verification email has been dispatched to your inbox.");
+                    } catch (err: any) {
+                      setAuthError(`Error sending verification: ${err.message}`);
+                    }
+                  }
+                }}
+                className="bg-amber-500 hover:bg-amber-600 text-[#0b0f19] font-sans font-black uppercase tracking-wider text-[10px] px-4 py-2.5 rounded-xl transition-all cursor-pointer whitespace-nowrap shadow-md shadow-amber-500/10"
+              >
+                ✉ Resend Verification
+              </button>
+            </div>
+          )}
+
           {/* ========================================================== */}
           {/* UNIFIED LUXURY "MY PROFILE" DASHBOARD SECTION */}
           {/* ========================================================== */}
@@ -1271,8 +1928,12 @@ export default function RegistrationPortal({
                       }`}>
                         {currentUser.role}
                       </span>
-                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[9px] font-mono font-black uppercase flex items-center gap-1">
-                        ✓ Verified Account
+                      <span className={`border px-2 py-0.5 rounded text-[9px] font-mono font-black uppercase flex items-center gap-1 ${
+                        isEmailVerified 
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      }`}>
+                        {isEmailVerified ? '✓ Verified Account' : '⚠ Verification Pending'}
                       </span>
                     </div>
                   </div>
@@ -1286,7 +1947,9 @@ export default function RegistrationPortal({
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-400 font-medium">Verification State:</span>
-                    <span className="text-emerald-400 font-black font-mono">SECURE (OTP)</span>
+                    <span className={`${isEmailVerified ? 'text-emerald-400' : 'text-amber-400'} font-black font-mono`}>
+                      {isEmailVerified ? 'SECURE (EMAIL)' : 'PENDING'}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-400 font-medium">Account Status:</span>
@@ -1797,40 +2460,159 @@ export default function RegistrationPortal({
 
                   {/* TAB: Settings & Security */}
                   {activeProfileTab === 'settings' && (
-                    <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-4 space-y-4">
-                      <h5 className="text-xs font-black text-white uppercase tracking-wider mb-1">Account Security Parameters</h5>
+                    <div className="space-y-6">
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-sans">
-                        <div className="space-y-1.5">
-                          <span className="text-slate-400 block font-medium">WhatsApp OTP Auth Status:</span>
-                          <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 px-2.5 py-1 rounded-lg block font-mono font-black uppercase text-center text-[10px]">
-                            🟢 ENCRYPTED & ACTIVE
-                          </span>
+                      {/* Banners for action notifications */}
+                      {securityActionError && (
+                        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs font-medium animate-fade-in flex items-center gap-2">
+                          <AlertTriangle size={14} className="shrink-0" />
+                          <span>{securityActionError}</span>
                         </div>
-                        <div className="space-y-1.5">
-                          <span className="text-slate-400 block font-medium">Auto-Login Cookie Key:</span>
-                          <span className="bg-sky-500/15 text-sky-400 border border-sky-500/25 px-2.5 py-1 rounded-lg block font-mono font-black uppercase text-center text-[10px]">
-                            🟢 VERIFIED PERSISTENT
-                          </span>
+                      )}
+                      {securityActionSuccess && (
+                        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs font-medium animate-fade-in flex items-center gap-2">
+                          <Check size={14} className="shrink-0" />
+                          <span>{securityActionSuccess}</span>
+                        </div>
+                      )}
+
+                      {/* Section A: Session & Integration Status */}
+                      <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-4 space-y-4">
+                        <h5 className="text-xs font-black text-white uppercase tracking-wider">Account Integrity Status</h5>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs font-sans">
+                          <div className="bg-slate-900/60 p-3 rounded-xl border border-white/5 space-y-1">
+                            <span className="text-slate-400 block text-[10px] font-mono uppercase tracking-wider">Identity Method</span>
+                            <span className="text-sky-400 font-bold flex items-center gap-1">
+                              <Shield size={12} />
+                              {auth.currentUser?.providerData.some(p => p.providerId === 'password') 
+                                ? 'Email & Password' 
+                                : auth.currentUser?.providerData[0]?.providerId === 'google.com'
+                                ? 'Google Identity Platform'
+                                : 'Social Federated OAuth'
+                              }
+                            </span>
+                          </div>
+                          
+                          <div className="bg-slate-900/60 p-3 rounded-xl border border-white/5 space-y-1">
+                            <span className="text-slate-400 block text-[10px] font-mono uppercase tracking-wider">Session Key Persistence</span>
+                            <span className="text-emerald-400 font-bold flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                              Active (LOCAL_STORAGE)
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-900/60 p-3 rounded-xl border border-white/5 space-y-1 col-span-1 sm:col-span-2 lg:col-span-1">
+                            <span className="text-slate-400 block text-[10px] font-mono uppercase tracking-wider">MFA Protocol</span>
+                            <span className="text-amber-400 font-bold flex items-center gap-1">
+                              🟢 SECURE DIRECT AUTH
+                            </span>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="border-t border-white/5 pt-3 mt-1 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="font-black text-white block text-xs">Simulate Multi-Factor Auth (MFA)</span>
-                            <span className="text-[10px] text-slate-400 font-medium">Require double-verification WhatsApp code upon suspicious logins.</span>
+                      {/* Section B: Change Password Form (Only for password users) */}
+                      {auth.currentUser?.providerData.some(p => p.providerId === 'password') ? (
+                        <form onSubmit={handleChangePassword} className="bg-slate-900/40 border border-white/5 rounded-2xl p-4 space-y-4">
+                          <div className="border-b border-white/5 pb-2">
+                            <h5 className="text-xs font-black text-white uppercase tracking-wider">Change Account Password</h5>
+                            <p className="text-[10px] text-slate-400 mt-0.5">Maintain enterprise compliance by updating your secure access key regularly.</p>
                           </div>
-                          <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-sky-600 border-white/10" />
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1">New Password *</label>
+                              <input
+                                type="password"
+                                required
+                                placeholder="Minimum 12 characters"
+                                value={changePassNew}
+                                onChange={e => setChangePassNew(e.target.value)}
+                                className="w-full bg-[#111827] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-sky-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-mono uppercase text-slate-400 tracking-wider block mb-1">Confirm New Password *</label>
+                              <input
+                                type="password"
+                                required
+                                placeholder="Re-enter password"
+                                value={changePassConfirm}
+                                onChange={e => setChangePassConfirm(e.target.value)}
+                                className="w-full bg-[#111827] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-sky-500"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Real-time feedback for New Password */}
+                          {changePassNew && (
+                            <div className="p-3 bg-white/5 border border-white/5 rounded-xl space-y-2 text-[10px]">
+                              <div className="flex justify-between items-center">
+                                <span className="text-slate-400 font-medium font-mono uppercase text-[9px]">Password Strength:</span>
+                                <span className={`font-black font-mono uppercase px-2 py-0.5 rounded text-[8px] ${
+                                  checkPasswordStrength(changePassNew).color === 'bg-rose-500' ? 'text-rose-400 bg-rose-500/10' :
+                                  checkPasswordStrength(changePassNew).color === 'bg-orange-500' ? 'text-orange-400 bg-orange-500/10' :
+                                  checkPasswordStrength(changePassNew).color === 'bg-amber-500' ? 'text-amber-400 bg-amber-500/10' :
+                                  checkPasswordStrength(changePassNew).color === 'bg-teal-500' ? 'text-teal-400 bg-teal-500/10' :
+                                  'text-emerald-400 bg-emerald-500/10'
+                                }`}>
+                                  {checkPasswordStrength(changePassNew).label}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-5 gap-1.5 h-1.5">
+                                {[1, 2, 3, 4, 5].map(idx => (
+                                  <div 
+                                    key={idx}
+                                    className={`h-full rounded-full transition-all duration-300 ${
+                                      idx <= checkPasswordStrength(changePassNew).score 
+                                        ? checkPasswordStrength(changePassNew).color 
+                                        : 'bg-slate-800'
+                                    }`}
+                                  ></div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <button
+                            type="submit"
+                            disabled={!changePassNew || changePassNew !== changePassConfirm || checkPasswordStrength(changePassNew).score < 4}
+                            className="px-4 py-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 text-white font-mono font-black uppercase tracking-wider text-[10px] rounded-lg transition-all shadow-md cursor-pointer"
+                          >
+                            Update Access Key
+                          </button>
+                        </form>
+                      ) : (
+                        <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-4">
+                          <span className="text-slate-400 text-xs block leading-relaxed">
+                            🔒 You are currently logged in via a federated social provider (Google, Facebook, or LinkedIn). Password modification is handled directly by your credential authority.
+                          </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="font-black text-white block text-xs">Allow Showroom Analytics sharing</span>
-                            <span className="text-[10px] text-slate-400 font-medium">Share visitor clickstream metrics with flagship partners anonymously.</span>
+                      )}
+
+                      {/* Section C: Critical Security Actions */}
+                      <div className="bg-rose-950/10 border border-rose-500/15 rounded-2xl p-4 space-y-3">
+                        <div>
+                          <h5 className="text-xs font-black text-rose-400 uppercase tracking-wider">Critical Zone</h5>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Actions performed in this zone are completely final and cannot be rolled back.</p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+                          <div className="max-w-md">
+                            <span className="font-extrabold text-white text-xs block">Erase Account Data</span>
+                            <span className="text-[10px] text-slate-400 leading-normal block mt-0.5">
+                              Permanently wipe your profile record from Firestore and remove your credentials from the BAZAR360 user database. All showroom inventories will be purged.
+                            </span>
                           </div>
-                          <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-sky-600 border-white/10" />
+                          <button
+                            type="button"
+                            onClick={handleDeleteAccount}
+                            className="bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/20 font-sans font-black uppercase tracking-wider text-[10px] px-4 py-2.5 rounded-xl transition-all cursor-pointer whitespace-nowrap align-middle"
+                          >
+                            ⚠️ Erase Profile & Listings
+                          </button>
                         </div>
                       </div>
+
                     </div>
                   )}
 
@@ -2463,6 +3245,67 @@ export default function RegistrationPortal({
           )}
 
         </div>
+        </div>
+      )}
+
+      {/* SECURITY RE-AUTHENTICATION OVERLAY MODAL */}
+      {isReauthModalOpen && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in" id="reauth-security-modal">
+          <div className="bg-[#0b0f19] border border-white/10 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl relative text-left">
+            <div className="bg-rose-500 p-4 rounded-t-2xl text-stone-950 -mx-6 -mt-6 flex justify-between items-start">
+              <div>
+                <span className="text-[8px] font-mono font-black uppercase tracking-widest block opacity-75">Verification Authority</span>
+                <h4 className="text-base font-black leading-tight uppercase tracking-tight">
+                  {reauthActionType === 'delete' ? 'Confirm Profile Deletion' : 'Confirm Password Update'}
+                </h4>
+                <p className="text-[9px] font-medium leading-relaxed opacity-90 mt-1">
+                  For secure authorization, enter your account password to sign off on this critical action.
+                </p>
+              </div>
+              <span className="bg-stone-950 text-white font-mono text-[9px] font-extrabold px-1.5 py-0.5 rounded">SECURE</span>
+            </div>
+
+            {securityActionError && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-[11px] leading-relaxed">
+                {securityActionError}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[9px] font-mono uppercase text-slate-400 tracking-wider block mb-1 font-bold">Your Account Password</label>
+                <input
+                  type="password"
+                  placeholder="Enter current password"
+                  value={reauthPassword}
+                  onChange={e => setReauthPassword(e.target.value)}
+                  className="w-full bg-[#111827] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-rose-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsReauthModalOpen(false);
+                  setReauthPassword('');
+                  setSecurityActionError('');
+                }}
+                className="px-4 py-2 text-[10px] uppercase font-bold text-slate-400 hover:text-white transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!reauthPassword}
+                onClick={reauthActionType === 'delete' ? executeDeleteAccount : executeChangePassword}
+                className="bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 disabled:text-slate-500 text-white px-5 py-2 rounded-xl text-[10px] uppercase tracking-wider font-extrabold transition-all cursor-pointer"
+              >
+                Authorize Action
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

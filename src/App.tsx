@@ -38,7 +38,7 @@ import ContactView from './components/ContactView';
 import ContactDrawer from './components/ContactDrawer';
 import { Bazar360Logo } from './components/Bazar360Logo';
 import { AutoChoiceLogo } from './components/AutoChoiceLogo';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { initializeVisitorTracking, trackSearchQuery, trackVehicleView } from './lib/visitorTracking';
 
 const METRIC_TABS_DATA = {
@@ -983,7 +983,7 @@ function App() {
           className="flex flex-col items-center justify-center text-center mt-1 mb-4 space-y-2 relative z-10 max-w-2xl mx-auto shrink-0"
         >
           <span className="text-[9px] uppercase font-mono font-black tracking-[0.25em] text-[#38BDF8] bg-[#38BDF8]/10 px-3.5 py-1.5 rounded-full border border-sky-500/20 shadow-sm">
-            ★ Pakistan’s Premier Automotive & Multi-Tenant Trade Network
+            ★ Pakistan's Trusted Automotive Marketplace
           </span>
           <h1 className="text-2xl md:text-3.5xl lg:text-4xl font-black tracking-tight text-white uppercase leading-tight md:leading-snug">
             Unified Digital <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#38BDF8] to-orange-500">Ecosystem Gateway</span>
@@ -1251,7 +1251,7 @@ function App() {
 
         {/* Footer */}
         <div className="text-center text-slate-500 text-[9px] md:text-[10px] uppercase font-mono tracking-widest pb-[env(safe-area-inset-bottom)] md:pb-1 mt-1 shrink-0 relative z-10 border-t border-white/5 pt-3">
-          Founder: Muhammad Amjid &bull; Helpline Connect: <a href="tel:03149198403" className="text-orange-500 hover:underline font-bold">03149198403</a> &bull; BAZAR360 Pakistan Enterprise &copy; 2026. SECURED THROUGH ADVANCED LOCAL BLUEPRINT.
+          Built in Peshawar. Trusted Across Pakistan. 🇵🇰 &bull; Founder: Muhammad Amjid &bull; Helpline Connect: <a href="tel:03149198403" className="text-orange-500 hover:underline font-bold">03149198403</a> &bull; BAZAR360 Pakistan Enterprise &copy; 2026.
         </div>
       </div>
     );
@@ -1792,9 +1792,17 @@ function App() {
       />
 
       {/* DYNAMIC LISTING DETAILS FULL SCREEN MODAL */}
-      {selectedListing && (
-        <div id="fullscreen-spec-modal" className="fixed inset-0 bg-[#0F172A] z-50 overflow-y-auto animate-fade-in animate-once">
-          <div className="min-h-screen w-full text-xs font-sans text-white flex flex-col relative max-w-full px-4 md:px-12 py-6">
+      <AnimatePresence>
+        {selectedListing && (
+          <motion.div
+            id="fullscreen-spec-modal"
+            initial={{ y: "100%", opacity: 0.9 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0.9 }}
+            transition={{ type: "spring", damping: 30, stiffness: 180 }}
+            className="fixed inset-0 bg-[#0F172A] z-50 overflow-y-auto"
+          >
+            <div className="min-h-screen w-full text-xs font-sans text-white flex flex-col relative max-w-full px-4 md:px-12 py-6">
             
             {/* Header banner */}
             <div className="bg-[#1E293B] p-4 border border-white/5 rounded-2xl flex justify-between items-center shrink-0 mb-6">
@@ -2282,8 +2290,9 @@ function App() {
             </div>
 
           </div>
-        </div>
+        </motion.div>
       )}
+    </AnimatePresence>
 
       {/* STICKY VEHICLE COMPARISON DRAWER BAR */}
       {compareList.length > 0 && (

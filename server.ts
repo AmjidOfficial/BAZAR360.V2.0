@@ -363,6 +363,53 @@ Your task is to translate any incoming text block beautifully and accurately int
     }
   });
 
+  // API 5: Secure Registration & Role Provisioning via Admin SDK
+  app.post("/api/user/register", async (req, res) => {
+    try {
+      const { profile, showroom } = req.body;
+      if (!profile || !profile.uid) {
+        return res.status(400).json({ success: false, error: "Profile payload with valid UID is required." });
+      }
+
+      console.log(`[Admin SDK] Securely registering user profile: ${profile.uid} with role: ${profile.role}`);
+      const dbAdmin = admin.firestore();
+      const timeStr = new Date().toISOString();
+
+      // Ensure updatedAt is set
+      const profilePayload = {
+        ...profile,
+        updatedAt: timeStr
+      };
+
+      // Save to /users
+      await dbAdmin.collection('users').doc(profile.uid).set(profilePayload, { merge: true });
+
+      // Save to /profiles (split-collection personal details)
+      await dbAdmin.collection('profiles').doc(profile.uid).set({
+        uid: profile.uid,
+        displayName: profile.displayName || profile.name || 'Anonymous User',
+        createdAt: profile.createdAt || timeStr,
+        updatedAt: timeStr
+      }, { merge: true });
+
+      // If showroom payload is provided, register the dealership
+      if (showroom && showroom.id) {
+        console.log(`[Admin SDK] Securely registering showroom: ${showroom.id}`);
+        await dbAdmin.collection('dealers').doc(showroom.id).set({
+          ...showroom,
+          createdAt: showroom.createdAt || timeStr,
+          updatedAt: timeStr
+        }, { merge: true });
+      }
+
+      res.json({ success: true, message: "Profile and Showroom successfully registered via Firebase Admin SDK." });
+
+    } catch (error: any) {
+      console.error("[Admin SDK] Error in /api/user/register:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to register user profile via Admin SDK." });
+    }
+  });
+
   // Vite development middleware vs Static Production files serving
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

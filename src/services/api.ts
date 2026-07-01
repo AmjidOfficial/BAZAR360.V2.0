@@ -239,3 +239,30 @@ export async function callAiTranslate(text: string, targetLanguage = 'Urdu'): Pr
   return response.json();
 }
 
+/**
+ * Register User Profile and optional Showroom via Secure full-stack Admin SDK backend
+ */
+export async function callRegisterUser(
+  profile: any, 
+  showroom?: any
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const appCheckHeader = await getAppCheckHeader();
+    const response = await fetch('/api/user/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...appCheckHeader
+      },
+      body: JSON.stringify({ profile, showroom }),
+    });
+    if (!response.ok) {
+      throw new Error('Registration backend API not responding or offline.');
+    }
+    return response.json();
+  } catch (error: any) {
+    console.error('Registration API Error:', error);
+    return { success: false, error: error.message || 'Failed to communicate with registration API.' };
+  }
+}
+

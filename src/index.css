@@ -1,9 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", "Work Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
   --color-bg-primary: var(--color-bg-primary);
@@ -38,8 +38,8 @@ h1, h2, h3, h4, h5, h6 {
   --color-text-main: #0F172A;
   --color-text-muted: #64748B;
   --color-border-main: #E2E8F0;
-  --color-accent-main: #FF6B00;
-  --color-accent-hover: #E05B00;
+  --color-accent-main: #F97316;
+  --color-accent-hover: #EA580C;
   
   --brand-bg: var(--color-bg-primary);
   --brand-text: var(--color-text-main);
@@ -48,7 +48,7 @@ h1, h2, h3, h4, h5, h6 {
   --brand-border: var(--color-border-main);
   --brand-accent: var(--color-accent-main);
   --brand-accent-hover: var(--color-accent-hover);
-  --brand-accent-rgb: 255, 107, 0;
+  --brand-accent-rgb: 249, 115, 22;
 }
 
 /* Explicit Light Mode Override class */
@@ -58,40 +58,40 @@ h1, h2, h3, h4, h5, h6 {
   --color-text-main: #0F172A;
   --color-text-muted: #64748B;
   --color-border-main: #E2E8F0;
-  --color-accent-main: #FF6B00;
-  --color-accent-hover: #E05B00;
+  --color-accent-main: #F97316;
+  --color-accent-hover: #EA580C;
 }
 
-/* Explicit Dark Mode Override class (Upgraded to Gateway Space Dark) */
+/* Explicit Dark Mode Override class (Upgraded to Dark Charcoal Version) */
 .dark {
-  --color-bg-primary: #030712;
-  --color-bg-secondary: #0b0f19;
-  --color-text-main: #f3f4f6;
-  --color-text-muted: #9ca3af;
-  --color-border-main: rgba(56, 189, 248, 0.12);
-  --color-accent-main: #38BDF8;
-  --color-accent-hover: #0ea5e9;
+  --color-bg-primary: #121214;
+  --color-bg-secondary: #1E1E22;
+  --color-text-main: #F4F4F5;
+  --color-text-muted: #A1A1AA;
+  --color-border-main: rgba(255, 255, 255, 0.08);
+  --color-accent-main: #F97316;
+  --color-accent-hover: #EA580C;
 }
 
 /* Legacy theme classes for backward-compatibility */
 .theme-luxury-light {
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f1f5f9;
-  --color-text-main: #0f172a;
-  --color-text-muted: #475569;
-  --color-border-main: #cbd5e1;
-  --color-accent-main: #1e40af;
-  --color-accent-hover: #1d4ed8;
+  --color-bg-primary: #FAFAFA;
+  --color-bg-secondary: #FFFFFF;
+  --color-text-main: #0F172A;
+  --color-text-muted: #64748B;
+  --color-border-main: #E2E8F0;
+  --color-accent-main: #F97316;
+  --color-accent-hover: #EA580C;
 }
 
 .theme-cosmic-dark {
-  --color-bg-primary: #030712;
-  --color-bg-secondary: #0b0f19;
-  --color-text-main: #f3f4f6;
-  --color-text-muted: #9ca3af;
-  --color-border-main: rgba(56, 189, 248, 0.12);
-  --color-accent-main: #38BDF8;
-  --color-accent-hover: #0ea5e9;
+  --color-bg-primary: #121214;
+  --color-bg-secondary: #1E1E22;
+  --color-text-main: #F4F4F5;
+  --color-text-muted: #A1A1AA;
+  --color-border-main: rgba(255, 255, 255, 0.08);
+  --color-accent-main: #F97316;
+  --color-accent-hover: #EA580C;
 }
 
 .theme-mint-emerald {

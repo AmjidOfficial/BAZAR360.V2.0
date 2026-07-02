@@ -458,6 +458,11 @@ export default function HomeView({
   const [searchFuel, setSearchFuel] = useState<string>('All');
   const [searchYear, setSearchYear] = useState<string>('All');
   const [searchSeller, setSearchSeller] = useState<'all' | 'showroom' | 'individual'>('all');
+  const [searchMake, setSearchMake] = useState<string>('All');
+  const [searchModel, setSearchModel] = useState<string>('');
+  const [searchVariant, setSearchVariant] = useState<string>('');
+  const [searchBodyType, setSearchBodyType] = useState<string>('All');
+  const [searchCondition, setSearchCondition] = useState<string>('All');
   const [showAdvanced, setShowAdvanced] = useState(false);
   
   // Hero Slider State
@@ -512,15 +517,22 @@ export default function HomeView({
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     let combined = localQuery.trim();
+    if (searchMake !== 'All') {
+      combined += ' ' + searchMake;
+      setSelectedCategory(searchMake);
+    }
+    if (searchModel.trim()) combined += ' ' + searchModel.trim();
+    if (searchVariant.trim()) combined += ' ' + searchVariant.trim();
+    if (searchYear !== 'All') combined += ' ' + searchYear;
     if (searchCity !== 'All') combined += ' ' + searchCity;
-    if (searchType !== 'all') combined += ' ' + searchType;
     if (searchPrice !== 'All') combined += ' ' + searchPrice;
     if (searchTransmission !== 'All') combined += ' ' + searchTransmission;
     if (searchFuel !== 'All') combined += ' ' + searchFuel;
-    if (searchYear !== 'All') combined += ' ' + searchYear;
+    if (searchBodyType !== 'All') combined += ' ' + searchBodyType;
+    if (searchCondition !== 'All') combined += ' ' + searchCondition;
     if (searchSeller !== 'all') combined += ' ' + searchSeller;
     
-    setSearchQuery(combined);
+    setSearchQuery(combined.trim());
     setTab('inventory');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -629,37 +641,69 @@ export default function HomeView({
           </AnimatePresence>
         </div>
 
-        {/* Slidable Content Text Controls overlay - Positioned beautifully in the empty top-left sky/background space, clear of the car body */}
-        <div className="absolute top-6 sm:top-8 md:top-12 left-5 sm:left-8 md:left-12 z-10 max-w-xl text-left flex flex-col space-y-2">
-          {(() => {
-            const slide = activeSlides[currentSlide];
-            if (!slide) return null;
-            const dealer = dealers.find(d => d.id === slide.dealerId);
-            const showroomName = dealer ? dealer.name : 'Individual Seller';
-            const showroomInitials = dealer ? (dealer.avatarLetter || dealer.name[0]) : 'P';
-            return (
-              <div className="space-y-2">
-                {/* Simplified Showroom Name Badge */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1 sm:py-1.5 rounded-full border border-white/10 shadow-lg">
-                    <div className="w-5 h-5 rounded-full bg-accent-main text-bg-primary flex items-center justify-center font-black text-[9px] uppercase shadow-sm">
-                      {showroomInitials}
-                    </div>
-                    <span className="text-white text-[10px] sm:text-xs font-sans font-black uppercase tracking-wider">
-                      {showroomName}
-                    </span>
-                  </div>
-                </div>
+        {/* Premium Typographic Overlays & Action CTAs - Designed beautifully to feel like a world-class automotive showroom */}
+        <div className="absolute inset-0 z-10 flex flex-col justify-center px-6 sm:px-12 md:px-16 text-left bg-gradient-to-r from-black/85 via-black/40 to-transparent">
+          <div className="max-w-2xl space-y-4 md:space-y-6">
+            {/* Dynamic Tagline Badge */}
+            <span className="inline-flex items-center gap-1.5 bg-accent-main text-white text-[9px] sm:text-[10px] font-mono font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">
+              <Sparkles size={11} /> {isRtl ? "پاکستان کا اسمارٹ آٹوموٹو مارکیٹ پلیس" : "PAKISTAN'S SMART AUTOMOTIVE MARKETPLACE"}
+            </span>
 
-                {/* Title (Car Name only, stylized with responsive spacing and strong drop shadow to match background aesthetic) */}
-                <div className="space-y-1">
-                  <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight uppercase leading-tight text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
-                    {slide.title}
-                  </h1>
+            {/* Headline */}
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight uppercase leading-none text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+              {isRtl ? "اپنی بہترین گاڑی تلاش کریں" : "Find Your Perfect Vehicle"}
+            </h1>
+
+            {/* Subheading */}
+            <p className="text-xs sm:text-sm md:text-base text-gray-300 leading-relaxed max-w-xl font-medium drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
+              {isRtl 
+                ? "تصدیق شدہ ڈیلرشپ اور ذاتی فروخت کنندگان کے ذریعے پاکستان بھر میں تصدیق شدہ گاڑیاں خریدیں، بیچیں اور دریافت کریں۔" 
+                : "Buy, Sell and Discover verified vehicles across Pakistan through trusted dealerships and private sellers."}
+            </p>
+
+            {/* CTAs */}
+            <div className="flex flex-wrap gap-3.5 pt-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTab('inventory');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="bg-accent-main hover:bg-accent-hover text-white font-sans font-black text-xs md:text-sm uppercase tracking-wider px-6 py-3.5 rounded-xl transition-all shadow-lg active:scale-95 flex items-center gap-2 hover:shadow-accent-main/20"
+              >
+                {isRtl ? "انوینٹری دیکھیں" : "Browse Inventory"} <ArrowRight size={16} />
+              </button>
+              
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTab('portal');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-sans font-black text-xs md:text-sm uppercase tracking-wider px-6 py-3.5 rounded-xl transition-all backdrop-blur-md active:scale-95 flex items-center gap-1.5"
+              >
+                {isRtl ? "اپنی گاڑی بیچیں" : "Sell Your Vehicle"}
+              </button>
+            </div>
+
+            {/* Minimal Spotlight Indicator for Active Background Slide */}
+            {(() => {
+              const slide = activeSlides[currentSlide];
+              if (!slide) return null;
+              return (
+                <div className="pt-4 flex items-center gap-2 opacity-75 sm:opacity-90">
+                  <span className="text-[10px] font-mono uppercase text-gray-400 tracking-wider font-bold">
+                    {isRtl ? "نمایاں گاڑی:" : "SHOWROOM SPOTLIGHT:"}
+                  </span>
+                  <span className="text-[11px] font-sans font-black text-accent-main uppercase tracking-tight bg-black/30 px-2 py-0.5 rounded border border-white/5">
+                    {slide.year} {slide.make} {slide.model}
+                  </span>
                 </div>
-              </div>
-            );
-          })()}
+              );
+            })()}
+          </div>
         </div>
 
         {/* Dots Indicator - Positioned at bottom-left */}
@@ -678,211 +722,251 @@ export default function HomeView({
       </section>
 
       {/* SECTION 2: SMART ADVANCED SEARCH PANEL */}
-      <section className="relative z-20 max-w-5xl mx-auto w-full -mt-8 sm:-mt-14 md:-mt-20 px-4">
-        <div className="bg-bg-secondary/95 backdrop-blur-md border border-border-main/60 rounded-2xl p-3 sm:p-4 md:p-4 shadow-[0_15px_40px_-10px_rgba(0,0,0,0.45)] relative overflow-hidden">
-          {/* Decorative Corner Glow */}
-          <div className="absolute top-0 right-0 w-24 h-24 bg-accent-main/5 rounded-full blur-3xl pointer-events-none"></div>
+      <section className="relative z-20 max-w-7xl mx-auto w-full -mt-8 sm:-mt-14 md:-mt-20 px-4">
+        <div className="bg-bg-secondary/95 backdrop-blur-md border border-border-main/60 rounded-[24px] p-5 md:p-6 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden">
+          {/* Decorative Subtle Corner Glow */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-accent-main/5 rounded-full blur-3xl pointer-events-none"></div>
           
-          <form onSubmit={handleSearchSubmit} className="space-y-2.5 relative z-10 text-text-main">
-            {/* Header and Type Toggles */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <form onSubmit={handleSearchSubmit} className="space-y-4 relative z-10 text-text-main">
+            {/* Header and Condition Toggles */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-main/50 pb-3">
               <div>
-                <h3 className="text-[10px] md:text-xs font-black uppercase tracking-wider text-text-main flex items-center gap-1">
-                  <span className="h-3 w-1 bg-accent-main rounded-full"></span>
-                  {t.searchHeader}
+                <h3 className="text-xs md:text-sm font-black uppercase tracking-wider text-text-main flex items-center gap-2">
+                  <span className="h-4 w-1.5 bg-accent-main rounded-full"></span>
+                  {lang === 'en' ? 'SMART AUTOMOTIVE SEARCH' : 'گاڑیوں کی سمارٹ تلاش'}
                 </h3>
               </div>
 
-              <div className="flex items-center gap-0.5 bg-bg-primary p-0.5 rounded-lg border border-border-main/50 shrink-0 self-start sm:self-auto">
-                {(['all', 'used', 'new'] as const).map((type) => (
+              {/* Condition Quick Toggles */}
+              <div className="flex items-center gap-1 bg-bg-primary p-1 rounded-xl border border-border-main/50 shrink-0 self-start sm:self-auto">
+                {([
+                  { key: 'All', labelEn: 'ALL VEHICLES', labelUr: 'تمام گاڑیاں' },
+                  { key: 'New', labelEn: 'BRAND NEW', labelUr: 'بالکل نئی' },
+                  { key: 'Used', labelEn: 'USED CARS', labelUr: 'استعمال شدہ' }
+                ]).map((cond) => (
                   <button
-                    key={type}
+                    key={cond.key}
                     type="button"
-                    onClick={() => setSearchType(type)}
-                    className={`px-2 py-0.5 rounded-md text-[9px] md:text-[10px] font-mono font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-                      searchType === type
-                        ? 'bg-accent-main text-bg-primary shadow-sm font-extrabold'
+                    onClick={() => setSearchCondition(cond.key)}
+                    className={`px-3 py-1.5 rounded-lg text-[9px] md:text-[10px] font-mono font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                      searchCondition === cond.key
+                        ? 'bg-accent-main text-white shadow-md font-extrabold'
                         : 'text-text-muted hover:text-text-main'
                     }`}
                   >
-                    {type === 'all' ? (lang === 'en' ? 'ALL VEHICLES' : 'تمام گاڑیاں') : 
-                     type === 'used' ? (lang === 'en' ? 'USED' : 'استعمال شدہ') : 
-                     (lang === 'en' ? 'NEW' : 'نئی')}
+                    {lang === 'en' ? cond.labelEn : cond.labelUr}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Core Search Bar Row */}
-            <div className="flex flex-col sm:flex-row gap-1.5">
-              {/* Search input */}
-              <div className="flex-grow flex items-center gap-2 bg-bg-primary border border-border-main/60 rounded-xl px-2.5 py-1.5 focus-within:border-accent-main transition-all">
-                <Search className="text-text-muted shrink-0" size={13} />
+            {/* Core 10-Field Advanced Search Matrix Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              
+              {/* 1. Make / Brand Selection */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block">
+                  {lang === 'en' ? '1. Vehicle Make' : '۱. گاڑی کا برانڈ'}
+                </label>
+                <select
+                  value={searchMake}
+                  onChange={(e) => setSearchMake(e.target.value)}
+                  className="w-full bg-bg-primary border border-border-main rounded-xl px-3 py-2 text-[11px] text-text-main font-semibold focus:outline-none focus:border-accent-main cursor-pointer"
+                >
+                  <option value="All">{lang === 'en' ? 'All Makes' : 'تمام برانڈز'}</option>
+                  <option value="Suzuki">Suzuki</option>
+                  <option value="Toyota">Toyota</option>
+                  <option value="Honda">Honda</option>
+                  <option value="KIA">KIA</option>
+                  <option value="Hyundai">Hyundai</option>
+                  <option value="MG">MG</option>
+                  <option value="BYD">BYD</option>
+                  <option value="BMW">BMW</option>
+                  <option value="Mercedes-Benz">Mercedes-Benz</option>
+                  <option value="Audi">Audi</option>
+                  <option value="Lexus">Lexus</option>
+                  <option value="Porsche">Porsche</option>
+                </select>
+              </div>
+
+              {/* 2. Model (Text input) */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block">
+                  {lang === 'en' ? '2. Vehicle Model' : '۲. گاڑی کا ماڈل'}
+                </label>
                 <input
                   type="text"
-                  value={localQuery}
-                  onChange={(e) => setLocalQuery(e.target.value)}
-                  placeholder={lang === 'en' ? "Search make, model, variant, keyword..." : "برانڈ، ماڈل یا گاڑی تلاش کریں..."}
-                  className="bg-transparent text-[11px] border-none outline-none focus:ring-0 text-text-main placeholder-text-muted/40 w-full font-sans py-0"
+                  value={searchModel}
+                  onChange={(e) => setSearchModel(e.target.value)}
+                  placeholder="e.g. Civic, Corolla, Swift"
+                  className="w-full bg-bg-primary border border-border-main rounded-xl px-3 py-2 text-[11px] text-text-main placeholder-text-muted/40 focus:outline-none focus:border-accent-main"
                 />
               </div>
 
-              {/* Submit Search Button */}
-              <button
-                type="submit"
-                className="bg-accent-main hover:bg-accent-hover text-bg-primary font-sans text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap shadow-sm shrink-0 flex items-center justify-center gap-1"
-              >
-                <Search size={11} />
-                {lang === 'en' ? 'SEARCH' : 'تلاش کریں'}
-              </button>
-            </div>
+              {/* 3. Variant (Text input) */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block">
+                  {lang === 'en' ? '3. Variant / Trim' : '۳. گاڑی کا ویرینٹ'}
+                </label>
+                <input
+                  type="text"
+                  value={searchVariant}
+                  onChange={(e) => setSearchVariant(e.target.value)}
+                  placeholder="e.g. VTi Oriel, GLX, VXL"
+                  className="w-full bg-bg-primary border border-border-main rounded-xl px-3 py-2 text-[11px] text-text-main placeholder-text-muted/40 focus:outline-none focus:border-accent-main"
+                />
+              </div>
 
-            {/* Default Filters Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-0.5">
-              {/* City Selection */}
-              <div>
-                <label className="text-[8px] font-mono font-black uppercase text-accent-main tracking-widest block mb-0.5">
-                  {lang === 'en' ? 'CHOOSE CITY' : 'شہر کا انتخاب'}
+              {/* 4. Year Model Selection */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block">
+                  {lang === 'en' ? '4. Year Model' : '۴. ماڈل سال'}
+                </label>
+                <select
+                  value={searchYear}
+                  onChange={(e) => setSearchYear(e.target.value)}
+                  className="w-full bg-bg-primary border border-border-main rounded-xl px-3 py-2 text-[11px] text-text-main font-semibold focus:outline-none focus:border-accent-main cursor-pointer"
+                >
+                  <option value="All">{lang === 'en' ? 'Any Year' : 'کسی بھی سال'}</option>
+                  <option value="2026">2026</option>
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                  <option value="2023">2023</option>
+                  <option value="2022">2022</option>
+                  <option value="2021">2021</option>
+                  <option value="2020">2020</option>
+                  <option value="2018">2018 & Above</option>
+                  <option value="2015">2015 & Above</option>
+                  <option value="2010">2010 & Above</option>
+                </select>
+              </div>
+
+              {/* 5. City Selection */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block">
+                  {lang === 'en' ? '5. Registration City' : '۵. شہر کا انتخاب'}
                 </label>
                 <select
                   value={searchCity}
                   onChange={(e) => setSearchCity(e.target.value)}
-                  className="w-full bg-bg-primary border border-border-main rounded-lg px-2.5 py-1.5 text-[11px] text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
+                  className="w-full bg-bg-primary border border-border-main rounded-xl px-3 py-2 text-[11px] text-text-main font-semibold focus:outline-none focus:border-accent-main cursor-pointer"
                 >
-                  <option value="All">{lang === 'en' ? 'ALL PAKISTAN' : 'پورا پاکستان'}</option>
-                  <option value="Peshawar">PESHAWAR</option>
-                  <option value="Islamabad">ISLAMABAD</option>
-                  <option value="Lahore">LAHORE</option>
-                  <option value="Karachi">KARACHI</option>
+                  <option value="All">{lang === 'en' ? 'All Pakistan' : 'پورا پاکستان'}</option>
+                  <option value="Peshawar">Peshawar</option>
+                  <option value="Islamabad">Islamabad</option>
+                  <option value="Lahore">Lahore</option>
+                  <option value="Karachi">Karachi</option>
                 </select>
               </div>
 
-              {/* Budget Range Selection */}
-              <div>
-                <label className="text-[8px] font-mono font-black uppercase text-accent-main tracking-widest block mb-0.5">
-                  {lang === 'en' ? 'MAX BUDGET' : 'زیادہ سے زیادہ بجٹ'}
+              {/* 6. Price Range Selection */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block">
+                  {lang === 'en' ? '6. Max Budget' : '۶. زیادہ سے زیادہ بجٹ'}
                 </label>
                 <select
                   value={searchPrice}
                   onChange={(e) => setSearchPrice(e.target.value)}
-                  className="w-full bg-bg-primary border border-border-main rounded-lg px-2.5 py-1.5 text-[11px] text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
+                  className="w-full bg-bg-primary border border-border-main rounded-xl px-3 py-2 text-[11px] text-text-main font-semibold focus:outline-none focus:border-accent-main cursor-pointer"
                 >
-                  <option value="All">{lang === 'en' ? 'ANY PRICE' : 'کوئی بھی قیمت'}</option>
-                  <option value="Under 15 Lakhs">{lang === 'en' ? 'UNDER 1.5 MILLION (15 LAKH)' : '15 لاکھ سے کم'}</option>
-                  <option value="15-35 Lakhs">{lang === 'en' ? '1.5M - 3.5M (15-35 LAKH)' : '15 سے 35 لاکھ'}</option>
-                  <option value="35-75 Lakhs">{lang === 'en' ? '3.5M - 7.5M (35-75 LAKH)' : '35 سے 75 لاکھ'}</option>
-                  <option value="75+ Lakhs">{lang === 'en' ? 'ABOVE 7.5 MILLION (75 LAKH)' : '75 لاکھ سے اوپر'}</option>
+                  <option value="All">{lang === 'en' ? 'Any Budget' : 'کوئی بھی قیمت'}</option>
+                  <option value="Under 15 Lakhs">{lang === 'en' ? 'Under 1.5 Million (15 Lakh)' : '15 لاکھ سے کم'}</option>
+                  <option value="15-35 Lakhs">{lang === 'en' ? '1.5M - 3.5M (15-35 Lakh)' : '15 سے 35 لاکھ'}</option>
+                  <option value="35-75 Lakhs">{lang === 'en' ? '3.5M - 7.5M (35-75 Lakh)' : '35 سے 75 لاکھ'}</option>
+                  <option value="75-150 Lakhs">{lang === 'en' ? '7.5M - 15.0M (75-150 Lakh)' : '75 لاکھ سے 1.5 کروڑ'}</option>
+                  <option value="75+ Lakhs">{lang === 'en' ? 'Above 7.5 Million (75 Lakh)' : '75 لاکھ سے اوپر'}</option>
                 </select>
               </div>
 
-              {/* Fuel Selection */}
-              <div>
-                <label className="text-[8px] font-mono font-black uppercase text-accent-main tracking-widest block mb-0.5">
-                  {lang === 'en' ? 'FUEL CATEGORY' : 'فیول کی قسم'}
-                </label>
-                <select
-                  value={searchFuel}
-                  onChange={(e) => setSearchFuel(e.target.value)}
-                  className="w-full bg-bg-primary border border-border-main rounded-lg px-2.5 py-1.5 text-[11px] text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
-                >
-                  <option value="All">{lang === 'en' ? 'ANY FUEL' : 'تمام فیول'}</option>
-                  <option value="Petrol">PETROL</option>
-                  <option value="Diesel">DIESEL</option>
-                  <option value="Hybrid">HYBRID</option>
-                  <option value="Electric">ELECTRIC</option>
-                </select>
-              </div>
-
-              {/* Transmission */}
-              <div>
-                <label className="text-[8px] font-mono font-black uppercase text-accent-main tracking-widest block mb-0.5">
-                  {lang === 'en' ? 'GEARBOX TRANSMISSION' : 'ٹرانسمیشن'}
+              {/* 7. Transmission Selection */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block">
+                  {lang === 'en' ? '7. Transmission' : '۷. ٹرانسمیشن'}
                 </label>
                 <select
                   value={searchTransmission}
                   onChange={(e) => setSearchTransmission(e.target.value)}
-                  className="w-full bg-bg-primary border border-border-main rounded-lg px-2.5 py-1.5 text-[11px] text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
+                  className="w-full bg-bg-primary border border-border-main rounded-xl px-3 py-2 text-[11px] text-text-main font-semibold focus:outline-none focus:border-accent-main cursor-pointer"
                 >
-                  <option value="All">{lang === 'en' ? 'ANY TRANSMISSION' : 'تمام ٹرانسمیشن'}</option>
-                  <option value="Automatic">AUTOMATIC</option>
-                  <option value="Manual">MANUAL</option>
+                  <option value="All">{lang === 'en' ? 'Any Transmission' : 'تمام ٹرانسمیشن'}</option>
+                  <option value="Automatic">Automatic</option>
+                  <option value="Manual">Manual</option>
                 </select>
               </div>
+
+              {/* 8. Fuel Type Selection */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block">
+                  {lang === 'en' ? '8. Fuel Type' : '۸. فیول کی قسم'}
+                </label>
+                <select
+                  value={searchFuel}
+                  onChange={(e) => setSearchFuel(e.target.value)}
+                  className="w-full bg-bg-primary border border-border-main rounded-xl px-3 py-2 text-[11px] text-text-main font-semibold focus:outline-none focus:border-accent-main cursor-pointer"
+                >
+                  <option value="All">{lang === 'en' ? 'Any Fuel' : 'تمام فیول'}</option>
+                  <option value="Petrol">Petrol</option>
+                  <option value="Diesel">Diesel</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="Electric">Electric</option>
+                </select>
+              </div>
+
+              {/* 9. Body Type Selection */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-mono font-black uppercase text-accent-main tracking-widest block">
+                  {lang === 'en' ? '9. Body Type' : '۹. باڈی کی قسم'}
+                </label>
+                <select
+                  value={searchBodyType}
+                  onChange={(e) => setSearchBodyType(e.target.value)}
+                  className="w-full bg-bg-primary border border-border-main rounded-xl px-3 py-2 text-[11px] text-text-main font-semibold focus:outline-none focus:border-accent-main cursor-pointer"
+                >
+                  <option value="All">{lang === 'en' ? 'Any Body Type' : 'تمام باڈی ٹائپ'}</option>
+                  <option value="Sedan">Sedan</option>
+                  <option value="SUV">SUV</option>
+                  <option value="Hatchback">Hatchback</option>
+                  <option value="Crossover">Crossover</option>
+                  <option value="Pickup">Pickup</option>
+                  <option value="MPV">MPV</option>
+                  <option value="Van">Van</option>
+                  <option value="Coupe">Coupe</option>
+                  <option value="Convertible">Convertible</option>
+                  <option value="Electric">Electric</option>
+                  <option value="Luxury">Luxury</option>
+                  <option value="Commercial">Commercial</option>
+                </select>
+              </div>
+
+              {/* 10. Condition & Submit Button */}
+              <div className="space-y-1 flex flex-col justify-end">
+                <button
+                  type="submit"
+                  className="w-full bg-accent-main hover:bg-accent-hover text-white font-sans text-xs font-black uppercase tracking-widest py-3.5 rounded-xl transition-all cursor-pointer shadow-md hover:shadow-accent-main/25 flex items-center justify-center gap-1.5 active:scale-95"
+                >
+                  <Search size={14} />
+                  {lang === 'en' ? 'SEARCH LISTINGS' : 'گاڑیاں تلاش کریں'}
+                </button>
+              </div>
+
             </div>
 
-            {/* Toggle Advanced Button */}
-            <div className="flex justify-between items-center pt-2 border-t border-border-main mt-4">
-              <button
-                type="button"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="text-xs font-mono font-black text-accent-main hover:text-accent-hover flex items-center gap-1 cursor-pointer"
-              >
-                <span>{showAdvanced ? '➖ CLOSE ADVANCED FILTERS' : '➕ CHOOSE MORE ADVANCED FILTERS'}</span>
-              </button>
+            {/* Keyword search shortcut */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-3 border-t border-border-main/50 text-xs">
+              <span className="text-text-muted font-mono uppercase text-[9px] tracking-wider font-black shrink-0">
+                {lang === 'en' ? 'Keyword Query (Optional):' : 'کی ورڈ تلاش (اختیاری):'}
+              </span>
+              <div className="w-full flex items-center gap-2 bg-bg-primary border border-border-main rounded-xl px-3 py-1.5 focus-within:border-accent-main transition-all">
+                <Search className="text-text-muted shrink-0" size={12} />
+                <input
+                  type="text"
+                  value={localQuery}
+                  onChange={(e) => setLocalQuery(e.target.value)}
+                  placeholder={lang === 'en' ? "Search custom keywords, features, registration plates..." : "مخصوص فیچرز، نمبر پلیٹ وغیرہ لکھیں..."}
+                  className="bg-transparent text-[11px] border-none outline-none focus:ring-0 text-text-main placeholder-text-muted/40 w-full font-sans py-0"
+                />
+              </div>
             </div>
-
-            {/* Advanced Filters Expandable block */}
-            {showAdvanced && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-border-main/5"
-              >
-                {/* Year range option */}
-                <div>
-                  <label className="text-[8px] font-mono font-black uppercase text-accent-main tracking-widest block mb-0.5">
-                    {lang === 'en' ? 'YEAR MODEL' : 'ماڈل سال'}
-                  </label>
-                  <select
-                    value={searchYear}
-                    onChange={(e) => setSearchYear(e.target.value)}
-                    className="w-full bg-bg-primary border border-border-main rounded-lg px-2.5 py-1.5 text-[11px] text-text-main focus:outline-none focus:border-accent-main cursor-pointer"
-                  >
-                    <option value="All">ANY YEAR</option>
-                    <option value="2025">2025 & Above</option>
-                    <option value="2023">2023 & Above</option>
-                    <option value="2020">2020 & Above</option>
-                    <option value="2015">2015 & Above</option>
-                  </select>
-                </div>
-
-                {/* Seller Type filter */}
-                <div>
-                  <label className="text-[8px] font-mono font-black uppercase text-accent-main tracking-widest block mb-0.5">
-                    {lang === 'en' ? 'SELLER TYPE' : 'بیچنے والے کی قسم'}
-                  </label>
-                  <div className="flex gap-1 bg-bg-primary border border-border-main p-1 rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() => setSearchSeller('all')}
-                      className={`flex-1 py-1 rounded text-[10px] font-bold ${searchSeller === 'all' ? 'bg-accent-main text-bg-primary' : 'text-text-muted hover:text-text-main'}`}
-                    >
-                      ALL
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSearchSeller('showroom')}
-                      className={`flex-1 py-1 rounded text-[10px] font-bold ${searchSeller === 'showroom' ? 'bg-accent-main text-bg-primary' : 'text-text-muted hover:text-text-main'}`}
-                    >
-                      DEALER
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSearchSeller('individual')}
-                      className={`flex-1 py-1 rounded text-[10px] font-bold ${searchSeller === 'individual' ? 'bg-accent-main text-bg-primary' : 'text-text-muted hover:text-text-main'}`}
-                    >
-                      PRIVATE
-                    </button>
-                  </div>
-                </div>
-
-                {/* Info Text */}
-                <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary/50 border border-border-main rounded-lg text-[9px] text-text-muted">
-                  <Info size={14} className="text-accent-main shrink-0" />
-                  <span>Verified Badging filter will be applied to listings instantly upon searching.</span>
-                </div>
-              </motion.div>
-            )}
           </form>
         </div>
       </section>
@@ -1279,60 +1363,22 @@ export default function HomeView({
         </div>
       </section>
 
-      {/* SECTION 10: TRUSTWORTHY REVIEWS & ANONYMOUS ECOSYSTEM STATS */}
-      <section className="space-y-12 max-w-7xl mx-auto w-full px-4">
-        {/* Customer Reviews */}
-        <div className="space-y-6">
-          <div className="text-center space-y-2">
-            <h2 className="text-xl md:text-2xl font-black uppercase tracking-wider text-text-main">
-              {lang === 'en' ? 'What Our Customers Say' : 'صارفین کی آراء'}
+      {/* SECTION 10: BRIDGING BAZAR360 & AUTO CHOICE BRAND BANNER */}
+      <section className="space-y-6 max-w-7xl mx-auto w-full px-4 text-center">
+        <div className="bg-gradient-to-br from-bg-secondary via-bg-primary to-bg-secondary border border-border-main p-8 md:p-12 rounded-[32px] shadow-sm relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(249,115,22,0.03),transparent_70%)] pointer-events-none" />
+          <div className="max-w-3xl mx-auto space-y-4">
+            <h3 className="text-[10px] md:text-xs font-mono font-black uppercase tracking-widest text-accent-main">
+              {lang === 'en' ? '★ REGISTERED TRADEMARKS' : '★ رجسٹرڈ برانڈز'}
+            </h3>
+            <h2 className="text-xl sm:text-3xl font-black text-text-main tracking-tight uppercase leading-tight">
+              BAZAR360.ONLINE <span className="text-accent-main font-light">×</span> AUTO CHOICE
             </h2>
-            <p className="text-xs text-text-muted max-w-sm mx-auto">
-              {lang === 'en' ? 'Real buyers and verified sellers share their success stories on BAZAR360.' : 'بازار360 پر گاڑیوں کی خریدو فروخت کا حقیقی اور تصدیق شدہ تجربہ۔'}
+            <p className="text-xs sm:text-sm text-text-muted leading-relaxed max-w-xl mx-auto">
+              {lang === 'en' 
+                ? 'Bringing Pakistan\'s smartest digital automotive classified platform and premium physical showroom experiences under one enterprise roof.'
+                : 'پاکستان کے سب سے اسمارٹ ڈیجیٹل آٹوموٹو کلاسیفائیڈ اور فزیکل پریمیم شوروم آٹو چوائس کا ایک شاندار ملاپ۔'}
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { name: "Ahmed Khan", city: "Lahore", text: "Posting an ad was unbelievably simple. I sold my Civic within 3 days without any hassle. Highly recommended!" },
-              { name: "Fatima Ali", city: "Islamabad", text: "The UI is incredibly clean and modern. I love the Urdu language option which makes it very accessible for everyone." },
-              { name: "Bilal Ahmed", city: "Peshawar", text: "Connecting with verified showrooms in Peshawar was a great experience. Bazar360 is the future of auto market in Pakistan." }
-            ].map((rev, i) => (
-              <div
-                key={i}
-                className="bg-bg-secondary border border-border-main p-6 rounded-2xl flex flex-col justify-between space-y-4 shadow-sm relative text-left"
-              >
-                <Quote size={20} className="text-accent-main/10 absolute top-4 right-4" />
-                
-                {/* Stars */}
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <Star key={star} size={12} className="fill-amber-500 text-amber-500" />
-                  ))}
-                </div>
-
-                {/* Text */}
-                <p className="text-text-muted text-xs md:text-sm leading-relaxed font-sans italic">
-                  "{rev.text}"
-                </p>
-
-                {/* User Identity */}
-                <div className="pt-4 border-t border-border-main/40 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-accent-main/10 border border-accent-main/20 flex items-center justify-center text-accent-main font-sans font-black text-xs uppercase">
-                    {rev.name[0]}
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-sans font-black text-text-main uppercase tracking-tight">
-                      {rev.name}
-                    </h4>
-                    <p className="text-[10px] text-text-muted font-sans uppercase tracking-wider flex items-center gap-1 mt-0.5 font-bold">
-                      <CheckCircle2 size={10} className="text-emerald-500" />
-                      {rev.city}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 

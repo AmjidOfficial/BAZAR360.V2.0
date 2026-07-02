@@ -30,22 +30,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.add('theme-luxury-light');
 
       // Persist the custom Light theme variables globally so they are standard and cover all components
-      root.style.setProperty('--color-bg-primary', '#ffffff');
-      root.style.setProperty('--color-bg-secondary', '#f1f5f9');
-      root.style.setProperty('--color-text-main', '#0f172a');
-      root.style.setProperty('--color-text-muted', '#475569');
-      root.style.setProperty('--color-border-main', '#cbd5e1');
-      root.style.setProperty('--color-accent-main', '#1e40af');
-      root.style.setProperty('--color-accent-hover', '#1d4ed8');
+      root.style.setProperty('--color-bg-primary', '#FAFAFA');
+      root.style.setProperty('--color-bg-secondary', '#FFFFFF');
+      root.style.setProperty('--color-text-main', '#0F172A');
+      root.style.setProperty('--color-text-muted', '#64748B');
+      root.style.setProperty('--color-border-main', '#E2E8F0');
+      root.style.setProperty('--color-accent-main', '#F97316');
+      root.style.setProperty('--color-accent-hover', '#EA580C');
 
       // Align brand and legacy properties
-      root.style.setProperty('--brand-bg', '#ffffff');
-      root.style.setProperty('--brand-text', '#0f172a');
-      root.style.setProperty('--brand-text-muted', '#475569');
-      root.style.setProperty('--brand-card', '#f1f5f9');
-      root.style.setProperty('--brand-border', '#cbd5e1');
-      root.style.setProperty('--brand-accent', '#1e40af');
-      root.style.setProperty('--brand-accent-hover', '#1d4ed8');
+      root.style.setProperty('--brand-bg', '#FAFAFA');
+      root.style.setProperty('--brand-text', '#0F172A');
+      root.style.setProperty('--brand-text-muted', '#64748B');
+      root.style.setProperty('--brand-card', '#FFFFFF');
+      root.style.setProperty('--brand-border', '#E2E8F0');
+      root.style.setProperty('--brand-accent', '#F97316');
+      root.style.setProperty('--brand-accent-hover', '#EA580C');
     } else {
       root.classList.add('dark');
       root.classList.remove('light');
@@ -53,22 +53,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.remove('theme-luxury-light', 'theme-obsidian-gold', 'theme-mint-emerald');
       root.classList.add('theme-cosmic-dark');
 
-      // Clear overrides to let ThemeEngine or CSS stylesheets apply dark presets
-      root.style.removeProperty('--color-bg-primary');
-      root.style.removeProperty('--color-bg-secondary');
-      root.style.removeProperty('--color-text-main');
-      root.style.removeProperty('--color-text-muted');
-      root.style.removeProperty('--color-border-main');
-      root.style.removeProperty('--color-accent-main');
-      root.style.removeProperty('--color-accent-hover');
+      // Direct overrides for the premium dark charcoal look
+      root.style.setProperty('--color-bg-primary', '#121214');
+      root.style.setProperty('--color-bg-secondary', '#1E1E22');
+      root.style.setProperty('--color-text-main', '#F4F4F5');
+      root.style.setProperty('--color-text-muted', '#A1A1AA');
+      root.style.setProperty('--color-border-main', 'rgba(255, 255, 255, 0.08)');
+      root.style.setProperty('--color-accent-main', '#F97316');
+      root.style.setProperty('--color-accent-hover', '#EA580C');
 
-      root.style.removeProperty('--brand-bg');
-      root.style.removeProperty('--brand-text');
-      root.style.removeProperty('--brand-text-muted');
-      root.style.removeProperty('--brand-card');
-      root.style.removeProperty('--brand-border');
-      root.style.removeProperty('--brand-accent');
-      root.style.removeProperty('--brand-accent-hover');
+      root.style.setProperty('--brand-bg', '#121214');
+      root.style.setProperty('--brand-text', '#F4F4F5');
+      root.style.setProperty('--brand-text-muted', '#A1A1AA');
+      root.style.setProperty('--brand-card', '#1E1E22');
+      root.style.setProperty('--brand-border', 'rgba(255, 255, 255, 0.08)');
+      root.style.setProperty('--brand-accent', '#F97316');
+      root.style.setProperty('--brand-accent-hover', '#EA580C');
     }
     
     try {
